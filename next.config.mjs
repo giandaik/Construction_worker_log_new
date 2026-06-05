@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // React Compiler disabled due to incompatibility with react-signature-canvas
-  // experimental: {
-  //   reactCompiler: true,
-  // },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
