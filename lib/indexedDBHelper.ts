@@ -25,6 +25,7 @@ export interface PendingWorkLogData {
   issues?: string;
   notes?: string;
   images?: string[];
+  status?: string; // "pending" or "signed"
   signatures?: Array<{
     data: string;
     signedBy: string;

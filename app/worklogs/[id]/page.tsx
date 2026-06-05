@@ -29,6 +29,13 @@ interface Material {
   unit: string;
 }
 
+interface Signature {
+  data: string;
+  signedBy: string;
+  signedAt: string;
+  role?: string;
+}
+
 interface WorkLog {
   _id: string;
   date: string;
@@ -45,6 +52,7 @@ interface WorkLog {
   materials?: Material[];
   notes?: string;
   status?:string;
+  signatures?: Signature[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -332,6 +340,45 @@ export default function WorkLogDetailPage() {
             <div>
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Notes</h3>
               <p className="whitespace-pre-wrap">{workLog.notes}</p>
+            </div>
+          )}
+
+          {/* Signatures */}
+          {workLog.signatures && workLog.signatures.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 border-b pb-2">Signatures</h3>
+              <div className="grid gap-6">
+                {workLog.signatures.map((signature, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="mb-4">
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-gray-500">Signed By</p>
+                          <p className="font-semibold">{signature.signedBy}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Role</p>
+                          <p>{signature.role || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Signed At</p>
+                        <p>{new Date(signature.signedAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="border-t pt-4">
+                      <p className="text-sm text-gray-500 mb-2">Signature</p>
+                      <div className="border rounded p-2 bg-white">
+                        <img
+                          src={signature.data}
+                          alt={`Signature by ${signature.signedBy}`}
+                          className="max-w-full h-auto max-h-48"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>

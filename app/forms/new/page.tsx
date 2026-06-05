@@ -176,6 +176,8 @@ function NewWorkLogFormContent() {
 
       if (isOnline) {
         // Online submission
+        const status = signatures.length > 0 ? 'signed' : 'pending'
+
         const response = await fetch('/api/worklogs', {
           method: 'POST',
           headers: {
@@ -183,7 +185,8 @@ function NewWorkLogFormContent() {
           },
           body: JSON.stringify({
             ...data,
-            signatures
+            signatures,
+            status
           }),
         })
 
@@ -200,6 +203,8 @@ function NewWorkLogFormContent() {
       } else {
         // Offline submission
         const tempId = uuidv4();
+        const status = signatures.length > 0 ? 'signed' : 'pending'
+
         const pendingData = {
           tempId,
           date: data.date,
@@ -223,7 +228,8 @@ function NewWorkLogFormContent() {
             unit: m.unit
           })) || [],
           notes: data.notes,
-          signatures: signatures
+          signatures: signatures,
+          status
         };
 
         await addPendingWorkLog(pendingData);

@@ -112,6 +112,9 @@ export default function EditWorkLogForm() {
         return
       }
 
+      // Set status based on whether signatures exist
+      const status = signatures.length > 0 ? 'signed' : 'pending'
+
       const response = await fetch(`/api/worklogs/${id}`, {
         method: 'PUT',
         headers: {
@@ -119,7 +122,8 @@ export default function EditWorkLogForm() {
         },
         body: JSON.stringify({
           ...data,
-          signatures
+          signatures,
+          status
         }),
       })
 
