@@ -58,6 +58,7 @@ export interface WorkLog {
   materials?: Material[];
   notes?: string;
   signatures?: Signature[];
+  images?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }

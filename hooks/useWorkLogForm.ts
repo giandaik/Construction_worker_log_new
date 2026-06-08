@@ -18,6 +18,7 @@ export type WorkLogFormData = {
   materials: Material[];
   notes?: string;
   signatures?: Signature[];
+  images: string[];
 };
 
 /**
@@ -32,7 +33,8 @@ export function useWorkLogForm() {
     personnel: [],
     equipment: [],
     materials: [],
-    signatures: []
+    signatures: [],
+    images: [],
   });
 
   /**
@@ -155,6 +157,16 @@ export function useWorkLogForm() {
   }, []);
 
   /**
+   * Update images array
+   */
+  const updateImages = useCallback((images: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      images
+    }));
+  }, []);
+
+  /**
    * Reset form to initial state
    */
   const resetForm = useCallback(() => {
@@ -165,7 +177,8 @@ export function useWorkLogForm() {
       personnel: [],
       equipment: [],
       materials: [],
-      signatures: []
+      signatures: [],
+      images: [],
     });
   }, []);
 
@@ -200,6 +213,7 @@ export function useWorkLogForm() {
       remove: removeMaterial,
     },
     updateSignatures,
+    updateImages,
     resetForm,
     toAPIFormat,
   };
