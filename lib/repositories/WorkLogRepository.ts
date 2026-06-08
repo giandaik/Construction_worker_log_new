@@ -150,53 +150,45 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
   }
 
   /**
-   * Find a work log by ID with populated project and author details
+   * Find a work log by ID with populated project and author details.
+   * Uses a single aggregation pipeline instead of 3 separate queries.
    */
-  async findByIdWithDetails(
-    id: string | ObjectId,
-    projectsCollection: any,
-    usersCollection: any
-  ): Promise<WorkLogWithDetails | null> {
-    const workLog = await this.findById(id);
+  async findByIdWithDetails(id: string | ObjectId): Promise<WorkLogWithDetails | null> {
+    const objectId = ValidationUtils.normalizeObjectId(id);
 
-    if (!workLog) {
-      return null;
-    }
+    const documents = await this.collection.aggregate([
+      { $match: { _id: objectId } },
+      {
+        $lookup: {
+          from: 'projects',
+          localField: 'project',
+          foreignField: '_id',
+          as: 'projectData',
+          pipeline: [{ $project: { name: 1, location: 1 } }],
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'author',
+          foreignField: '_id',
+          as: 'authorData',
+          pipeline: [{ $project: { name: 1 } }],
+        },
+      },
+      {
+        $addFields: {
+          projectName: { $arrayElemAt: ['$projectData.name', 0] },
+          projectLocation: { $arrayElemAt: ['$projectData.location', 0] },
+          authorName: { $arrayElemAt: ['$authorData.name', 0] },
+        },
+      },
+      { $project: { projectData: 0, authorData: 0 } },
+    ]).toArray();
 
-    const result: WorkLogWithDetails = { ...workLog };
+    if (!documents.length) return null;
 
-    // Fetch project details
-    if (workLog.project) {
-      try {
-        const projectId = ValidationUtils.normalizeOptionalObjectId(workLog.project);
-        if (projectId) {
-          const project = await projectsCollection.findOne({ _id: projectId });
-          if (project) {
-            result.projectName = project.name;
-            result.projectLocation = project.location;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching project details:', error);
-      }
-    }
-
-    // Fetch author details
-    if (workLog.author) {
-      try {
-        const authorId = ValidationUtils.normalizeOptionalObjectId(workLog.author);
-        if (authorId) {
-          const user = await usersCollection.findOne({ _id: authorId });
-          if (user) {
-            result.authorName = user.name;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching author details:', error);
-      }
-    }
-
-    return result;
+    return this.mapToEntity(documents[0]) as WorkLogWithDetails;
   }
 
   /**
