@@ -172,13 +172,13 @@ function WorkLogsPageContent() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="mb-6">
         <Button variant="ghost" onClick={() => router.push('/')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
         </Button>
       </div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Work Logs ({filteredLogs.length})</h1>
           {project && filterProjectId && (
@@ -188,8 +188,8 @@ function WorkLogsPageContent() {
           )}
         </div>
         <div className="flex gap-2">
-          <Link href="/forms/new">
-            <Button>Create New</Button>
+          <Link href="/forms/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">Create New</Button>
           </Link>
         </div>
       </div>
@@ -236,7 +236,7 @@ function WorkLogsPageContent() {
                 ))}
               </select>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch md:items-end gap-2">
               <Button className="w-full" onClick={handleApplyFilters}>
                 Apply Filters
               </Button>

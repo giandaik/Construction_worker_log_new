@@ -160,7 +160,7 @@ export default function EditWorkLogForm() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto px-3 py-4 sm:px-4">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
@@ -181,7 +181,7 @@ export default function EditWorkLogForm() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto px-3 py-4 sm:px-4">
       <Toaster />
       <div className="mb-6">
         <Button variant="ghost" onClick={() => router.back()}>
@@ -309,7 +309,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Personnel</h2>
               <div className="space-y-4">
                 {watch('personnel')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Role</Label>
                       <Input
@@ -345,7 +345,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Equipment</h2>
               <div className="space-y-4">
                 {watch('equipment')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Type</Label>
                       <Input
@@ -382,7 +382,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Materials</h2>
               <div className="space-y-4">
                 {watch('materials')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Name</Label>
                       <Input
@@ -436,10 +436,18 @@ export default function EditWorkLogForm() {
               />
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="sm:w-auto"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </Button>
               <Button
                 type="submit"
-                className="flex-1"
+                className="sm:flex-1"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -448,13 +456,6 @@ export default function EditWorkLogForm() {
                     Saving...
                   </>
                 ) : 'Update Work Log'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                Cancel
               </Button>
             </div>
           </form>

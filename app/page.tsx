@@ -76,13 +76,14 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b">
-        <div className="container flex items-center justify-between py-4">
-          <h1 className="text-2xl font-bold">Ημερολόγιο Εργασιών</h1>
-          <div className="flex items-center gap-4">
+        <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-4">
+          <h1 className="text-xl sm:text-2xl font-bold">Ημερολόγιο Εργασιών</h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <Button asChild>
               <Link href="/forms/new">
                 <Plus className="w-4 h-4 mr-2" />
-                New Form
+                <span className="hidden sm:inline">New Form</span>
+                <span className="sm:hidden">New</span>
               </Link>
             </Button>
             <ThemeToggle />
@@ -92,11 +93,11 @@ export default async function HomePage() {
       </header>
       
       <main>
-        <section className="py-12 md:py-24 lg:py-32">
+        <section className="py-8 sm:py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl lg:text-5xl">
                   Digitize Your Construction Site Forms
                 </h2>
                 <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
@@ -124,8 +125,8 @@ export default async function HomePage() {
                   </Button>
                 </div>
               </div>
-              
-              <div className="relative w-full max-w-md">
+
+              <div className="relative w-full max-w-md mx-auto lg:mx-0">
                 <div className="p-4 bg-white border rounded-lg shadow-lg">
                   <div className="text-center p-2 bg-gray-100 rounded mb-4">
                     <h3 className="font-bold text-lg">ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ</h3>
@@ -170,7 +171,7 @@ export default async function HomePage() {
       </main>
       
       <footer className="border-t">
-        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
+        <div className="container flex flex-col items-center justify-between gap-4 px-4 py-6 md:flex-row">
           <p className="text-sm text-gray-500">© 2024 ConstructionLog. All rights reserved.</p>
           <nav className="flex gap-4 text-sm">
             <Link href="#" className="text-gray-500 hover:underline">

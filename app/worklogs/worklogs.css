@@ -1,9 +1,17 @@
   .work-log-status {
     font-weight: 500;
-    padding: 0.25rem 2.5rem;
+    padding: 0.25rem 1rem;
     border-radius: 0.5rem;
     color: #1f2937;
-    font-size: 18px;
+    font-size: 16px;
+    display: inline-block;
+  }
+
+  @media (min-width: 640px) {
+    .work-log-status {
+      padding: 0.25rem 2.5rem;
+      font-size: 18px;
+    }
   }
 
   .work-log-list-status {

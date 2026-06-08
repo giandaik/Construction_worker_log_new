@@ -346,7 +346,7 @@ function NewWorkLogFormContent() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto px-3 py-4 sm:px-4">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
@@ -360,7 +360,7 @@ function NewWorkLogFormContent() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto px-3 py-4 sm:px-4">
       <Toaster />
       <div className="mb-6">
         <Button variant="ghost" onClick={() => router.back()}>
@@ -619,11 +619,12 @@ function NewWorkLogFormContent() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">{LABELS.personnel} ({LABELS.total}: {totalCount})</h2>
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="relative grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
+                  <div key={field.id} className="relative grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 pt-10 sm:pt-4 border rounded-md bg-gray-50 dark:bg-gray-800">
                      <button
                         type="button"
                         onClick={() => remove(index)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold"
+                        aria-label="Remove personnel"
+                        className="absolute top-2 right-2 p-2 -m-2 text-red-500 hover:text-red-700 font-bold min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <Trash2 size={16} />
                     </button>
@@ -662,11 +663,12 @@ function NewWorkLogFormContent() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Equipment</h2>
               <div className="space-y-4">
                 {watch('equipment')?.map((_, index) => (
-                  <div key={index} className="relative grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
+                  <div key={index} className="relative grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 pt-10 sm:pt-4 border rounded-md bg-gray-50 dark:bg-gray-800">
                     <button
                         type="button"
                         onClick={() => removeEquipment(index)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold"
+                        aria-label="Remove equipment"
+                        className="absolute top-2 right-2 p-2 -m-2 text-red-500 hover:text-red-700 font-bold min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <Trash2 size={16} />
                     </button>
@@ -706,11 +708,12 @@ function NewWorkLogFormContent() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Materials</h2>
               <div className="space-y-4">
                 {watch('materials')?.map((_, index) => (
-                  <div key={index} className="relative grid grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
+                  <div key={index} className="relative grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 pt-10 sm:pt-4 border rounded-md bg-gray-50 dark:bg-gray-800">
                     <button
                         type="button"
                         onClick={() => removeMaterial(index)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold"
+                        aria-label="Remove material"
+                        className="absolute top-2 right-2 p-2 -m-2 text-red-500 hover:text-red-700 font-bold min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <Trash2 size={16} />
                     </button>
@@ -789,7 +792,7 @@ function NewWorkLogFormContent() {
 export default function NewWorkLogForm() {
   return (
     <Suspense fallback={
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto px-3 py-4 sm:px-4">
         <div className="mb-6">
           <Button variant="ghost" disabled>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back

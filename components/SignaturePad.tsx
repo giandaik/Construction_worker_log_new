@@ -56,7 +56,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
             <SignatureCanvas
               ref={sigCanvas}
               canvasProps={{
-                className: 'w-full h-40 cursor-crosshair',
+                className: 'w-full h-40 cursor-crosshair touch-none',
               }}
               backgroundColor="white"
             />
