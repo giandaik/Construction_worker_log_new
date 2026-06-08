@@ -10,7 +10,78 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/FormField';
 import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
+import { PhotoUpload } from '@/components/forms/PhotoUpload';
 import { TOAST_DURATION } from '@/lib/constants/constants';
+
+function PersonnelCountField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  const isCustom = value > 9;
+  const [showCustom, setShowCustom] = useState(isCustom);
+  const [customValue, setCustomValue] = useState(isCustom ? String(value) : '');
+
+  const selectClass =
+    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm';
+
+  if (showCustom) {
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        <input
+          type="number"
+          id={id}
+          min={0}
+          value={customValue}
+          onChange={(e) => {
+            setCustomValue(e.target.value);
+            const n = parseInt(e.target.value, 10);
+            if (!isNaN(n) && n >= 0) onChange(n);
+          }}
+          className={selectClass}
+          placeholder="Enter number"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setShowCustom(false);
+            setCustomValue('');
+            onChange(0);
+          }}
+          className="text-xs text-gray-500 underline whitespace-nowrap"
+        >
+          Use list
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(e) => {
+        if (e.target.value === 'custom') {
+          setShowCustom(true);
+          setCustomValue('');
+        } else {
+          onChange(parseInt(e.target.value, 10) || 0);
+        }
+      }}
+      className={selectClass}
+    >
+      {Array.from({ length: 10 }, (_, i) => (
+        <option key={i} value={i}>{i}</option>
+      ))}
+      <option value="custom">Other…</option>
+    </select>
+  );
+}
 
 export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -24,6 +95,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
     equipment,
     materials,
     updateSignatures,
+    updateImages,
     resetForm,
   } = useWorkLogForm();
 
@@ -190,13 +262,10 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
               />
             </FormField>
             <FormField label="Count" htmlFor={`personnel-count-${index}`}>
-              <input
-                type="number"
+              <PersonnelCountField
                 id={`personnel-count-${index}`}
                 value={item.count}
-                onChange={(e) => personnel.update(index, 'count', parseInt(e.target.value) || 0)}
-                min="1"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(n) => personnel.update(index, 'count', n)}
               />
             </FormField>
           </div>
@@ -284,6 +353,11 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
             </FormField>
           </div>
         )}
+      />
+
+      <PhotoUpload
+        value={formData.images}
+        onChange={updateImages}
       />
 
       <SignatureSection

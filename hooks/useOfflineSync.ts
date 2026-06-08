@@ -5,7 +5,20 @@ import { addPendingWorkLog, PendingWorkLogData } from '@/lib/indexedDBHelper';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useToast } from './useToast';
 import { TOAST_DURATION } from '@/lib/constants/constants';
+import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize';
 import type { WorkLogFormData } from './useWorkLogForm';
+
+async function resolveImageUrls(images: string[]): Promise<string[]> {
+  const resolved: string[] = [];
+  for (const entry of images) {
+    if (isDataUrl(entry)) {
+      resolved.push(await uploadImageBlob(dataUrlToBlob(entry)));
+    } else {
+      resolved.push(entry);
+    }
+  }
+  return resolved;
+}
 
 /**
  * Options for submitting work log data
@@ -42,8 +55,11 @@ export function useOfflineSync() {
     if (isOnline) {
       // Online submission
       try {
+        const images = await resolveImageUrls(formData.images || []);
+
         const apiData = {
           ...formData,
+          images,
           date: new Date(formData.date),
           author: authorId
         };
@@ -72,6 +88,7 @@ export function useOfflineSync() {
         equipment: formData.equipment,
         materials: formData.materials,
         notes: formData.notes,
+        images: formData.images,
       };
 
       try {

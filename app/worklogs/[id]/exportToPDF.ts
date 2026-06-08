@@ -41,11 +41,24 @@ interface WorkLog {
     materials?: Material[];
     notes?: string;
     signatures?: Signature[];
+    images?: string[];
     createdAt?: string;
     updatedAt?: string;
 }
 
-export function exportToPDF(workLog: WorkLog) {
+async function fetchAsDataUrl(url: string): Promise<string> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch image: ${url}`);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
+
+export async function exportToPDF(workLog: WorkLog) {
     const doc = new jsPDF();
     doc.addFileToVFS("Roboto-Regular.ttf", robotoRegular);
     doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
@@ -261,6 +274,57 @@ export function exportToPDF(workLog: WorkLog) {
             }
             addLine("",line)
         });
+    }
+
+    // Photos
+    if (workLog.images && workLog.images.length > 0) {
+        addHeader("Photos");
+        const cellWidth = 80;
+        const cellHeight = 60;
+        const cols = 2;
+        const colGap = 6;
+        let col = 0;
+        let rowStartY = y;
+
+        for (const src of workLog.images) {
+            if (col === 0 && rowStartY + cellHeight > pageHeight - margin) {
+                drawRect();
+                doc.addPage();
+                y = margin + 10;
+                rowStartY = y;
+            }
+
+            const cellX = margin + 6 + col * (cellWidth + colGap);
+            try {
+                const dataUrl = src.startsWith('data:') ? src : await fetchAsDataUrl(src);
+                const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+                const props = doc.getImageProperties(dataUrl);
+                const scale = Math.min(cellWidth / props.width, cellHeight / props.height);
+                const drawW = props.width * scale;
+                const drawH = props.height * scale;
+                const drawX = cellX + (cellWidth - drawW) / 2;
+                const drawY = rowStartY + (cellHeight - drawH) / 2;
+
+                doc.setDrawColor(200, 200, 200);
+                doc.rect(drawX, drawY, drawW, drawH);
+                doc.addImage(dataUrl, format, drawX, drawY, drawW, drawH);
+            } catch (err) {
+                console.error('Error embedding photo:', err);
+                doc.text('(Photo error)', cellX, rowStartY + 10);
+            }
+
+            col++;
+            if (col >= cols) {
+                col = 0;
+                rowStartY += cellHeight + lineGap;
+                y = rowStartY;
+                lastLineY = y;
+            }
+        }
+        if (col !== 0) {
+            y = rowStartY + cellHeight + lineGap;
+            lastLineY = y;
+        }
     }
 
     // Signatures

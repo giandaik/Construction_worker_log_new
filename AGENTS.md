@@ -1,7 +1,24 @@
+# Project Context
+
+## Tech Stack (as of 2026-06-08)
+- **Framework**: Next.js 15 (app router, TypeScript)
+- **Database**: MongoDB via Mongoose (`lib/models/`, `lib/schemas/`, `lib/repositories/`)
+- **Auth**: JWT via `jose`; custom session cookies; `bcryptjs` in package.json (not yet wired in)
+- **File Uploads**: Vercel Blob (`@vercel/blob`) — client-side resize via Canvas, offline-first with IndexedDB fallback
+- **Offline Sync**: `hooks/useOfflineSync.ts` + `lib/syncService.ts`
+
+## Photo Attachment Feature (added 2026-06-08)
+Key files: `app/api/upload/route.ts`, `lib/imageResize.ts`, `components/forms/PhotoUpload.tsx`.
+Required env var: `BLOB_READ_WRITE_TOKEN` (Vercel Blob Store).
+Offline flow: `data:` URLs held in IndexedDB, pre-uploaded to Blob before worklog POST/PUT.
+
+## Open Security Issue (fp CWL-gupyodxk)
+Passwords hashed with unsalted SHA-256 — switch to `bcryptjs`. `POST /api/users` does not persist passwords. Fix before production.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log** (1354 symbols, 2450 relationships, 106 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1499 symbols, 2699 relationships, 123 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -24,10 +41,10 @@ This project is indexed by GitNexus as **Construction_worker_log** (1354 symbols
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/Construction_worker_log/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Construction_worker_log/clusters` | All functional areas |
-| `gitnexus://repo/Construction_worker_log/processes` | All execution flows |
-| `gitnexus://repo/Construction_worker_log/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/Construction_worker_log_new/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/Construction_worker_log_new/clusters` | All functional areas |
+| `gitnexus://repo/Construction_worker_log_new/processes` | All execution flows |
+| `gitnexus://repo/Construction_worker_log_new/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 

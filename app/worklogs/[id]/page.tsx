@@ -53,6 +53,7 @@ interface WorkLog {
   notes?: string;
   status?:string;
   signatures?: Signature[];
+  images?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -102,7 +103,7 @@ export default function WorkLogDetailPage() {
 
     // Dynamically import the PDF export function
     const { exportToPDF } = await import('./exportToPDF');
-    exportToPDF(workLog);
+    await exportToPDF(workLog);
   };
 
   const handleDelete = async () => {
@@ -330,6 +331,32 @@ export default function WorkLogDetailPage() {
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Photos */}
+          {workLog.images && workLog.images.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 border-b pb-2">Photos</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {workLog.images.map((src, index) => (
+                  <a
+                    key={index}
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block aspect-square overflow-hidden rounded-md border bg-gray-50"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`Photo ${index + 1}`}
+                      className="h-full w-full object-cover transition-transform hover:scale-105"
+                      loading="lazy"
+                    />
+                  </a>
                 ))}
               </div>
             </div>

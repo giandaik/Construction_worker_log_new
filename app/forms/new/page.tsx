@@ -20,8 +20,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { Toaster } from '@/components/ui/toaster'
 import mongoose from 'mongoose'
 import { SignatureSection } from '@/components/SignatureSection'
+import { PhotoUpload } from '@/components/forms/PhotoUpload'
 import type { Signature } from '@/types/shared'
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
+import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize'
 import { PERSONNEL_ROLES, LABELS } from '@/lib/constants/constantValues'
 function NewWorkLogFormContent() {
   const router = useRouter()
@@ -33,6 +35,7 @@ function NewWorkLogFormContent() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [signatures, setSignatures] = useState<Signature[]>([])
+  const [images, setImages] = useState<string[]>([])
 
   // New state for the add project/user dialogs
   const [newProject, setNewProject] = useState({ name: '', description: '', location: '' })
@@ -178,6 +181,16 @@ function NewWorkLogFormContent() {
         // Online submission
         const status = signatures.length > 0 ? 'signed' : 'pending'
 
+        // Upload any pending (base64) images before saving
+        const resolvedImages: string[] = []
+        for (const entry of images) {
+          if (isDataUrl(entry)) {
+            resolvedImages.push(await uploadImageBlob(dataUrlToBlob(entry)))
+          } else {
+            resolvedImages.push(entry)
+          }
+        }
+
         const response = await fetch('/api/worklogs', {
           method: 'POST',
           headers: {
@@ -186,6 +199,7 @@ function NewWorkLogFormContent() {
           body: JSON.stringify({
             ...data,
             signatures,
+            images: resolvedImages,
             status
           }),
         })
@@ -229,6 +243,7 @@ function NewWorkLogFormContent() {
           })) || [],
           notes: data.notes,
           signatures: signatures,
+          images,
           status
         };
 
@@ -643,11 +658,14 @@ function NewWorkLogFormContent() {
                     </div>
                     <div>
                       <Label>{LABELS.count}</Label>
-                      <Input
-                        type="number"
-                        placeholder={LABELS.count}
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         {...register(`personnel.${index}.count`, { valueAsNumber: true })}
-                      />
+                      >
+                        {Array.from({ length: 10 }, (_, i) => (
+                          <option key={i} value={i}>{i}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label>{LABELS.workDetails}</Label>
@@ -765,6 +783,12 @@ function NewWorkLogFormContent() {
                 />
                 {errors.notes && <p className="text-red-500">{errors.notes.message}</p>}
               </div>
+            </div>
+
+            {/* Photos Section */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4 border-b pb-2">Photos</h2>
+              <PhotoUpload value={images} onChange={setImages} />
             </div>
 
             {/* Signatures Section */}

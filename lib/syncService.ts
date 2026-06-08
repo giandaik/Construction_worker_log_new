@@ -4,6 +4,21 @@ import {
   deletePendingWorkLog,
   PendingWorkLogData,
 } from './indexedDBHelper';
+import { dataUrlToBlob, isDataUrl, uploadImageBlob } from './imageResize';
+
+async function uploadPendingDataUrls(images: string[] | undefined): Promise<string[] | undefined> {
+  if (!images || images.length === 0) return images;
+  const resolved: string[] = [];
+  for (const entry of images) {
+    if (isDataUrl(entry)) {
+      const url = await uploadImageBlob(dataUrlToBlob(entry));
+      resolved.push(url);
+    } else {
+      resolved.push(entry);
+    }
+  }
+  return resolved;
+}
 
 /**
  * API payload interface for creating work logs
@@ -57,6 +72,7 @@ export const syncPendingWorkLogs = async (): Promise<{ successful: number; faile
       try {
         console.log(`Attempting to sync log with tempId: ${log.tempId}`);
         const apiPayload = transformPendingDataToApiPayload(log);
+        apiPayload.images = await uploadPendingDataUrls(apiPayload.images);
 
         const response = await fetch('/api/worklogs', {
           method: 'POST',

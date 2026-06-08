@@ -15,9 +15,11 @@ import { fetchProjects, fetchUsers, ProjectWithId, UserWithId } from '@/lib/data
 import { ArrowLeft } from "lucide-react"
 import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
+import { PhotoUpload } from '@/components/forms/PhotoUpload'
 import type { Signature } from '@/types/shared'
 import { Skeleton } from "@/components/ui/skeleton"
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
+import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize'
 
 export default function EditWorkLogForm() {
   const params = useParams()
@@ -29,6 +31,7 @@ export default function EditWorkLogForm() {
   const [isLoading, setIsLoading] = useState(true)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [signatures, setSignatures] = useState<Signature[]>([])
+  const [images, setImages] = useState<string[]>([])
 
   const {
     register,
@@ -84,6 +87,11 @@ export default function EditWorkLogForm() {
           setSignatures(workLog.signatures)
         }
 
+        // Set images if they exist
+        if (Array.isArray(workLog.images)) {
+          setImages(workLog.images)
+        }
+
         setIsLoading(false)
       } catch (error) {
         console.error('Error loading data:', error)
@@ -115,6 +123,16 @@ export default function EditWorkLogForm() {
       // Set status based on whether signatures exist
       const status = signatures.length > 0 ? 'signed' : 'pending'
 
+      // Upload any pending (base64) images before saving
+      const resolvedImages: string[] = []
+      for (const entry of images) {
+        if (isDataUrl(entry)) {
+          resolvedImages.push(await uploadImageBlob(dataUrlToBlob(entry)))
+        } else {
+          resolvedImages.push(entry)
+        }
+      }
+
       const response = await fetch(`/api/worklogs/${id}`, {
         method: 'PUT',
         headers: {
@@ -123,6 +141,7 @@ export default function EditWorkLogForm() {
         body: JSON.stringify({
           ...data,
           signatures,
+          images: resolvedImages,
           status
         }),
       })
@@ -323,11 +342,14 @@ export default function EditWorkLogForm() {
                     </div>
                     <div>
                       <Label>Count</Label>
-                      <Input
-                        type="number"
-                        placeholder="Count"
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         {...register(`personnel.${index}.count`, { valueAsNumber: true })}
-                      />
+                      >
+                        {Array.from({ length: 10 }, (_, i) => (
+                          <option key={i} value={i}>{i}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label>Work Details</Label>
@@ -429,6 +451,12 @@ export default function EditWorkLogForm() {
                 />
                 {errors.notes && <p className="text-red-500">{errors.notes.message}</p>}
               </div>
+            </div>
+
+            {/* Photos Section */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4 border-b pb-2">Photos</h2>
+              <PhotoUpload value={images} onChange={setImages} />
             </div>
 
             {/* Signatures Section */}
