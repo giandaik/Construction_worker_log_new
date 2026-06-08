@@ -40,14 +40,15 @@ Starts only the Express backend server with hot reload (tsx watch).
 
 ## Tech Stack
 
-- **Frontend**: React 18 with TypeScript, Vite
+- **Framework**: Next.js 15 (app router, TypeScript)
 - **Styling**: Tailwind CSS with custom yellow/construction theme
 - **UI Components**: Headless UI, Heroicons
-- **Routing**: React Router v7
-- **Backend**: Express.js server for file uploads
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth
-- **File Uploads**: Multer (server-side), max 5 photos per log, 5MB each
+- **Routing**: Next.js file-based routing (`app/` directory)
+- **Backend**: Next.js API routes (`app/api/`)
+- **Database**: MongoDB via Mongoose — `lib/models/`, `lib/schemas/`, `lib/repositories/`
+- **Authentication**: JWT via `jose`; custom session cookies; `bcryptjs` in package.json (not yet wired in)
+- **File Uploads**: Vercel Blob (`@vercel/blob`) — client-side resize, offline-first with IndexedDB fallback
+- **Offline Sync**: `hooks/useOfflineSync.ts` + `lib/syncService.ts` — replays pending worklogs from IndexedDB on reconnect
 
 ## Architecture
 
@@ -139,6 +140,41 @@ Express server (`server/index.ts`) handles file uploads:
 **UserProfile** (`src/types/auth.ts`):
 Extends Firebase User with custom role field.
 
+## Photo Attachment Feature
+
+Added in session 2026-06-08. Photos can be attached to any WorkLog (create and edit forms).
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `app/api/upload/route.ts` | POST endpoint — multipart/form-data, calls `put()` from `@vercel/blob`. Limits: 8 MB per file, JPEG/PNG/WebP only. Pathname: `worklogs/{userId}/{timestamp}-{uuid}.{ext}`. Gated by `getAuthUser()`. |
+| `lib/imageResize.ts` | `resizeImage` (Canvas, max 2000 px, 0.85 JPEG), `blobToDataUrl`, `uploadImageBlob`, `isDataUrl`, `dataUrlToBlob`. |
+| `components/forms/PhotoUpload.tsx` | Reusable multi-file input with `capture="environment"` (camera), thumbnail grid, remove button, "Pending" badge for not-yet-uploaded photos. |
+
+### Modified files
+
+- `hooks/useWorkLogForm.ts` — `images: string[]` in form state, `updateImages` setter.
+- `components/WorkLogForm.tsx` — renders `<PhotoUpload>` above signatures.
+- `hooks/useOfflineSync.ts` — pre-uploads `data:` URLs before POST when online; stores them in IndexedDB payload when offline.
+- `lib/syncService.ts` — uploads `data:` URLs before replaying pending worklogs.
+- `lib/schemas/workLogSchema.ts` — `images: z.array(z.string()).optional()`.
+- `lib/repositories/WorkLogRepository.ts` — `images?: string[]` on `WorkLog` interface.
+- `app/worklogs/[id]/page.tsx` — Photos grid, click to open full-res in new tab.
+- `app/worklogs/[id]/exportToPDF.ts` — async PDF export; fetches each image and embeds as data URL (2-column layout).
+- `app/worklogs/[id]/edit/page.tsx` — loads existing images, renders `<PhotoUpload>`, pre-uploads `data:` URLs before PUT.
+
+### Required env var
+
+`BLOB_READ_WRITE_TOKEN` — obtain from Vercel dashboard → Storage → Create Blob Store → connect to project. Add to `.env.local` and Vercel project settings.
+
+### Offline flow
+
+1. User picks photos on form — resized client-side, stored as `data:` URLs in form state.
+2. If offline: `data:` URLs saved to IndexedDB with the pending worklog.
+3. On reconnect (or at submit time if online): `data:` URLs pre-uploaded to Blob, HTTPS URLs replace them, then worklog POST/PUT fires with HTTPS URLs only.
+4. The MongoDB document and Blob store only ever hold HTTPS URLs.
+
 ## Code Style Guidelines (from .cursorrules)
 
 ### TypeScript Conventions
@@ -168,13 +204,13 @@ Extends Firebase User with custom role field.
 
 ## Important Notes
 
-1. **Console Logs**: The codebase currently has extensive console.log statements in `src/App.tsx` and `src/contexts/AuthContext.tsx` for debugging authentication flow. These should be removed before production.
+1. **Actual Stack (NOTE: the Tech Stack section above is outdated)**: The running codebase is **Next.js 15** (app router), **MongoDB/Mongoose** for persistence (models in `lib/models/`, schemas in `lib/schemas/`, repository pattern in `lib/repositories/`), and **JWT via jose** for auth (`middleware.ts` + `app/api/login/`). The Vite/Express/Firebase description is a legacy artifact and does not reflect what is on disk.
 
-2. **In-Memory Storage**: The backend currently stores logs in a simple array. This needs to be replaced with a database (likely Firestore) for production.
+2. **Password Hashing (open security issue — fp CWL-gupyodxk)**: Passwords are currently hashed with unsalted SHA-256 (`crypto.createHash`). `bcryptjs` is in `package.json` but unused. Replace with `bcryptjs.hash` / `bcryptjs.compare` before any real user data is stored.
 
-3. **Role Assignment**: When users sign up, their role is stored in Firestore. The default role is `WORKER` if not specified or if Firestore fetch fails.
+3. **Role Assignment**: Roles are stored in MongoDB on the `User` document. Default role is `WORKER`. Note: `POST /api/users` currently does not persist passwords correctly (tracked in CWL-gupyodxk).
 
-4. **Photo Storage**: Photos are currently stored in the local `uploads/` directory. For production, use Firebase Storage or another cloud storage service.
+4. **Photo Storage**: Photos are stored in **Vercel Blob** (`@vercel/blob`). The upload endpoint is `app/api/upload/route.ts` (POST, multipart/form-data, max 8 MB, JPEG/PNG/WebP). Client-side resize (`lib/imageResize.ts`) compresses to ≤2000 px / 0.85 JPEG quality before upload. When offline, photos are held as `data:` URLs in form state and IndexedDB; they are pre-uploaded on reconnect or at submit time. The `WorkLog` model stores only HTTPS Blob URLs. Required env var: `BLOB_READ_WRITE_TOKEN` (Vercel dashboard → Storage → Blob Store).
 
 5. **Network Handling**: AuthContext includes network status monitoring and displays errors when offline.
 
@@ -185,7 +221,7 @@ Extends Firebase User with custom role field.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log** (1354 symbols, 2450 relationships, 106 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1370 symbols, 2460 relationships, 106 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -208,10 +244,10 @@ This project is indexed by GitNexus as **Construction_worker_log** (1354 symbols
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/Construction_worker_log/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Construction_worker_log/clusters` | All functional areas |
-| `gitnexus://repo/Construction_worker_log/processes` | All execution flows |
-| `gitnexus://repo/Construction_worker_log/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/Construction_worker_log_new/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/Construction_worker_log_new/clusters` | All functional areas |
+| `gitnexus://repo/Construction_worker_log_new/processes` | All execution flows |
+| `gitnexus://repo/Construction_worker_log_new/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
