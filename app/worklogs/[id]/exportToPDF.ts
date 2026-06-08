@@ -41,11 +41,24 @@ interface WorkLog {
     materials?: Material[];
     notes?: string;
     signatures?: Signature[];
+    images?: string[];
     createdAt?: string;
     updatedAt?: string;
 }
 
-export function exportToPDF(workLog: WorkLog) {
+async function fetchAsDataUrl(url: string): Promise<string> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch image: ${url}`);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
+
+export async function exportToPDF(workLog: WorkLog) {
     const doc = new jsPDF();
     doc.addFileToVFS("Roboto-Regular.ttf", robotoRegular);
     doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
@@ -261,6 +274,50 @@ export function exportToPDF(workLog: WorkLog) {
             }
             addLine("",line)
         });
+    }
+
+    // Photos
+    if (workLog.images && workLog.images.length > 0) {
+        addHeader("Photos");
+        const imgWidth = 80;
+        const imgHeight = 60;
+        const cols = 2;
+        const colGap = 6;
+        let col = 0;
+        let rowStartY = y;
+
+        for (const src of workLog.images) {
+            if (col === 0 && rowStartY + imgHeight > pageHeight - margin) {
+                drawRect();
+                doc.addPage();
+                y = margin + 10;
+                rowStartY = y;
+            }
+
+            const x = margin + 6 + col * (imgWidth + colGap);
+            try {
+                const dataUrl = src.startsWith('data:') ? src : await fetchAsDataUrl(src);
+                const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+                doc.setDrawColor(200, 200, 200);
+                doc.rect(x, rowStartY, imgWidth, imgHeight);
+                doc.addImage(dataUrl, format, x, rowStartY, imgWidth, imgHeight);
+            } catch (err) {
+                console.error('Error embedding photo:', err);
+                doc.text('(Photo error)', x, rowStartY + 10);
+            }
+
+            col++;
+            if (col >= cols) {
+                col = 0;
+                rowStartY += imgHeight + lineGap;
+                y = rowStartY;
+                lastLineY = y;
+            }
+        }
+        if (col !== 0) {
+            y = rowStartY + imgHeight + lineGap;
+            lastLineY = y;
+        }
     }
 
     // Signatures
