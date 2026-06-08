@@ -35,27 +35,21 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
       }
 
       setBusy(true);
-      const added: string[] = [];
 
-      for (const file of toProcess) {
-        try {
+      const results = await Promise.allSettled(
+        toProcess.map(async (file) => {
           const resized = await resizeImage(file);
-          if (isOnline) {
-            const url = await uploadImageBlob(resized);
-            added.push(url);
-          } else {
-            const dataUrl = await blobToDataUrl(resized);
-            added.push(dataUrl);
-          }
-        } catch (err) {
-          console.error('Photo processing failed:', err);
-          try {
-            const resized = await resizeImage(file);
-            added.push(await blobToDataUrl(resized));
-          } catch (fallbackErr) {
-            console.error('Fallback also failed:', fallbackErr);
-            setError(err instanceof Error ? err.message : 'Photo processing failed');
-          }
+          return isOnline ? uploadImageBlob(resized) : blobToDataUrl(resized);
+        }),
+      );
+
+      const added: string[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          added.push(result.value);
+        } else {
+          console.error('Photo processing failed:', result.reason);
+          setError(result.reason instanceof Error ? result.reason.message : 'Photo processing failed');
         }
       }
 
