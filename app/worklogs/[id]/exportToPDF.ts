@@ -279,43 +279,50 @@ export async function exportToPDF(workLog: WorkLog) {
     // Photos
     if (workLog.images && workLog.images.length > 0) {
         addHeader("Photos");
-        const imgWidth = 80;
-        const imgHeight = 60;
+        const cellWidth = 80;
+        const cellHeight = 60;
         const cols = 2;
         const colGap = 6;
         let col = 0;
         let rowStartY = y;
 
         for (const src of workLog.images) {
-            if (col === 0 && rowStartY + imgHeight > pageHeight - margin) {
+            if (col === 0 && rowStartY + cellHeight > pageHeight - margin) {
                 drawRect();
                 doc.addPage();
                 y = margin + 10;
                 rowStartY = y;
             }
 
-            const x = margin + 6 + col * (imgWidth + colGap);
+            const cellX = margin + 6 + col * (cellWidth + colGap);
             try {
                 const dataUrl = src.startsWith('data:') ? src : await fetchAsDataUrl(src);
                 const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+                const props = doc.getImageProperties(dataUrl);
+                const scale = Math.min(cellWidth / props.width, cellHeight / props.height);
+                const drawW = props.width * scale;
+                const drawH = props.height * scale;
+                const drawX = cellX + (cellWidth - drawW) / 2;
+                const drawY = rowStartY + (cellHeight - drawH) / 2;
+
                 doc.setDrawColor(200, 200, 200);
-                doc.rect(x, rowStartY, imgWidth, imgHeight);
-                doc.addImage(dataUrl, format, x, rowStartY, imgWidth, imgHeight);
+                doc.rect(drawX, drawY, drawW, drawH);
+                doc.addImage(dataUrl, format, drawX, drawY, drawW, drawH);
             } catch (err) {
                 console.error('Error embedding photo:', err);
-                doc.text('(Photo error)', x, rowStartY + 10);
+                doc.text('(Photo error)', cellX, rowStartY + 10);
             }
 
             col++;
             if (col >= cols) {
                 col = 0;
-                rowStartY += imgHeight + lineGap;
+                rowStartY += cellHeight + lineGap;
                 y = rowStartY;
                 lastLineY = y;
             }
         }
         if (col !== 0) {
-            y = rowStartY + imgHeight + lineGap;
+            y = rowStartY + cellHeight + lineGap;
             lastLineY = y;
         }
     }
