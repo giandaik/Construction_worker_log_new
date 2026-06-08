@@ -3,6 +3,7 @@ import { DatabaseUtils } from '@/lib/api/database';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify } from '@/utils/auth';
+import { sendSignatureNotificationEmail } from '@/lib/email/resendEmail';
 
 export async function GET(
   request: Request,
@@ -62,11 +63,58 @@ export async function PUT(
         return ApiError.forbidden('You do not have permission to update this work log');
       }
 
+      const existingSignatureCount = existingWorkLog.signatures?.length ?? 0;
+      const updatedSignatures = Array.isArray(data.signatures)
+        ? data.signatures
+        : existingWorkLog.signatures ?? [];
+      const hasNewSignature = updatedSignatures.length > existingSignatureCount;
+
       // Update the work log using repository
       const workLog = await workLogRepo.update(id, data);
 
       if (!workLog) {
         return ApiError.notFound('Work log');
+      }
+
+      if (hasNewSignature && updatedSignatures.length > 0) {
+        const latestSignature = updatedSignatures[updatedSignatures.length - 1];
+
+        // Fetch project details from database
+        let projectName: string | undefined;
+        try {
+          return await DatabaseUtils.withConnection(async (db) => {
+            const projectsCollection = db.collection('projects');
+            const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
+            if (projectId) {
+              const { ObjectId } = await import('mongodb');
+              const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
+              projectName = project?.name;
+            }
+
+            await sendSignatureNotificationEmail({
+              signerName: latestSignature.signedBy,
+              signerRole: latestSignature.role,
+              projectName,
+              signatureTimestamp: latestSignature.signedAt?.toString(),
+            }).catch((error) => {
+              console.error('Error sending signature notification email:', error);
+            });
+
+            return ApiError.success(workLog);
+          });
+        } catch (error) {
+          console.error('Error fetching project details:', error);
+          await sendSignatureNotificationEmail({
+            signerName: latestSignature.signedBy,
+            signerRole: latestSignature.role,
+            projectName,
+            signatureTimestamp: latestSignature.signedAt?.toString(),
+          }).catch((error) => {
+            console.error('Error sending signature notification email:', error);
+          });
+
+          return ApiError.success(workLog);
+        }
       }
 
       return ApiError.success(workLog);

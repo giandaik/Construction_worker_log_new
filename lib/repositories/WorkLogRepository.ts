@@ -245,7 +245,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
       ...data,
       project: ValidationUtils.normalizeObjectId(data.project),
       author: ValidationUtils.normalizeObjectId(data.author),
-      status: FORM_STATUS.PENDING
+      status: data.status ?? FORM_STATUS.PENDING,
     };
 
     return super.create(normalizedData as any);

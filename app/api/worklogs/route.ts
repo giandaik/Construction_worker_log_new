@@ -3,6 +3,8 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/constants/constants';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser } from '@/utils/auth';
+import { sendSignatureNotificationEmail } from '@/lib/email/resendEmail';
+import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {
   try {
@@ -60,6 +62,35 @@ export async function POST(request: Request) {
 
       // Create the work log using repository
       const workLog = await workLogRepo.create(workLogData);
+
+      if (Array.isArray(data.signatures) && data.signatures.length > 0) {
+        const latestSignature = data.signatures[data.signatures.length - 1];
+
+        // Fetch project details from database
+        let projectName: string | undefined;
+        try {
+          await DatabaseUtils.withConnection(async (db) => {
+            const projectsCollection = db.collection('projects');
+            const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
+            if (projectId) {
+              const { ObjectId } = await import('mongodb');
+              const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
+              projectName = project?.name;
+            }
+          });
+        } catch (error) {
+          console.error('Error fetching project details:', error);
+        }
+
+        await sendSignatureNotificationEmail({
+          signerName: latestSignature.signedBy,
+          signerRole: latestSignature.role,
+          projectName,
+          signatureTimestamp: latestSignature.signedAt?.toString(),
+        }).catch((error) => {
+          console.error('Error sending signature notification email:', error);
+        });
+      }
 
       console.log(`Work log created in ${Date.now() - startTime}ms`);
 
