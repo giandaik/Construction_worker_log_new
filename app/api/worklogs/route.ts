@@ -3,7 +3,7 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/constants/constants';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser } from '@/utils/auth';
-import { sendSignatureNotificationEmail } from '@/lib/email/resendEmail';
+import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
 import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {

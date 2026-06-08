@@ -3,7 +3,7 @@ import { DatabaseUtils } from '@/lib/api/database';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify } from '@/utils/auth';
-import { sendSignatureNotificationEmail } from '@/lib/email/resendEmail';
+import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
 
 export async function GET(
   request: Request,
