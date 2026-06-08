@@ -192,14 +192,16 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
               />
             </FormField>
             <FormField label="Count" htmlFor={`personnel-count-${index}`}>
-              <input
-                type="number"
+              <select
                 id={`personnel-count-${index}`}
                 value={item.count}
                 onChange={(e) => personnel.update(index, 'count', parseInt(e.target.value) || 0)}
-                min="1"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
+              >
+                {Array.from({ length: 10 }, (_, i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
             </FormField>
           </div>
         )}
