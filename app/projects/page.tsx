@@ -51,7 +51,7 @@ export default function ProjectsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => router.push('/')}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home

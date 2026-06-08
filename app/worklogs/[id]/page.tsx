@@ -170,12 +170,12 @@ export default function WorkLogDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <Button variant="ghost" onClick={() => router.back()}>
+    <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
+        <Button variant="ghost" className="self-start" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Work Logs
         </Button>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href={`/worklogs/${id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
@@ -192,18 +192,18 @@ export default function WorkLogDetailPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start w-full">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start w-full">
             <div>
-              <CardTitle className="text-2xl">
-              <span>Work Log - {new Date(workLog.date).toLocaleDateString()}</span>                   
+              <CardTitle className="text-xl sm:text-2xl">
+              <span>Work Log - {new Date(workLog.date).toLocaleDateString()}</span>
               </CardTitle>
               <CardDescription>
                 Created: {workLog.createdAt ? new Date(workLog.createdAt).toLocaleString() : 'Unknown'}
-              </CardDescription>              
+              </CardDescription>
             </div>
-            <span className={`work-log-status  ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES]}`}>
+            <span className={`work-log-status self-start whitespace-nowrap ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES]}`}>
               {FORM_STATUS_LABELS[workLog.status as keyof typeof FORM_STATUS_LABELS] ?? "N/A"}
-            </span>  
+            </span>
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -260,7 +260,7 @@ export default function WorkLogDetailPage() {
                 <div className="grid gap-4">
                   {workLog.personnel.map((person, index) => (
                     <div key={index} className="border rounded-md p-4 bg-gray-50">
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <p className="text-sm text-gray-500">{LABELS.role}</p>
                           <strong>{person.role || 'N/A'}</strong>
