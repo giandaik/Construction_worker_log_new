@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -347,14 +348,14 @@ export default function WorkLogDetailPage() {
                     href={src}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block aspect-square overflow-hidden rounded-md border bg-gray-50"
+                    className="relative block aspect-square overflow-hidden rounded-md border bg-gray-50"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={src}
                       alt={`Photo ${index + 1}`}
-                      className="h-full w-full object-cover transition-transform hover:scale-105"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                      className="object-cover transition-transform hover:scale-105"
                     />
                   </a>
                 ))}

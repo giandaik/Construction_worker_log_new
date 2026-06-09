@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@/components/ui/input'
@@ -19,7 +18,6 @@ import { PlusCircle, ArrowLeft, Trash2 } from "lucide-react"
 import { addPendingWorkLog } from '@/lib/indexedDBHelper'
 import { v4 as uuidv4 } from 'uuid'
 import { Toaster } from '@/components/ui/toaster'
-import mongoose from 'mongoose'
 import { SignatureSection } from '@/components/SignatureSection'
 import { PhotoUpload } from '@/components/forms/PhotoUpload'
 import type { Signature } from '@/types/shared'
@@ -29,7 +27,6 @@ import { PERSONNEL_ROLES, LABELS } from '@/lib/constants/constantValues'
 function NewWorkLogFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session } = useSession()
   const [projects, setProjects] = useState<ProjectWithId[]>([])
   const [users, setUsers] = useState<UserWithId[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -105,17 +102,7 @@ function NewWorkLogFormContent() {
           }
         }
 
-        // Set default author based on session or first user if available
-        if (session?.user?.email) {
-          const currentUser = usersData.find((user: UserWithId) =>
-            user.email === session.user?.email
-          )
-          if (currentUser) {
-            setValue('author', currentUser._id)
-          } else if (usersData.length > 0) {
-            setValue('author', usersData[0]._id)
-          }
-        } else if (usersData.length > 0 && !watch('author')) {
+        if (usersData.length > 0 && !watch('author')) {
           setValue('author', usersData[0]._id)
         }
 
@@ -128,16 +115,7 @@ function NewWorkLogFormContent() {
     }
 
     loadData()
-  }, [session, setValue, watch, searchParams])
-
-  // Add debug output to check state updates
-  useEffect(() => {
-    console.log('Projects updated:', projects)
-  }, [projects])
-
-  useEffect(() => {
-    console.log('Users updated:', users)
-  }, [users])
+  }, [setValue, watch, searchParams])
 
   useEffect(() => {
     // Check initial online status
@@ -325,9 +303,6 @@ function NewWorkLogFormContent() {
         throw new Error('Failed to create project')
       }
 
-      console.log('Created project:', createdProject)
-
-      // Add the new project to the list and select it
       setProjects(prevProjects => [...prevProjects, createdProject])
       setValue('project', createdProject._id)
 
@@ -356,9 +331,6 @@ function NewWorkLogFormContent() {
         throw new Error('Failed to create user')
       }
 
-      console.log('Created user:', createdUser)
-
-      // Add the new user to the list and select it
       setUsers(prevUsers => [...prevUsers, createdUser])
       setValue('author', createdUser._id)
 

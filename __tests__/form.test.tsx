@@ -8,8 +8,6 @@ import { WorkLog, Project, User } from '../lib/models';
 import type { IProject, IUser } from '../lib/models';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import { SessionProvider } from 'next-auth/react';
-
 
 let mongoServer: MongoMemoryServer;
 
@@ -32,24 +30,7 @@ beforeEach(async () => {
   await User.deleteMany({});
 });
 
-// Mock session
-const mockSession = {
-  user: {
-    id: 'test-user-id',
-    name: 'Test User',
-    email: 'test@example.com',
-  },
-  expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-};
-
-// Helper to render with SessionProvider
-const renderWithSession = (component: React.ReactElement) => {
-  return render(
-    <SessionProvider session={mockSession}>
-      {component}
-    </SessionProvider>
-  );
-};
+const renderWithSession = (component: React.ReactElement) => render(component);
 
 describe('WorkLogForm', () => {
   const mockManagerId = new mongoose.Types.ObjectId();

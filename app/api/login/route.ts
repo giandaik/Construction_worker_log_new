@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/dbConnect";
 import mongoose from "mongoose";
-import { createHash } from "crypto";
+import { compare } from "bcryptjs";
 import { SignJWT } from "jose";
 import { setSessionCookie, validateJWTSecret } from "@/utils/auth";
-
-
-function hashPassword(password: string) {
-  return createHash("sha256").update(password).digest("hex");
-}
 
 export async function POST(request: Request) {
   try {
@@ -25,11 +20,14 @@ export async function POST(request: Request) {
     const db = mongoose.connection;
     const usersCollection = db.collection("users");
 
-    // Basic auth: look for user with matching email and passwordHash
-    const user = await usersCollection.findOne({
-      email,
-      password: hashPassword(password),
-    });
+    const user = await usersCollection.findOne({ email });
+
+    if (!user || !user.password || !(await compare(password, user.password))) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
     
     if (!user) {
       return NextResponse.json(

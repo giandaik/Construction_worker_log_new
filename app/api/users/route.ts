@@ -2,11 +2,16 @@ import { ApiError } from "@/lib/api/errorHandling";
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
 import { getAuthUser, isAdmin } from "@/utils/auth";
+import { hash } from "bcryptjs";
 
 export async function GET() {
   try {
+    const authUser = await getAuthUser();
+    if (!authUser) {
+      return ApiError.unauthorized();
+    }
+
     return await RepositoryFactory.withUserRepository(async (userRepo) => {
-      // Ensure default user exists
       await userRepo.ensureDefaultUser();
 
       // Return user summary (lightweight for dropdowns)
@@ -39,13 +44,13 @@ export async function POST(request: Request) {
     }
 
     return await RepositoryFactory.withUserRepository(async (userRepo) => {
-      // Create new user with defaults (repository will validate email uniqueness)
+      const { password, ...rest } = validatedData.data;
       const newUser = {
-        ...validatedData.data,
-        role: validatedData.data.role || 'user',
+        ...rest,
+        password: await hash(password, 12),
+        role: rest.role || 'user',
       };
 
-      // Insert using repository (will throw error if email is already in use)
       const user = await userRepo.create(newUser as any);
 
       return ApiError.success(user, 201);

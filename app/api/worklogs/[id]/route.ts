@@ -1,6 +1,6 @@
 // GET a single work log by ID
-import { DatabaseUtils } from '@/lib/api/database';
 import { ApiError } from '@/lib/api/errorHandling';
+import { DatabaseUtils } from '@/lib/api/database';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify } from '@/utils/auth';
 import {
@@ -21,17 +21,8 @@ export async function GET(
   try {
     const { id } = await params;
 
-    return await DatabaseUtils.withConnection(async (db) => {
-      const workLogRepo = RepositoryFactory.getWorkLogRepository();
-      const projectsCollection = db.collection('projects');
-      const usersCollection = db.collection('users');
-
-      // Find work log by ID with populated details
-      const workLog = await workLogRepo.findByIdWithDetails(
-        id,
-        projectsCollection,
-        usersCollection
-      );
+    return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const workLog = await workLogRepo.findByIdWithDetails(id);
 
       if (!workLog) {
         return ApiError.notFound('Work log');

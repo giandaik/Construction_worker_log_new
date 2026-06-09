@@ -1,6 +1,4 @@
-import { totalmem } from "os";
-
-export const PERSONNEL_ROLES = 
+export const PERSONNEL_ROLES =
 ["Εργοδηγοί",  "Επιστάτες", "Τεχνίτες", "Βοηθοί", "Εργάτες", "Χειριστές","Οδηγοί"];
 
 export const LABELS = {   

@@ -78,4 +78,9 @@ const WorkLogSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+WorkLogSchema.index({ project: 1, createdAt: -1 });
+WorkLogSchema.index({ author: 1, createdAt: -1 });
+WorkLogSchema.index({ date: -1 });
+WorkLogSchema.index({ status: 1 });
+
 export default mongoose.models.WorkLog || mongoose.model<IWorkLog>('WorkLog', WorkLogSchema); 

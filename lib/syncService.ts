@@ -8,16 +8,11 @@ import { dataUrlToBlob, isDataUrl, uploadImageBlob } from './imageResize';
 
 async function uploadPendingDataUrls(images: string[] | undefined): Promise<string[] | undefined> {
   if (!images || images.length === 0) return images;
-  const resolved: string[] = [];
-  for (const entry of images) {
-    if (isDataUrl(entry)) {
-      const url = await uploadImageBlob(dataUrlToBlob(entry));
-      resolved.push(url);
-    } else {
-      resolved.push(entry);
-    }
-  }
-  return resolved;
+  return Promise.all(
+    images.map((entry) =>
+      isDataUrl(entry) ? uploadImageBlob(dataUrlToBlob(entry)) : Promise.resolve(entry),
+    ),
+  );
 }
 
 /**
@@ -56,61 +51,42 @@ const transformPendingDataToApiPayload = (pendingData: PendingWorkLogData): Work
 
 // Attempts to sync all pending work logs with the server
 export const syncPendingWorkLogs = async (): Promise<{ successful: number; failed: number }> => {
-  let successfulSyncs = 0;
-  let failedSyncs = 0;
-
   try {
     const pendingLogs = await getPendingWorkLogs();
-    console.log(`Found ${pendingLogs.length} pending work logs to sync.`);
+    if (pendingLogs.length === 0) return { successful: 0, failed: 0 };
 
-    if (pendingLogs.length === 0) {
-      return { successful: 0, failed: 0 };
-    }
-
-    // Process logs one by one
-    for (const log of pendingLogs) {
-      try {
-        console.log(`Attempting to sync log with tempId: ${log.tempId}`);
+    const results = await Promise.allSettled(
+      pendingLogs.map(async (log) => {
         const apiPayload = transformPendingDataToApiPayload(log);
         apiPayload.images = await uploadPendingDataUrls(apiPayload.images);
 
         const response = await fetch('/api/worklogs', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(apiPayload),
         });
 
-        if (response.ok) { // Check for 2xx status codes
-          const result = await response.json();
-          console.log(`Successfully synced log tempId: ${log.tempId}, server _id: ${result._id}`);
-          // Delete from IndexedDB only after successful server confirmation
-          await deletePendingWorkLog(log.tempId);
-          successfulSyncs++;
-        } else {
-          // Handle API errors (e.g., 4xx, 5xx)
-          const errorBody = await response.text(); // Read error response
-          console.error(`Failed to sync log tempId: ${log.tempId}. Status: ${response.status}. Error: ${errorBody}`);
-          failedSyncs++;
-          // Optional: Implement retry logic or mark the log as failed in IndexedDB?
-          // For now, we stop syncing on the first failure to prevent hammering
-          // break;
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Status ${response.status}: ${errorBody}`);
         }
-      } catch (error) {
-        // Handle network errors or errors during transformation/fetch
-        console.error(`Error syncing log tempId: ${log.tempId}:`, error);
-        failedSyncs++;
-        // Optional: Implement retry logic?
-        // Stop syncing on network or unexpected errors
-        // break;
+
+        await deletePendingWorkLog(log.tempId);
+      }),
+    );
+
+    const successful = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        console.error(`Failed to sync log ${pendingLogs[i].tempId}:`, r.reason);
       }
-    }
+    });
+
+    return { successful, failed };
   } catch (error) {
     console.error('Failed to retrieve pending work logs:', error);
-    // Can't proceed if we can't read from IndexedDB
+    return { successful: 0, failed: 0 };
   }
-
-  console.log(`Sync finished. Successful: ${successfulSyncs}, Failed: ${failedSyncs}`);
-  return { successful: successfulSyncs, failed: failedSyncs };
 }; 

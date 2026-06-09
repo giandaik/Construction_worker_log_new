@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useCurrentUser } from '@/components/auth-context';
 import { v4 as uuidv4 } from 'uuid';
 import { addPendingWorkLog, PendingWorkLogData } from '@/lib/indexedDBHelper';
 import { useOnlineStatus } from './useOnlineStatus';
@@ -33,24 +33,21 @@ interface SubmitOptions {
  * Abstracts the complexity of determining whether to save locally or submit to server
  */
 export function useOfflineSync() {
-  const { data: session } = useSession();
+  const { user } = useCurrentUser();
   const isOnline = useOnlineStatus();
   const { showSuccess, showError } = useToast();
 
-  /**
-   * Submit work log - automatically handles online/offline scenarios
-   */
   const submitWorkLog = useCallback(async ({
     onlineSubmit,
     formData,
   }: SubmitOptions) => {
-    if (!session?.user?.id) {
+    if (!user?.userId) {
       const errorMsg = 'User not authenticated. Please sign in to submit work logs.';
       showError(errorMsg);
       throw new Error(errorMsg);
     }
 
-    const authorId = session.user.id;
+    const authorId = user.userId;
 
     if (isOnline) {
       // Online submission
@@ -101,7 +98,7 @@ export function useOfflineSync() {
         throw error;
       }
     }
-  }, [session, isOnline, showSuccess, showError]);
+  }, [user, isOnline, showSuccess, showError]);
 
   return {
     isOnline,
