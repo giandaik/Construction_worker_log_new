@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import { SessionProvider } from 'next-auth/react';
 import dbConnect from '../lib/dbConnect';
 
 // Mock next/navigation
@@ -19,22 +18,6 @@ vi.mock('next/navigation', () => ({
     back: mockRouterBack,
   }),
   useParams: () => mockParams,
-}));
-
-// Mock next-auth
-vi.mock('next-auth/react', () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useSession: () => ({
-    data: {
-      user: {
-        id: 'test-user-id',
-        name: 'Test User',
-        email: 'test@example.com',
-      },
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    },
-    status: 'authenticated',
-  }),
 }));
 
 // Mock data-fetchers
