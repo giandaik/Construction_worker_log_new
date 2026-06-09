@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 interface AuthUser {
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextValue>({ user: null, isLoading: tru
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     fetch('/api/me')
@@ -27,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
-  }, []);
+  }, [pathname]);
 
   return <AuthContext.Provider value={{ user, isLoading }}>{children}</AuthContext.Provider>;
 }
