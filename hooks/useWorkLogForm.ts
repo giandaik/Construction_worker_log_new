@@ -166,6 +166,10 @@ export function useWorkLogForm() {
     }));
   }, []);
 
+  const updateWeather = useCallback((weather: string) => {
+    setFormData(prev => ({ ...prev, weather }));
+  }, []);
+
   /**
    * Reset form to initial state
    */
@@ -214,6 +218,7 @@ export function useWorkLogForm() {
     },
     updateSignatures,
     updateImages,
+    updateWeather,
     resetForm,
     toAPIFormat,
   };

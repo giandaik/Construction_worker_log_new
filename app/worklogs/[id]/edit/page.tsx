@@ -17,6 +17,9 @@ import { ArrowLeft } from "lucide-react"
 import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
 import { PhotoUpload } from '@/components/forms/PhotoUpload'
+import { Combobox } from '@/components/forms/Combobox'
+import { WeatherPicker } from '@/components/forms/WeatherPicker'
+import { useSuggestions } from '@/hooks/useSuggestions'
 import type { Signature } from '@/types/shared'
 import { Skeleton } from "@/components/ui/skeleton"
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
@@ -49,6 +52,12 @@ export default function EditWorkLogForm() {
       materials: []
     }
   })
+
+  const watchedProject = watch('project') || ''
+  const roleSuggestions = useSuggestions('personnel.role', watchedProject)
+  const equipmentTypeSuggestions = useSuggestions('equipment.type', watchedProject)
+  const materialNameSuggestions = useSuggestions('materials.name', watchedProject)
+  const materialUnitSuggestions = useSuggestions('materials.unit', watchedProject)
 
   useEffect(() => {
     const loadData = async () => {
@@ -299,9 +308,9 @@ export default function EditWorkLogForm() {
 
                 <div>
                   <Label htmlFor="weather">Weather</Label>
-                  <Input
-                    id="weather"
-                    {...register('weather')}
+                  <WeatherPicker
+                    value={watch('weather') || ''}
+                    onChange={(v) => setValue('weather', v, { shouldDirty: true })}
                   />
                   {errors.weather && <p className="text-red-500">{errors.weather.message}</p>}
                 </div>
@@ -340,9 +349,11 @@ export default function EditWorkLogForm() {
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Role</Label>
-                      <Input
+                      <Combobox
+                        value={watch(`personnel.${index}.role`) || ''}
+                        onChange={(v) => setValue(`personnel.${index}.role`, v, { shouldDirty: true })}
+                        suggestions={roleSuggestions}
                         placeholder="Role"
-                        {...register(`personnel.${index}.role`)}
                       />
                     </div>
                     <div>
@@ -379,9 +390,11 @@ export default function EditWorkLogForm() {
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Type</Label>
-                      <Input
+                      <Combobox
+                        value={watch(`equipment.${index}.type`) || ''}
+                        onChange={(v) => setValue(`equipment.${index}.type`, v, { shouldDirty: true })}
+                        suggestions={equipmentTypeSuggestions}
                         placeholder="Type"
-                        {...register(`equipment.${index}.type`)}
                       />
                     </div>
                     <div>
@@ -416,9 +429,11 @@ export default function EditWorkLogForm() {
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
                     <div>
                       <Label>Name</Label>
-                      <Input
+                      <Combobox
+                        value={watch(`materials.${index}.name`) || ''}
+                        onChange={(v) => setValue(`materials.${index}.name`, v, { shouldDirty: true })}
+                        suggestions={materialNameSuggestions}
                         placeholder="Name"
-                        {...register(`materials.${index}.name`)}
                       />
                     </div>
                     <div>
@@ -431,9 +446,11 @@ export default function EditWorkLogForm() {
                     </div>
                     <div>
                       <Label>Unit</Label>
-                      <Input
-                        placeholder="Unit"
-                        {...register(`materials.${index}.unit`)}
+                      <Combobox
+                        value={watch(`materials.${index}.unit`) || ''}
+                        onChange={(v) => setValue(`materials.${index}.unit`, v, { shouldDirty: true })}
+                        suggestions={materialUnitSuggestions}
+                        placeholder="m³, kg, τεμ., m², ώρες"
                       />
                     </div>
                   </div>

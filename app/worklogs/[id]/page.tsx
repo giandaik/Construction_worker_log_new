@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import {ArrowLeft, FileDown, Pencil, Trash} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
+import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 import "../worklogs.css";
+
+const WEATHER_LABEL_MAP: Record<string, { label: string; Icon: typeof WEATHER_OPTIONS[number]['icon'] }> =
+  Object.fromEntries(WEATHER_OPTIONS.map(({ key, label, icon }) => [key, { label, Icon: icon }]));
 
 // Define a comprehensive WorkLog interface
 interface Personnel {
@@ -232,7 +236,19 @@ export default function WorkLogDetailPage() {
               {workLog.weather && (
                 <div>
                   <p className="text-sm text-gray-500">Weather</p>
-                  <p>{workLog.weather}</p>
+                  {(() => {
+                    const mapped = WEATHER_LABEL_MAP[workLog.weather];
+                    if (mapped) {
+                      const { label, Icon } = mapped;
+                      return (
+                        <p className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" aria-hidden />
+                          <span>{label}</span>
+                        </p>
+                      );
+                    }
+                    return <p>{workLog.weather}</p>;
+                  })()}
                 </div>
               )}
               {typeof workLog.temperature === 'number' && (

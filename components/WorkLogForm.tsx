@@ -11,6 +11,9 @@ import { FormField } from '@/components/forms/FormField';
 import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
 import { PhotoUpload } from '@/components/forms/PhotoUpload';
+import { Combobox } from '@/components/forms/Combobox';
+import { WeatherPicker } from '@/components/forms/WeatherPicker';
+import { useSuggestions } from '@/hooks/useSuggestions';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 
 function PersonnelCountField({
@@ -96,8 +99,14 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
     materials,
     updateSignatures,
     updateImages,
+    updateWeather,
     resetForm,
   } = useWorkLogForm();
+
+  const roleSuggestions = useSuggestions('personnel.role', formData.project);
+  const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
+  const materialNameSuggestions = useSuggestions('materials.name', formData.project);
+  const materialUnitSuggestions = useSuggestions('materials.unit', formData.project);
 
   const { isOnline, submitWorkLog } = useOfflineSync();
   const { toast, showError } = useToast();
@@ -200,13 +209,9 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
       </FormField>
 
       <FormField label="Weather" htmlFor="weather">
-        <input
-          type="text"
-          id="weather"
-          name="weather"
+        <WeatherPicker
           value={formData.weather || ''}
-          onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          onChange={updateWeather}
         />
       </FormField>
 
@@ -253,12 +258,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-2 gap-4 pr-8">
             <FormField label="Role" htmlFor={`personnel-role-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`personnel-role-${index}`}
                 value={item.role}
-                onChange={(e) => personnel.update(index, 'role', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => personnel.update(index, 'role', v)}
+                suggestions={roleSuggestions}
+                placeholder="e.g. Εργάτης"
               />
             </FormField>
             <FormField label="Count" htmlFor={`personnel-count-${index}`}>
@@ -281,12 +286,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Type" htmlFor={`equipment-type-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`equipment-type-${index}`}
                 value={item.type}
-                onChange={(e) => equipment.update(index, 'type', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => equipment.update(index, 'type', v)}
+                suggestions={equipmentTypeSuggestions}
+                placeholder="e.g. Εκσκαφέας"
               />
             </FormField>
             <FormField label="Count" htmlFor={`equipment-count-${index}`}>
@@ -323,12 +328,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Name" htmlFor={`material-name-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`material-name-${index}`}
                 value={item.name}
-                onChange={(e) => materials.update(index, 'name', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => materials.update(index, 'name', v)}
+                suggestions={materialNameSuggestions}
+                placeholder="e.g. Σκυρόδεμα"
               />
             </FormField>
             <FormField label="Quantity" htmlFor={`material-quantity-${index}`}>
@@ -343,12 +348,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
               />
             </FormField>
             <FormField label="Unit" htmlFor={`material-unit-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`material-unit-${index}`}
                 value={item.unit}
-                onChange={(e) => materials.update(index, 'unit', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => materials.update(index, 'unit', v)}
+                suggestions={materialUnitSuggestions}
+                placeholder="m³, kg, τεμ., m², ώρες"
               />
             </FormField>
           </div>
