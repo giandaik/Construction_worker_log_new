@@ -12,7 +12,6 @@ import {
   validateSignatureOrder,
   hasContractorThenOwnerSignatures,
 } from '@/lib/signatureUtils';
-import { generateWorkLogPdfBuffer } from '@/lib/pdf/workLogPdf';
 import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {
@@ -152,24 +151,7 @@ export async function POST(request: Request) {
             );
             return workLogDetails;
           });
-
-          if (populatedWorkLog) {
-            const pdfBuffer = await generateWorkLogPdfBuffer(populatedWorkLog as any);
-            await sendWorkLogCompletedEmail(
-              {
-                projectName,
-                workLogId: workLog._id ? workLog._id.toString() : undefined,
-                signerName: latestSignature.signedBy,
-              },
-              [{
-                filename: `worklog-${workLog._id?.toString() || 'completed'}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf',
-              }]
-            ).catch((error) => {
-              console.error('Error sending completed work log email:', error);
-            });
-          }
+          
         }
       }
 

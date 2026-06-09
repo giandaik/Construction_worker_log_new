@@ -12,7 +12,6 @@ import {
   validateSignatureOrder,
   hasContractorThenOwnerSignatures,
 } from '@/lib/signatureUtils';
-import { generateWorkLogPdfBuffer } from '@/lib/pdf/workLogPdf';
 
 export async function GET(
   request: Request,
