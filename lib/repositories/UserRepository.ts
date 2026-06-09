@@ -1,5 +1,6 @@
 import type { Collection } from 'mongodb';
 import { ObjectId } from 'mongodb';
+import { hash } from 'bcryptjs';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
 
@@ -15,6 +16,7 @@ export interface User {
   _id?: string | ObjectId;
   name: string;
   email: string;
+  password?: string;
   role?: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
@@ -108,6 +110,7 @@ export class UserRepository extends BaseRepository<User> {
       const defaultUser: Omit<User, '_id' | 'createdAt' | 'updatedAt'> = {
         name: 'Default User',
         email: 'default@example.com',
+        password: await hash('changeme123', 12),
         role: 'admin',
       };
 

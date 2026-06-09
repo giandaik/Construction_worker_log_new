@@ -8,6 +8,11 @@ import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser();
+    if (!authUser) {
+      return ApiError.unauthorized();
+    }
+
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       // Get project filter from query parameters
       const { searchParams } = new URL(request.url);
