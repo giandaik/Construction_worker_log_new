@@ -2,8 +2,9 @@ export interface SignatureNotificationPayload {
   signerName: string;
   signerRole?: string;
   projectName?: string;
-  signatureTimestamp?: string;
+  signatureSignedAt?: string | Date;
   workLogUrl?: string;
+  workLogId?: string;
 }
 
 const getAppUrl = (): string => {
@@ -17,11 +18,13 @@ const getAppUrl = (): string => {
 export const buildSignatureNotificationTemplate = (
   payload: SignatureNotificationPayload
 ) => {
-  const formattedDate = payload.signatureTimestamp
-    ? new Date(payload.signatureTimestamp).toLocaleString()
-    : 'Unknown date';
+  const formattedDate = payload.signatureSignedAt
+            ? new Date(payload.signatureSignedAt).toLocaleString()
+            : "Unknown date";
 
-  const workLogUrl = payload.workLogUrl || `${getAppUrl()}/worklogs`;
+  const workLogUrl =
+    payload.workLogUrl ??
+    (payload.workLogId ? `${getAppUrl()}/worklogs/${payload.workLogId}` : `${getAppUrl()}/worklogs`);
   const subject = `Work log signed by ${payload.signerName}`;
 
   const html = `

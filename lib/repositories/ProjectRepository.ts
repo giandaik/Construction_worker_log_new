@@ -15,6 +15,8 @@ export interface Project {
   name: string;
   description?: string;
   location?: string;
+  ownerName?: string;
+  contractorName?: string;
   client?: string;
   startDate?: Date;
   endDate?: Date;
@@ -94,10 +96,10 @@ export class ProjectRepository extends BaseRepository<Project> {
   /**
    * Get projects summary (lightweight for dropdowns)
    */
-  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status'>[]> {
+  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'ownerName' | 'contractorName'>[]> {
     const documents = await this.collection
       .find({})
-      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1 })
+      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, ownerName: 1, contractorName: 1 })
       .sort({ name: 1 })
       .toArray();
 
@@ -116,6 +118,8 @@ export class ProjectRepository extends BaseRepository<Project> {
         name: 'Default Project',
         description: 'Default project for work logs',
         location: 'Default Location',
+        ownerName: 'Default Owner',
+        contractorName: 'Default Contractor',
         client: 'Default Client',
         startDate: new Date(),
         endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),

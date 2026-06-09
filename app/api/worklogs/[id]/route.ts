@@ -3,7 +3,16 @@ import { DatabaseUtils } from '@/lib/api/database';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify } from '@/utils/auth';
-import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
+import {
+  sendSignatureNotificationEmail,
+  sendWorkLogCompletedEmail,
+} from '@/lib/email/sendEmail';
+import {
+  getWorkLogStatusFromSignatures,
+  validateSignatureOrder,
+  hasContractorThenOwnerSignatures,
+} from '@/lib/signatureUtils';
+import { generateWorkLogPdfBuffer } from '@/lib/pdf/workLogPdf';
 
 export async function GET(
   request: Request,
@@ -69,6 +78,35 @@ export async function PUT(
         : existingWorkLog.signatures ?? [];
       const hasNewSignature = updatedSignatures.length > existingSignatureCount;
 
+      let projectName: string | undefined;
+      let projectOwnerName: string | undefined;
+      let projectContractorName: string | undefined;
+
+      try {
+        await DatabaseUtils.withConnection(async (db) => {
+          const projectsCollection = db.collection('projects');
+          const projectId = typeof existingWorkLog.project === 'string' ? existingWorkLog.project : existingWorkLog.project?.toString();
+          if (projectId) {
+            const { ObjectId } = await import('mongodb');
+            const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
+            projectName = project?.name;
+            projectOwnerName = project?.ownerName;
+            projectContractorName = project?.contractorName;
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      }
+
+      const signatureOrderError = validateSignatureOrder(updatedSignatures, projectOwnerName, projectContractorName);
+      if (signatureOrderError) {
+        return ApiError.badRequest(signatureOrderError);
+      }
+
+      if (projectOwnerName && projectContractorName) {
+        data.status = getWorkLogStatusFromSignatures(updatedSignatures, projectOwnerName, projectContractorName);
+      }
+
       // Update the work log using repository
       const workLog = await workLogRepo.update(id, data);
 
@@ -79,41 +117,40 @@ export async function PUT(
       if (hasNewSignature && updatedSignatures.length > 0) {
         const latestSignature = updatedSignatures[updatedSignatures.length - 1];
 
-        // Fetch project details from database
-        let projectName: string | undefined;
-        try {
-          return await DatabaseUtils.withConnection(async (db) => {
-            const projectsCollection = db.collection('projects');
-            const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
-            if (projectId) {
-              const { ObjectId } = await import('mongodb');
-              const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
-              projectName = project?.name;
-            }
+        await sendSignatureNotificationEmail({
+          signerName: latestSignature.signedBy,
+          signerRole: latestSignature.role,
+          projectName,
+          signatureSignedAt: latestSignature.signedAt.toString(),
+          workLogId: id,
+        }).catch((error) => {
+          console.error('Error sending signature notification email:', error);
+        });
 
-            await sendSignatureNotificationEmail({
-              signerName: latestSignature.signedBy,
-              signerRole: latestSignature.role,
-              projectName,
-              signatureTimestamp: latestSignature.signedAt?.toString(),
-            }).catch((error) => {
-              console.error('Error sending signature notification email:', error);
+        if (projectOwnerName && projectContractorName && hasContractorThenOwnerSignatures(updatedSignatures, projectOwnerName, projectContractorName)) {
+          const workLogDetails = await workLogRepo.findByIdWithDetails(
+            id,
+            DatabaseUtils.getCollection('projects'),
+            DatabaseUtils.getCollection('users')
+          );
+
+          if (workLogDetails) {
+            const pdfBuffer = await generateWorkLogPdfBuffer(workLogDetails as any);
+            await sendWorkLogCompletedEmail(
+              {
+                projectName,
+                workLogId: id,
+                signerName: latestSignature.signedBy,
+              },
+              [{
+                filename: `worklog-${id}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+              }]
+            ).catch((error) => {
+              console.error('Error sending completed work log email:', error);
             });
-
-            return ApiError.success(workLog);
-          });
-        } catch (error) {
-          console.error('Error fetching project details:', error);
-          await sendSignatureNotificationEmail({
-            signerName: latestSignature.signedBy,
-            signerRole: latestSignature.role,
-            projectName,
-            signatureTimestamp: latestSignature.signedAt?.toString(),
-          }).catch((error) => {
-            console.error('Error sending signature notification email:', error);
-          });
-
-          return ApiError.success(workLog);
+          }
         }
       }
 

@@ -117,6 +117,8 @@ export interface Project {
   name: string;
   description?: string;
   location?: string;
+  ownerName?: string;
+  contractorName?: string;
   status?: 'planning' | 'in-progress' | 'completed' | 'on-hold';
   startDate?: Date;
   endDate?: Date;

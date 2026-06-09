@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { fetchProjects, fetchUsers, ProjectWithId, UserWithId } from '@/lib/data-fetchers'
+import { getWorkLogStatusFromSignatures } from '@/lib/signatureUtils'
 import { ArrowLeft } from "lucide-react"
 import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
@@ -120,8 +121,12 @@ export default function EditWorkLogForm() {
         return
       }
 
-      // Set status based on whether signatures exist
-      const status = signatures.length > 0 ? 'signed' : 'pending'
+      const selectedProject = projects.find((project) => project._id === data.project)
+      const status = getWorkLogStatusFromSignatures(
+        signatures,
+        selectedProject?.ownerName,
+        selectedProject?.contractorName
+      )
 
       // Upload any pending (base64) images before saving
       const resolvedImages: string[] = []
@@ -465,6 +470,8 @@ export default function EditWorkLogForm() {
               <SignatureSection
                 signatures={signatures}
                 onChange={setSignatures}
+                projectOwnerName={projects.find((project) => project._id === watch('project'))?.ownerName}
+                projectContractorName={projects.find((project) => project._id === watch('project'))?.contractorName}
               />
             </div>
 

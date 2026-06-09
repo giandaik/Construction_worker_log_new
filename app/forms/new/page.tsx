@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { fetchProjects, fetchUsers, createProject, createUser, ProjectWithId, UserWithId } from '@/lib/data-fetchers'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { getWorkLogStatusFromSignatures } from '@/lib/signatureUtils'
 import { PlusCircle, ArrowLeft, Trash2 } from "lucide-react"
 import { addPendingWorkLog } from '@/lib/indexedDBHelper'
 import { v4 as uuidv4 } from 'uuid'
@@ -38,7 +39,7 @@ function NewWorkLogFormContent() {
   const [images, setImages] = useState<string[]>([])
 
   // New state for the add project/user dialogs
-  const [newProject, setNewProject] = useState({ name: '', description: '', location: '' })
+  const [newProject, setNewProject] = useState({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
   const [newUser, setNewUser] = useState({ name: '', email: '' })
   const [isAddingProject, setIsAddingProject] = useState(false)
   const [isAddingUser, setIsAddingUser] = useState(false)
@@ -179,7 +180,12 @@ function NewWorkLogFormContent() {
 
       if (isOnline) {
         // Online submission
-        const status = signatures.length > 0 ? 'signed' : 'pending'
+        const selectedProject = projects.find((project) => project._id === watch('project'))
+        const status = getWorkLogStatusFromSignatures(
+          signatures,
+          selectedProject?.ownerName,
+          selectedProject?.contractorName
+        )
 
         // Upload any pending (base64) images before saving
         const resolvedImages: string[] = []
@@ -217,7 +223,12 @@ function NewWorkLogFormContent() {
       } else {
         // Offline submission
         const tempId = uuidv4();
-        const status = signatures.length > 0 ? 'signed' : 'pending'
+        const selectedProject = projects.find((project) => project._id === watch('project'))
+        const status = getWorkLogStatusFromSignatures(
+          signatures,
+          selectedProject?.ownerName,
+          selectedProject?.contractorName
+        )
 
         const pendingData = {
           tempId,
@@ -321,7 +332,7 @@ function NewWorkLogFormContent() {
       setValue('project', createdProject._id)
 
       // Reset the form
-      setNewProject({ name: '', description: '', location: '' })
+      setNewProject({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
       toast.success('Project created successfully')
 
       // Close the dialog programmatically
@@ -473,6 +484,26 @@ function NewWorkLogFormContent() {
                             />
                           </div>
                           <div>
+                            <Label htmlFor="projectOwner">Project Owner</Label>
+                            <Input
+                              id="projectOwner"
+                              type="email"
+                              value={newProject.ownerName}
+                              onChange={(e) => setNewProject({...newProject, ownerName: e.target.value})}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="projectContractor">Project Contractor</Label>
+                            <Input
+                              id="projectContractor"
+                              type="email"
+                              value={newProject.contractorName}
+                              onChange={(e) => setNewProject({...newProject, contractorName: e.target.value})}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
                             <Label htmlFor="projectDescription">Description</Label>
                             <Textarea
                               id="projectDescription"
@@ -498,7 +529,7 @@ function NewWorkLogFormContent() {
                           <Button
                             type="button"
                             onClick={handleAddProject}
-                            disabled={isAddingProject || !newProject.name}
+                            disabled={isAddingProject || !newProject.name || !newProject.ownerName || !newProject.contractorName}
                           >
                             {isAddingProject ? 'Creating...' : 'Create Project'}
                           </Button>
@@ -797,6 +828,8 @@ function NewWorkLogFormContent() {
               <SignatureSection
                 signatures={signatures}
                 onChange={setSignatures}
+                projectOwnerName={projects.find((project) => project._id === watch('project'))?.ownerName}
+                projectContractorName={projects.find((project) => project._id === watch('project'))?.contractorName}
               />
             </div>
 

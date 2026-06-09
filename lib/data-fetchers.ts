@@ -4,6 +4,8 @@ export interface ProjectWithId {
   name: string;
   description?: string;
   location?: string;
+  ownerName?: string;
+  contractorName?: string;
   status?: string;
   startDate?: Date;
   endDate?: Date;
@@ -61,6 +63,8 @@ export async function createProject(projectData: {
   name: string; 
   description?: string;
   location?: string;
+  ownerName: string;
+  contractorName: string;
 }): Promise<ProjectWithId | null> {
   try {
     const response = await fetch('/api/projects', {

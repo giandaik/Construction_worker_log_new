@@ -1,24 +1,39 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus, X } from 'lucide-react';
 import type { Signature } from '@/types/shared';
+import { getSignatureAddError } from '@/lib/signatureUtils';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface SignatureSectionProps {
   signatures: Signature[];
   onChange: (signatures: Signature[]) => void;
+  projectOwnerName?: string;
+  projectContractorName?: string;
 }
 
 export const SignatureSection: React.FC<SignatureSectionProps> = ({
   signatures,
   onChange,
+  projectOwnerName,
+  projectContractorName,
 }) => {
   const [showAddSignature, setShowAddSignature] = useState(false);
   const [newSignatureName, setNewSignatureName] = useState('');
   const [newSignatureRole, setNewSignatureRole] = useState('');
+  const { user } = useCurrentUser();
+
+  const handleAddSignatureClick = () => {
+    if (user) {
+      setNewSignatureName(user.name);
+      setNewSignatureRole(user.role);
+    }
+    setShowAddSignature(true);
+  };
 
   const addSignature = (signatureData: string) => {
     if (!newSignatureName.trim()) {
@@ -33,6 +48,18 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
       role: newSignatureRole.trim() || undefined,
     };
 
+    const validationError = getSignatureAddError(
+      newSignature,
+      signatures,
+      projectOwnerName,
+      projectContractorName
+    );
+
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
     onChange([...signatures, newSignature]);
     setNewSignatureName('');
     setNewSignatureRole('');
@@ -43,14 +70,26 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
     onChange(signatures.filter((_, i) => i !== index));
   };
 
+  //const isAuthorized = user && (user.role === 'admin' || user.role === 'supervisor');
+
+  const hasUserSigned = user ? signatures.some((sig) => sig.signedBy === user.name) : false;
+
+  const canAddSignature =  !showAddSignature &&  signatures.length < 2 &&  !hasUserSigned;
+
+  const canAddSing = () => {
+          {console.log('Can add signature:', canAddSignature, 'Show add signature:', showAddSignature, 'Has user signed:', hasUserSigned, 'Current signatures:', signatures)}
+          return true;
+
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Signatures</h3>
-        {!showAddSignature && (
+        {canAddSignature && (
           <Button
             type="button"
-            onClick={() => setShowAddSignature(true)}
+            onClick={handleAddSignatureClick}
             variant="outline"
             size="sm"
           >
@@ -59,6 +98,11 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
           </Button>
         )}
       </div>
+      {projectOwnerName && projectContractorName && (
+        <p className="text-sm text-gray-500">
+          Signature order is required: the contractor (&quot;{projectContractorName}&quot;) must sign before the owner (&quot;{projectOwnerName}&quot;).
+        </p>
+      )}
 
       {/* Existing Signatures */}
       {signatures.length > 0 && (

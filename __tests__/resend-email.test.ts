@@ -21,6 +21,7 @@ describe('SMTP email notification', () => {
       signerRole: 'Supervisor',
       projectName: 'Downtown Renovation',
       signatureTimestamp: '2026-06-08T14:30:00Z',
+      workLogId: 'abc123',
     });
 
     expect(template.subject).toContain('Jane Smith');
@@ -28,9 +29,11 @@ describe('SMTP email notification', () => {
     expect(template.html).toContain('Jane Smith');
     expect(template.html).toContain('Supervisor');
     expect(template.html).toContain('Downtown Renovation');
+    expect(template.html).toContain('http://localhost:3000/worklogs/abc123');
     expect(template.text).toContain('Signer: Jane Smith');
     expect(template.text).toContain('Role: Supervisor');
     expect(template.text).toContain('Project: Downtown Renovation');
+    expect(template.text).toContain('UTC');
   });
 
   it('sends mail via nodemailer with the expected payload', async () => {

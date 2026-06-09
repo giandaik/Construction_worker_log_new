@@ -8,6 +8,8 @@ export const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
   description: z.string().optional(),
   location: z.string().optional(),
+  ownerName: z.string().min(1, 'Project owner is required'),
+  contractorName: z.string().min(1, 'Project contractor is required'),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   status: z.enum(['planned', 'in-progress', 'completed', 'on-hold']).optional(),

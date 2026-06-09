@@ -3,7 +3,16 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/constants/constants';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser } from '@/utils/auth';
-import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
+import {
+  sendSignatureNotificationEmail,
+  sendWorkLogCompletedEmail,
+} from '@/lib/email/sendEmail';
+import {
+  getWorkLogStatusFromSignatures,
+  validateSignatureOrder,
+  hasContractorThenOwnerSignatures,
+} from '@/lib/signatureUtils';
+import { generateWorkLogPdfBuffer } from '@/lib/pdf/workLogPdf';
 import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {
@@ -54,10 +63,45 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
-      // Ensure the worklog is created with the authenticated user's ID
+      // Determine if the selected project already defines signature parties
+      let projectOwnerName: string | undefined;
+      let projectContractorName: string | undefined;
+
+      try {
+        await DatabaseUtils.withConnection(async (db) => {
+          const projectsCollection = db.collection('projects');
+          const projectId = typeof data.project === 'string' ? data.project : data.project?.toString();
+          if (projectId) {
+            const { ObjectId } = await import('mongodb');
+            const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
+            projectOwnerName = project?.ownerName;
+            projectContractorName = project?.contractorName;
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      }
+
+      const validationError = validateSignatureOrder(
+        Array.isArray(data.signatures) ? data.signatures : [],
+        projectOwnerName,
+        projectContractorName
+      );
+
+      if (validationError) {
+        return ApiError.badRequest(validationError);
+      }
+
+      const status = getWorkLogStatusFromSignatures(
+        Array.isArray(data.signatures) ? data.signatures : [],
+        projectOwnerName,
+        projectContractorName
+      );
+
       const workLogData = {
         ...data,
-        author: user.userId
+        author: user.userId,
+        status,
       };
 
       // Create the work log using repository
@@ -68,6 +112,8 @@ export async function POST(request: Request) {
 
         // Fetch project details from database
         let projectName: string | undefined;
+        let projectOwnerName: string | undefined;
+        let projectContractorName: string | undefined;
         try {
           await DatabaseUtils.withConnection(async (db) => {
             const projectsCollection = db.collection('projects');
@@ -76,6 +122,8 @@ export async function POST(request: Request) {
               const { ObjectId } = await import('mongodb');
               const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
               projectName = project?.name;
+              projectOwnerName = project?.ownerName;
+              projectContractorName = project?.contractorName;
             }
           });
         } catch (error) {
@@ -86,10 +134,40 @@ export async function POST(request: Request) {
           signerName: latestSignature.signedBy,
           signerRole: latestSignature.role,
           projectName,
-          signatureTimestamp: latestSignature.signedAt?.toString(),
+          signatureSignedAt: latestSignature.signedAt.toString(),
+          workLogId: workLog._id ? workLog._id.toString() : undefined,
         }).catch((error) => {
           console.error('Error sending signature notification email:', error);
         });
+
+        if (projectOwnerName && projectContractorName && hasContractorThenOwnerSignatures(data.signatures, projectOwnerName, projectContractorName)) {
+          const populatedWorkLog = await RepositoryFactory.withWorkLogRepository(async (repo) => {
+            const workLogDetails = await repo.findByIdWithDetails(
+              workLog._id?.toString() ?? '',
+              DatabaseUtils.getCollection('projects'),
+              DatabaseUtils.getCollection('users')
+            );
+            return workLogDetails;
+          });
+
+          if (populatedWorkLog) {
+            const pdfBuffer = await generateWorkLogPdfBuffer(populatedWorkLog as any);
+            await sendWorkLogCompletedEmail(
+              {
+                projectName,
+                workLogId: workLog._id ? workLog._id.toString() : undefined,
+                signerName: latestSignature.signedBy,
+              },
+              [{
+                filename: `worklog-${workLog._id?.toString() || 'completed'}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+              }]
+            ).catch((error) => {
+              console.error('Error sending completed work log email:', error);
+            });
+          }
+        }
       }
 
       console.log(`Work log created in ${Date.now() - startTime}ms`);
