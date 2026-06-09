@@ -1,5 +1,6 @@
 // GET a single work log by ID
 import { ApiError } from '@/lib/api/errorHandling';
+import { DatabaseUtils } from '@/lib/api/database';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify } from '@/utils/auth';
 import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
