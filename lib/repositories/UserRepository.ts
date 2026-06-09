@@ -174,8 +174,9 @@ export class UserRepository extends BaseRepository<User> {
    * Map database document to entity
    */
   protected mapToEntity(document: any): User {
+    const { password: _password, ...rest } = document;
     return {
-      ...document,
+      ...rest,
       _id: document._id.toString(),
     };
   }
