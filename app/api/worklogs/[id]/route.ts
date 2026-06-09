@@ -117,32 +117,7 @@ export async function PUT(
         }).catch((error) => {
           console.error('Error sending signature notification email:', error);
         });
-
-        if (projectOwnerName && projectContractorName && hasContractorThenOwnerSignatures(updatedSignatures, projectOwnerName, projectContractorName)) {
-          const workLogDetails = await workLogRepo.findByIdWithDetails(
-            id,
-            DatabaseUtils.getCollection('projects'),
-            DatabaseUtils.getCollection('users')
-          );
-
-          if (workLogDetails) {
-            const pdfBuffer = await generateWorkLogPdfBuffer(workLogDetails as any);
-            await sendWorkLogCompletedEmail(
-              {
-                projectName,
-                workLogId: id,
-                signerName: latestSignature.signedBy,
-              },
-              [{
-                filename: `worklog-${id}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf',
-              }]
-            ).catch((error) => {
-              console.error('Error sending completed work log email:', error);
-            });
-          }
-        }
+        
       }
 
       return ApiError.success(workLog);

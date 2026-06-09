@@ -496,7 +496,7 @@ function NewWorkLogFormContent() {
                         </div>
                         <DialogFooter>
                           <Button type="button" variant="outline" onClick={() => {
-                            setNewProject({ name: '', description: '', location: '' })
+                            setNewProject({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
                           }}>Cancel</Button>
                           <Button
                             type="button"
