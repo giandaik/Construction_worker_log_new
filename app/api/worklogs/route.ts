@@ -148,9 +148,7 @@ export async function POST(request: Request) {
         if (projectOwnerName && projectContractorName && hasContractorThenOwnerSignatures(data.signatures, projectOwnerName, projectContractorName)) {
           const populatedWorkLog = await RepositoryFactory.withWorkLogRepository(async (repo) => {
             const workLogDetails = await repo.findByIdWithDetails(
-              workLog._id?.toString() ?? '',
-              DatabaseUtils.getCollection('projects'),
-              DatabaseUtils.getCollection('users')
+              workLog._id?.toString() ?? ''
             );
             return workLogDetails;
           });
