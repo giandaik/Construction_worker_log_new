@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import mongoose from 'mongoose';
 import { DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIALS } from '@/lib/constants/constants';
 import type { Personnel, Equipment, Material, Signature } from '@/types/shared';
 
@@ -186,18 +185,6 @@ export function useWorkLogForm(initialProject = '') {
     });
   }, []);
 
-  /**
-   * Convert form data to API format
-   */
-  const toAPIFormat = useCallback((authorId: string) => {
-    return {
-      ...formData,
-      date: new Date(formData.date),
-      project: new mongoose.Types.ObjectId(formData.project),
-      author: authorId
-    };
-  }, [formData]);
-
   return {
     formData,
     handleChange,
@@ -220,6 +207,5 @@ export function useWorkLogForm(initialProject = '') {
     updateImages,
     updateWeather,
     resetForm,
-    toAPIFormat,
   };
 }
