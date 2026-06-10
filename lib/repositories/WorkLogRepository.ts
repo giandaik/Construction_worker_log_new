@@ -127,6 +127,32 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
   }
 
   /**
+   * Find the most recent work log for a given (author, project) pair.
+   * Used to pre-fill the new-worklog form with yesterday's crew/equipment/materials.
+   */
+  async findMostRecentByAuthorAndProject(
+    authorId: string | ObjectId,
+    projectId: string | ObjectId
+  ): Promise<WorkLog | null> {
+    const authorObjectId = ValidationUtils.normalizeObjectId(authorId);
+    const projectObjectId = ValidationUtils.normalizeObjectId(projectId);
+    const projectStr = typeof projectId === 'string' ? projectId : projectId.toString();
+
+    const document = await this.collection
+      .find({
+        $and: [
+          { author: authorObjectId },
+          { $or: [{ project: projectObjectId }, { project: projectStr }] },
+        ],
+      } as any)
+      .sort({ date: -1, createdAt: -1 })
+      .limit(1)
+      .next();
+
+    return document ? this.mapToEntity(document) : null;
+  }
+
+  /**
    * Find work logs by date range
    */
   async findByDateRange(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import mongoose from 'mongoose';
 import type { WorkLogFormProps } from '../types/components';
 import type { IProject } from '@/lib/models';
@@ -100,8 +100,13 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     updateSignatures,
     updateImages,
     updateWeather,
+    seedFromPrevious,
+    clearSeed,
     resetForm,
   } = useWorkLogForm(initialProject);
+
+  const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
+  const prefillAttemptedFor = useRef<Set<string>>(new Set());
 
   const roleSuggestions = useSuggestions('personnel.role', formData.project);
   const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
@@ -146,6 +151,59 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     fetchProjects();
   }, [showError]);
 
+  // Pre-fill personnel/equipment/materials/weather from this user's most recent
+  // log on the same project. Only runs when the form is still pristine for those
+  // fields, and only once per (projectId) per mount.
+  const projectId = formData.project;
+  const formIsPristineForSeed =
+    formData.personnel.length === 0 &&
+    formData.equipment.length === 0 &&
+    formData.materials.length === 0 &&
+    !formData.weather;
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (prefillAttemptedFor.current.has(projectId)) return;
+    if (!formIsPristineForSeed) return;
+
+    prefillAttemptedFor.current.add(projectId);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/worklogs/last?project=${encodeURIComponent(projectId)}`);
+        if (!res.ok) return;
+        const last = await res.json();
+        if (cancelled || !last) return;
+
+        const hasSeed =
+          (last.personnel?.length ?? 0) > 0 ||
+          (last.equipment?.length ?? 0) > 0 ||
+          (last.materials?.length ?? 0) > 0 ||
+          !!last.weather;
+        if (!hasSeed) return;
+
+        seedFromPrevious({
+          weather: last.weather,
+          temperature: last.temperature,
+          personnel: last.personnel ?? [],
+          equipment: last.equipment ?? [],
+          materials: last.materials ?? [],
+        });
+        setPrefilledFrom(typeof last.date === 'string' ? last.date : new Date(last.date).toISOString());
+      } catch (err) {
+        console.error('Pre-fill from last worklog failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, formIsPristineForSeed, seedFromPrevious]);
+
+  const dismissPrefill = useCallback(() => {
+    clearSeed();
+    setPrefilledFrom(null);
+  }, [clearSeed]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -160,6 +218,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         formData,
       });
       resetForm();
+      setPrefilledFrom(null);
+      prefillAttemptedFor.current.clear();
     } catch (error) {
       // Error already handled by useOfflineSync
       console.error('Form submission error:', error);
@@ -176,6 +236,28 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       {toast && (
         <Alert variant={toast.type}>
           {toast.message}
+        </Alert>
+      )}
+      {prefilledFrom && (
+        <Alert variant="info">
+          <span>
+            Copied from your log on{' '}
+            <strong>
+              {new Date(prefilledFrom).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </strong>
+            .
+          </span>{' '}
+          <button
+            type="button"
+            onClick={dismissPrefill}
+            className="underline text-blue-700 hover:text-blue-900 ml-1"
+          >
+            Start blank
+          </button>
         </Alert>
       )}
 

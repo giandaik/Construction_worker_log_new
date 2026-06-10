@@ -170,6 +170,38 @@ export function useWorkLogForm(initialProject = '') {
   }, []);
 
   /**
+   * Seed the array fields + weather from a previous work log. Keeps the
+   * current project + today's date + blank workDescription/notes.
+   */
+  type SeedFields = Pick<WorkLogFormData, 'weather' | 'temperature' | 'personnel' | 'equipment' | 'materials'>;
+  const seedFromPrevious = useCallback((seed: Partial<SeedFields>) => {
+    setFormData(prev => ({
+      ...prev,
+      weather: seed.weather ?? prev.weather,
+      temperature: seed.temperature ?? prev.temperature,
+      personnel: seed.personnel ?? prev.personnel,
+      equipment: seed.equipment ?? prev.equipment,
+      materials: seed.materials ?? prev.materials,
+    }));
+  }, []);
+
+  /**
+   * Clear only the array fields + weather/temperature. Keeps the
+   * current project so the user can choose to start blank without
+   * losing their project selection.
+   */
+  const clearSeed = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      weather: undefined,
+      temperature: undefined,
+      personnel: [],
+      equipment: [],
+      materials: [],
+    }));
+  }, []);
+
+  /**
    * Reset form to initial state
    */
   const resetForm = useCallback(() => {
@@ -206,6 +238,8 @@ export function useWorkLogForm(initialProject = '') {
     updateSignatures,
     updateImages,
     updateWeather,
+    seedFromPrevious,
+    clearSeed,
     resetForm,
   };
 }
