@@ -221,7 +221,7 @@ Added in session 2026-06-08. Photos can be attached to any WorkLog (create and e
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (1493 symbols, 2694 relationships, 125 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1546 symbols, 2766 relationships, 127 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
