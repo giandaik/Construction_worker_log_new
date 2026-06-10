@@ -7,10 +7,10 @@ import {
   sendSignatureNotificationEmail,
   sendWorkLogCompletedEmail,
 } from '@/lib/email/sendEmail';
+import { createWorkLogPdfAttachment } from '@/app/worklogs/[id]/exportToPDF';
 import {
   getWorkLogStatusFromSignatures,
   validateSignatureOrder,
-  hasContractorThenOwnerSignatures,
 } from '@/lib/signatureUtils';
 import { DatabaseUtils } from '@/lib/api/database';
 
@@ -134,24 +134,33 @@ export async function POST(request: Request) {
           console.error('Error fetching project details:', error);
         }
 
-        await sendSignatureNotificationEmail({
-          signerName: latestSignature.signedBy,
-          signerRole: latestSignature.role,
-          projectName,
-          signatureSignedAt: latestSignature.signedAt.toString(),
-          workLogId: workLog._id ? workLog._id.toString() : undefined,
-        }).catch((error) => {
-          console.error('Error sending signature notification email:', error);
-        });
-
-        if (projectOwnerName && projectContractorName && hasContractorThenOwnerSignatures(data.signatures, projectOwnerName, projectContractorName)) {
-          const populatedWorkLog = await RepositoryFactory.withWorkLogRepository(async (repo) => {
-            const workLogDetails = await repo.findByIdWithDetails(
+        try {
+          if (latestSignature.projectRole === 'contractor') {
+            await sendSignatureNotificationEmail({
+              signerName: latestSignature.signedBy,
+              signerRole: latestSignature.projectRole,
+              projectName,
+              signatureSignedAt: latestSignature.signedAt.toString(),
+              workLogId: workLog._id ? workLog._id.toString() : undefined,
+            });
+          } else if (latestSignature.projectRole === 'owner') {
+            const workLogWithDetails = await workLogRepo.findByIdWithDetails(
               workLog._id?.toString() ?? ''
             );
-            return workLogDetails;
-          });
-          
+            const pdfAttachment = workLogWithDetails
+              ? await createWorkLogPdfAttachment(workLogWithDetails)
+              : undefined;
+
+            await sendWorkLogCompletedEmail({
+              signerName: latestSignature.signedBy,
+              signerRole: latestSignature.projectRole,
+              projectName,
+              signatureSignedAt: latestSignature.signedAt.toString(),
+              workLogId: workLog._id ? workLog._id.toString() : undefined,
+            }, pdfAttachment ? [pdfAttachment] : undefined);
+          }
+        } catch (error) {
+          console.error('Error sending signature email:', error);
         }
       }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 export interface CurrentUser {
-  id: string;
+  userId: string;
   name: string;
   email: string;
   role: string;
@@ -24,7 +24,7 @@ export const useCurrentUser = () => {
           throw new Error(`Failed to fetch current user: ${response.statusText}`);
         }
 
-        const data = await response.json();       
+        const data = await response.json();    
         setUser(data);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch user';

@@ -37,21 +37,43 @@ export async function POST(request: Request) {
         validatedData.error.issues.map(issue => issue.message).join(', ')
       );
     }
+    
+    return await RepositoryFactory.withUserRepository(async (userRepo) => {
+      const owner = await userRepo.findByEmail(
+        validatedData.data.ownerEmail
+      );
 
-    return await RepositoryFactory.withProjectRepository(async (projectRepo) => {
-      // Create new project with required defaults
-      const newProject = {
-        ...validatedData.data,
-        startDate: validatedData.data.startDate || new Date(),
-        endDate: validatedData.data.endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        status: validatedData.data.status || 'planned',
-      };
+      const contractor = await userRepo.findByEmail(
+        validatedData.data.contractorEmail
+      );
 
-      // Insert using repository
-      const project = await projectRepo.create(newProject as any);
+      if (!owner) {
+        return ApiError.badRequest('Owner user not found');
+      }
 
-      return ApiError.success(project, 201);
+      if (!contractor) {
+        return ApiError.badRequest('Contractor user not found');
+      }
+  
+
+      return await RepositoryFactory.withProjectRepository(async (projectRepo) => {
+        // Create new project with required defaults
+        const newProject = {
+          ...validatedData.data,
+          startDate: validatedData.data.startDate || new Date(),
+          endDate: validatedData.data.endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+          ownerUserId: owner._id?.toString(),
+          contractorUserId: contractor._id?.toString(),
+          status: validatedData.data.status || 'planned',
+        };
+
+        // Insert using repository
+        const project = await projectRepo.create(newProject as any);
+
+        return ApiError.success(project, 201);
+      });
     });
+    
   } catch (error) {
     return ApiError.handle(error);
   }

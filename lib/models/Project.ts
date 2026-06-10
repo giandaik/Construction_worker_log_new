@@ -12,6 +12,10 @@ export interface IProject extends Document {
   manager: mongoose.Types.ObjectId | IUser;
   createdAt: Date;
   updatedAt: Date;
+  ownerEmail: string;
+  contractorEmail: string;
+  ownerUserId: mongoose.Types.ObjectId | IUser;
+  contractorUserId: mongoose.Types.ObjectId | IUser;
 }
 
 const ProjectSchema: Schema = new Schema(
@@ -26,6 +30,21 @@ const ProjectSchema: Schema = new Schema(
       enum: ['planned', 'in-progress', 'completed', 'on-hold'], 
       default: 'planned' 
     },
+    ownerEmail: { type: String, required: true },
+    contractorEmail: { type: String, required: true },
+
+    ownerUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
+    contractorUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
     manager: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'User', 
@@ -37,5 +56,11 @@ const ProjectSchema: Schema = new Schema(
 
 ProjectSchema.index({ name: 1 });
 ProjectSchema.index({ status: 1 });
+
+ProjectSchema.index({ ownerUserId: 1 });
+ProjectSchema.index({ contractorUserId: 1 });
+
+ProjectSchema.index({ ownerEmail: 1 });
+ProjectSchema.index({ contractorEmail: 1 });
 
 export default mongoose.models.Project || mongoose.model<IProject>('Project', ProjectSchema);

@@ -1,10 +1,11 @@
 import jsPDF from "jspdf";
-import robotoRegular from "../../fonts/Roboto-Regular.js"; 
+import robotoRegular from "../../fonts/Roboto-Regular.js";
+import type { WorkLogWithDetails } from '@/lib/repositories/WorkLogRepository';
 
 interface Personnel {
     role: string;
     count: number;
-    workDetails: string;
+    workDetails?: string;
 }
 
 interface Equipment {
@@ -27,11 +28,11 @@ interface Signature {
 }
 
 interface WorkLog {
-    _id: string;
-    date: string;
-    project: string;
+    _id?: string | { toString(): string };
+    date: string | Date;
+    project: string | { toString(): string };
     projectName?: string;
-    author: string;
+    author: string | { toString(): string };
     authorName?: string;
     weather?: string;
     temperature?: number;
@@ -42,23 +43,57 @@ interface WorkLog {
     notes?: string;
     signatures?: Signature[];
     images?: string[];
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
 }
 
 async function fetchAsDataUrl(url: string): Promise<string> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to fetch image: ${url}`);
     const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
-    });
+
+    if (typeof FileReader !== 'undefined') {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    const arrayBuffer = await blob.arrayBuffer();
+    const contentType = blob.type || res.headers.get('content-type') || 'image/jpeg';
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    return `data:${contentType};base64,${base64}`;
 }
 
-export async function exportToPDF(workLog: WorkLog) {
+export function getWorkLogPdfFilename(workLog: WorkLog): string {
+    return `WorkLog-${new Date(workLog.date).toISOString().split("T")[0]}.pdf`;
+}
+
+export interface WorkLogPdfAttachment {
+    filename: string;
+    content: Buffer;
+    contentType: 'application/pdf';
+}
+
+export async function createWorkLogPdfAttachment(
+    workLog: WorkLogWithDetails
+): Promise<WorkLogPdfAttachment | undefined> {
+    try {
+        const content = await exportToPDFBuffer(workLog);
+        return {
+            filename: getWorkLogPdfFilename(workLog),
+            content,
+            contentType: 'application/pdf',
+        };
+    } catch (error) {
+        console.error('Error generating PDF attachment:', error);
+        return undefined;
+    }
+}
+
+async function buildWorkLogPdfDoc(workLog: WorkLog): Promise<jsPDF> {
     const doc = new jsPDF();
     doc.addFileToVFS("Roboto-Regular.ttf", robotoRegular);
     doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
@@ -207,8 +242,8 @@ export async function exportToPDF(workLog: WorkLog) {
     // Basic Info
     addHeader("Basic Information")
     addLine("Date", new Date(workLog.date).toLocaleDateString());
-    addLine("Project", workLog.projectName || workLog.project);
-    addLine("Author", workLog.authorName || workLog.author);
+    addLine("Project", workLog.projectName || String(workLog.project));
+    addLine("Author", workLog.authorName || String(workLog.author));
     addLine("Weather", workLog.weather);
     addLine("Temperature", typeof workLog.temperature === "number" ? `${workLog.temperature}°C` : undefined);
 
@@ -394,5 +429,15 @@ export async function exportToPDF(workLog: WorkLog) {
     }
 
     drawRect();
-    doc.save(`WorkLog-${new Date(workLog.date).toISOString().split("T")[0]}.pdf`);
+    return doc;
+}
+
+export async function exportToPDF(workLog: WorkLog) {
+    const doc = await buildWorkLogPdfDoc(workLog);
+    doc.save(getWorkLogPdfFilename(workLog));
+}
+
+export async function exportToPDFBuffer(workLog: WorkLogWithDetails | WorkLog): Promise<Buffer> {
+    const doc = await buildWorkLogPdfDoc(workLog as WorkLog);
+    return Buffer.from(doc.output('arraybuffer'));
 }

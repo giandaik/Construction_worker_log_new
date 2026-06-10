@@ -36,7 +36,7 @@ function NewWorkLogFormContent() {
   const [images, setImages] = useState<string[]>([])
 
   // New state for the add project/user dialogs
-  const [newProject, setNewProject] = useState({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
+  const [newProject, setNewProject] = useState({ name: '', description: '', location: '', ownerEmail: '', contractorEmail: '' })
   const [newUser, setNewUser] = useState({ name: '', email: '' })
   const [isAddingProject, setIsAddingProject] = useState(false)
   const [isAddingUser, setIsAddingUser] = useState(false)
@@ -307,7 +307,7 @@ function NewWorkLogFormContent() {
       setValue('project', createdProject._id)
 
       // Reset the form
-      setNewProject({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
+      setNewProject({ name: '', description: '', location: '', ownerEmail: '', contractorEmail: '' })
       toast.success('Project created successfully')
 
       // Close the dialog programmatically
@@ -456,22 +456,22 @@ function NewWorkLogFormContent() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="projectOwner">Project Owner</Label>
+                            <Label htmlFor="projectOwner">Project Owner (email)</Label>
                             <Input
                               id="projectOwner"
                               type="email"
-                              value={newProject.ownerName}
-                              onChange={(e) => setNewProject({...newProject, ownerName: e.target.value})}
+                              value={newProject.ownerEmail}
+                              onChange={(e) => setNewProject({...newProject, ownerEmail: e.target.value})}
                               className="mt-1"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="projectContractor">Project Contractor</Label>
+                            <Label htmlFor="projectContractor">Project Contractor (email)</Label>
                             <Input
                               id="projectContractor"
                               type="email"
-                              value={newProject.contractorName}
-                              onChange={(e) => setNewProject({...newProject, contractorName: e.target.value})}
+                              value={newProject.contractorEmail}
+                              onChange={(e) => setNewProject({...newProject, contractorEmail: e.target.value})}
                               className="mt-1"
                             />
                           </div>
@@ -496,12 +496,12 @@ function NewWorkLogFormContent() {
                         </div>
                         <DialogFooter>
                           <Button type="button" variant="outline" onClick={() => {
-                            setNewProject({ name: '', description: '', location: '', ownerName: '', contractorName: '' })
+                            setNewProject({ name: '', description: '', location: '', ownerEmail: '', contractorEmail: '' })
                           }}>Cancel</Button>
                           <Button
                             type="button"
                             onClick={handleAddProject}
-                            disabled={isAddingProject || !newProject.name || !newProject.ownerName || !newProject.contractorName}
+                            disabled={isAddingProject || !newProject.name || !newProject.ownerEmail || !newProject.contractorEmail}
                           >
                             {isAddingProject ? 'Creating...' : 'Create Project'}
                           </Button>
@@ -800,8 +800,8 @@ function NewWorkLogFormContent() {
               <SignatureSection
                 signatures={signatures}
                 onChange={setSignatures}
-                projectOwnerName={projects.find((project) => project._id === watch('project'))?.ownerName}
-                projectContractorName={projects.find((project) => project._id === watch('project'))?.contractorName}
+                projectOwnerUserId={projects.find((project) => project._id === watch('project'))?.ownerUserId}
+                projectContractorUserId={projects.find((project) => project._id === watch('project'))?.contractorUserId}
               />
             </div>
 

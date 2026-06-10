@@ -43,6 +43,7 @@ export function clearSessionCookie(response: NextResponse) {
 
 export interface AuthUser {
   userId: string;
+  name: string;
   role: string;
 }
 
@@ -67,6 +68,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
 
     return {
       userId: payload.userId as string,
+      name: payload.name as string,
       role: payload.role as string,
     };
   } catch (error) {

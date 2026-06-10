@@ -13,6 +13,10 @@ export interface ProjectWithId {
   budget?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  ownerEmail: string;
+  contractorEmail: string;
+  ownerUserId: string;
+  contractorUserId: string;
 }
 
 export interface UserWithId {
@@ -63,8 +67,8 @@ export async function createProject(projectData: {
   name: string; 
   description?: string;
   location?: string;
-  ownerName: string;
-  contractorName: string;
+  ownerEmail: string;
+  contractorEmail: string;
 }): Promise<ProjectWithId | null> {
   try {
     const response = await fetch('/api/projects', {

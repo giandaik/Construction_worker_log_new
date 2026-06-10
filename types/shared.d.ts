@@ -41,7 +41,8 @@ export interface Signature {
   data: string; // Base64 encoded image data
   signedBy: string; // Name of person who signed
   signedAt: Date | string; // Timestamp of signature
-  role?: string; // Role of signer (e.g., "Supervisor", "Worker")
+  projectRole?: string; // Role of signer (e.g., "Supervisor", "Worker")
+  signedByUserId?: ObjectId | string; // Optional reference to User who signed
 }
 
 /**

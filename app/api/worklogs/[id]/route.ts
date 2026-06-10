@@ -10,8 +10,8 @@ import {
 import {
   getWorkLogStatusFromSignatures,
   validateSignatureOrder,
-  hasContractorThenOwnerSignatures,
 } from '@/lib/signatureUtils';
+import { createWorkLogPdfAttachment } from '@/app/worklogs/[id]/exportToPDF';
 
 export async function GET(
   request: Request,
@@ -69,8 +69,8 @@ export async function PUT(
       const hasNewSignature = updatedSignatures.length > existingSignatureCount;
 
       let projectName: string | undefined;
-      let projectOwnerName: string | undefined;
-      let projectContractorName: string | undefined;
+      let projectOwnerEmail: string | undefined;
+      let projectContractorEmail: string | undefined;
 
       try {
         await DatabaseUtils.withConnection(async (db) => {
@@ -80,21 +80,21 @@ export async function PUT(
             const { ObjectId } = await import('mongodb');
             const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
             projectName = project?.name;
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
+            projectOwnerEmail = project?.ownerEmail;
+            projectContractorEmail = project?.contractorEmail;
           }
         });
       } catch (error) {
         console.error('Error fetching project details:', error);
       }
 
-      const signatureOrderError = validateSignatureOrder(updatedSignatures, projectOwnerName, projectContractorName);
+      const signatureOrderError = validateSignatureOrder(updatedSignatures, projectOwnerEmail, projectContractorEmail);
       if (signatureOrderError) {
         return ApiError.badRequest(signatureOrderError);
       }
 
-      if (projectOwnerName && projectContractorName) {
-        data.status = getWorkLogStatusFromSignatures(updatedSignatures, projectOwnerName, projectContractorName);
+      if (projectOwnerEmail && projectContractorEmail) {
+        data.status = getWorkLogStatusFromSignatures(updatedSignatures, projectOwnerEmail, projectContractorEmail);
       }
 
       // Update the work log using repository
@@ -105,18 +105,38 @@ export async function PUT(
       }
 
       if (hasNewSignature && updatedSignatures.length > 0) {
-        const latestSignature = updatedSignatures[updatedSignatures.length - 1];
+        const latestSignature =
+          updatedSignatures[updatedSignatures.length - 1];
 
-        await sendSignatureNotificationEmail({
-          signerName: latestSignature.signedBy,
-          signerRole: latestSignature.role,
-          projectName,
-          signatureSignedAt: latestSignature.signedAt.toString(),
-          workLogId: id,
-        }).catch((error) => {
-          console.error('Error sending signature notification email:', error);
-        });
-        
+        try {
+          if (latestSignature.projectRole === 'contractor') {
+            await sendSignatureNotificationEmail({
+              signerName: latestSignature.signedBy,
+              signerRole: latestSignature.projectRole,
+              projectName,
+              signatureSignedAt: latestSignature.signedAt.toString(),
+              workLogId: id,
+              projectOwnerEmail: projectOwnerEmail
+            });
+          } else if (latestSignature.projectRole === 'owner') {
+            const workLogWithDetails = await workLogRepo.findByIdWithDetails(id);
+            const pdfAttachment = workLogWithDetails
+              ? await createWorkLogPdfAttachment(workLogWithDetails)
+              : undefined;
+
+            await sendWorkLogCompletedEmail({
+              signerName: latestSignature.signedBy,
+              signerRole: latestSignature.projectRole,
+              projectName,
+              signatureSignedAt: latestSignature.signedAt.toString(),
+              workLogId: id,
+              projectOwnerEmail: projectOwnerEmail,
+              projectContractorEmail: projectContractorEmail,
+            }, pdfAttachment ? [pdfAttachment] : undefined);
+          }
+        } catch (error) {
+          console.error('Error sending signature email:', error);
+        }
       }
 
       return ApiError.success(workLog);

@@ -186,6 +186,7 @@ export default function EditWorkLogForm() {
     setValue('materials', [...currentMaterials, DEFAULT_MATERIAL])
   }
 
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-3 py-4 sm:px-4">
@@ -470,8 +471,8 @@ export default function EditWorkLogForm() {
               <SignatureSection
                 signatures={signatures}
                 onChange={setSignatures}
-                projectOwnerName={projects.find((project) => project._id === watch('project'))?.ownerName}
-                projectContractorName={projects.find((project) => project._id === watch('project'))?.contractorName}
+                projectOwnerUserId={projects.find((project) => project._id === watch('project'))?.ownerUserId}
+                projectContractorUserId={projects.find((project) => project._id === watch('project'))?.contractorUserId}
               />
             </div>
 

@@ -1,8 +1,12 @@
 export interface WorkLogCompletionPayload {
+  signerName: string;
+  signerRole?: string;
   projectName?: string;
+  signatureSignedAt?: string | Date;
   workLogUrl?: string;
-  signerName?: string;
   workLogId?: string;
+  projectOwnerEmail?: string;
+  projectContractorEmail?: string;
 }
 
 const getAppUrl = (): string => {

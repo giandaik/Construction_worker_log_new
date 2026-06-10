@@ -15,8 +15,6 @@ export interface Project {
   name: string;
   description?: string;
   location?: string;
-  ownerName?: string;
-  contractorName?: string;
   client?: string;
   startDate?: Date;
   endDate?: Date;
@@ -25,6 +23,10 @@ export interface Project {
   budget?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  ownerEmail: string;
+  contractorEmail: string;
+  ownerUserId: string | ObjectId;
+  contractorUserId: string | ObjectId;
 }
 
 /**
@@ -96,10 +98,10 @@ export class ProjectRepository extends BaseRepository<Project> {
   /**
    * Get projects summary (lightweight for dropdowns)
    */
-  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'ownerName' | 'contractorName'>[]> {
+  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'ownerEmail' | 'contractorEmail' | 'ownerUserId' | 'contractorUserId'>[]> {
     const documents = await this.collection
       .find({})
-      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, ownerName: 1, contractorName: 1 })
+      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, ownerEmail: 1, contractorEmail: 1, ownerUserId: 1, contractorUserId: 1 })
       .sort({ name: 1 })
       .toArray();
 
@@ -118,8 +120,10 @@ export class ProjectRepository extends BaseRepository<Project> {
         name: 'Default Project',
         description: 'Default project for work logs',
         location: 'Default Location',
-        ownerName: 'Default Owner',
-        contractorName: 'Default Contractor',
+        ownerEmail: 'owner@example.com',
+        contractorEmail: 'contractor@example.com',
+        ownerUserId: 'owner-user-id',
+        contractorUserId: 'contractor-user-id',
         client: 'Default Client',
         startDate: new Date(),
         endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),

@@ -91,19 +91,19 @@ export const sendSmtpEmail = async (options: sendMailOptions): Promise<boolean> 
 export const sendSignatureNotificationEmail = async (
   payload: SignatureNotificationPayload
 ): Promise<boolean> => {
-  const recipients = getNotificationRecipients();
+  
 
-  if (recipients.length === 0) {
-    console.warn('[SMTP] No notification recipients are configured. Set RESEND_NOTIFICATION_RECIPIENT or RESEND_NOTIFICATION_RECIPIENTS.');
+  console.log('[SMTP] Preparing signature notification email for recipients:', payload.signerRole);
+  const template = buildSignatureNotificationTemplate(payload);
+
+  if (!payload.projectOwnerEmail) {
+    console.error('[SMTP] No project owner email provided');
     return false;
   }
 
-  console.log('[SMTP] Preparing signature notification email for recipients:', recipients);
-  const template = buildSignatureNotificationTemplate(payload);
-
   return sendSmtpEmail({
     from: getSenderEmail(),
-    to: recipients,
+    to: payload.projectOwnerEmail,
     subject: template.subject,
     html: template.html,
     text: template.text,
@@ -114,7 +114,10 @@ export const sendWorkLogCompletedEmail = async (
   payload: WorkLogCompletionPayload,
   attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>
 ): Promise<boolean> => {
-  const recipients = getNotificationRecipients();
+  const recipients = [
+    payload.projectOwnerEmail,
+    payload.projectContractorEmail,
+  ].filter((email): email is string => Boolean(email));
 
   if (recipients.length === 0) {
     console.warn('[SMTP] No notification recipients are configured. Set RESEND_NOTIFICATION_RECIPIENT or RESEND_NOTIFICATION_RECIPIENTS.');
@@ -123,6 +126,7 @@ export const sendWorkLogCompletedEmail = async (
 
   console.log('[SMTP] Preparing completed work log email for recipients:', recipients);
   const template = buildWorkLogCompletionTemplate(payload);
+  
 
   return sendSmtpEmail({
     from: getSenderEmail(),

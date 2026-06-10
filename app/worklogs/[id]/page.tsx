@@ -34,7 +34,7 @@ interface Signature {
   data: string;
   signedBy: string;
   signedAt: string;
-  role?: string;
+  projectRole?: string;
 }
 
 interface WorkLog {
@@ -385,8 +385,8 @@ export default function WorkLogDetailPage() {
                           <p className="font-semibold">{signature.signedBy}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Role</p>
-                          <p>{signature.role || 'N/A'}</p>
+                          <p className="text-sm text-gray-500">Project Role</p>
+                          <p>{signature.projectRole || 'N/A'}</p>
                         </div>
                       </div>
                       <div>

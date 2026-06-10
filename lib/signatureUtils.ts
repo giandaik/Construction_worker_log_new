@@ -9,7 +9,7 @@ export const getSignatureRoleType = (
   projectOwnerName?: string,
   projectContractorName?: string
 ): 'owner' | 'contractor' | undefined => {
-  const normalizedRole = normalizeText(signature.role);
+  const normalizedRole = normalizeText(signature.projectRole);
   const normalizedName = normalizeText(signature.signedBy);
   const normalizedOwner = normalizeText(projectOwnerName);
   const normalizedContractor = normalizeText(projectContractorName);

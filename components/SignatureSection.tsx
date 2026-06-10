@@ -8,29 +8,40 @@ import { Plus, X } from 'lucide-react';
 import type { Signature } from '@/types/shared';
 import { getSignatureAddError } from '@/lib/signatureUtils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useProjectRole } from '@/hooks/useProjectRole';
+
 
 interface SignatureSectionProps {
   signatures: Signature[];
   onChange: (signatures: Signature[]) => void;
-  projectOwnerName?: string;
-  projectContractorName?: string;
+  projectOwnerUserId?: string;
+  projectContractorUserId?: string;
 }
 
 export const SignatureSection: React.FC<SignatureSectionProps> = ({
   signatures,
   onChange,
-  projectOwnerName,
-  projectContractorName,
+  projectOwnerUserId,
+  projectContractorUserId
 }) => {
   const [showAddSignature, setShowAddSignature] = useState(false);
   const [newSignatureName, setNewSignatureName] = useState('');
   const [newSignatureRole, setNewSignatureRole] = useState('');
   const { user } = useCurrentUser();
 
+  const projectRole = useProjectRole(
+    user?.userId,
+    projectOwnerUserId,
+    projectContractorUserId
+  );
+
   const handleAddSignatureClick = () => {
-    if (user) {
+    console.log('Current user:', user);
+    console.log('Project role:', projectRole);
+
+    if (user && projectRole) {
       setNewSignatureName(user.name);
-      setNewSignatureRole(user.role);
+      setNewSignatureRole(projectRole);
     }
     setShowAddSignature(true);
   };
@@ -45,14 +56,15 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
       data: signatureData,
       signedBy: newSignatureName.trim(),
       signedAt: new Date().toISOString(),
-      role: newSignatureRole.trim() || undefined,
+      projectRole: newSignatureRole.trim() || undefined,
+      signedByUserId: user?.userId
     };
 
     const validationError = getSignatureAddError(
       newSignature,
       signatures,
-      projectOwnerName,
-      projectContractorName
+      projectOwnerUserId,
+      projectContractorUserId
     );
 
     if (validationError) {
@@ -71,22 +83,56 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
   };
 
   //const isAuthorized = user && (user.role === 'admin' || user.role === 'supervisor');
+  function canUserAddSignature({
+    user,
+    signatures,
+    projectOwnerUserId,
+    projectContractorUserId,
+    showAddSignature,
+    projectRole
+  }: any) {
+    if (!user) return false;
 
-  const hasUserSigned = user ? signatures.some((sig) => sig.signedBy === user.name) : false;
+    const hasUserSigned = signatures.some(
+      (sig: any) => sig.signedByUserId === user.userId
+    );
 
-  const canAddSignature =  !showAddSignature &&  signatures.length < 2 &&  !hasUserSigned;
+    const contractorHasSigned = signatures.some(
+      (sig: any) => sig.projectRole === 'contractor'
+    );
 
-  const canAddSing = () => {
-          {console.log('Can add signature:', canAddSignature, 'Show add signature:', showAddSignature, 'Has user signed:', hasUserSigned, 'Current signatures:', signatures)}
-          return true;
+    
 
-  };
+    const isAllowedByRole =
+      projectRole === 'contractor'
+        ? true
+        : projectRole === 'owner'
+          ? contractorHasSigned
+          : false;
+
+    return (
+      !showAddSignature &&
+      signatures.length < 2 &&
+      !hasUserSigned &&
+      isAllowedByRole
+    );
+  }
+
+
+  const canAddSignature = canUserAddSignature({
+    user,
+    signatures,
+    projectOwnerUserId,
+    projectContractorUserId,
+    showAddSignature,
+    projectRole
+  });
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Signatures</h3>
-        {canAddSignature && (
+        { canAddSignature && (
           <Button
             type="button"
             onClick={handleAddSignatureClick}
@@ -97,12 +143,7 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
             Add Signature
           </Button>
         )}
-      </div>
-      {projectOwnerName && projectContractorName && (
-        <p className="text-sm text-gray-500">
-          Signature order is required: the contractor (&quot;{projectContractorName}&quot;) must sign before the owner (&quot;{projectOwnerName}&quot;).
-        </p>
-      )}
+      </div>      
 
       {/* Existing Signatures */}
       {signatures.length > 0 && (
@@ -113,8 +154,8 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-base">{sig.signedBy}</CardTitle>
-                    {sig.role && (
-                      <p className="text-sm text-gray-500 mt-1">{sig.role}</p>
+                    {sig.projectRole && (
+                      <p className="text-sm text-gray-500 mt-1">{sig.projectRole}</p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
                       Signed: {new Date(sig.signedAt).toLocaleString()}
@@ -153,28 +194,20 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={newSignatureName}
-                onChange={(e) => setNewSignatureName(e.target.value)}
-                placeholder="Enter signer's name"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-              />
+                Name 
+              </label>              
+              <div className="w-full rounded-md border bg-gray-100 px-3 py-2 text-sm">
+                  {newSignatureName || '-'}
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role (Optional)
+                Project Role
               </label>
-              <input
-                type="text"
-                value={newSignatureRole}
-                onChange={(e) => setNewSignatureRole(e.target.value)}
-                placeholder="e.g., Supervisor, Project Manager"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-              />
+              <div className="w-full rounded-md border bg-gray-100 px-3 py-2 text-sm">
+                  {newSignatureRole || '-'}
+              </div>
             </div>
 
             <SignaturePad

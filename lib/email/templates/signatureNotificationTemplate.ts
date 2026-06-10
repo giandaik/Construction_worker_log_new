@@ -5,6 +5,8 @@ export interface SignatureNotificationPayload {
   signatureSignedAt?: string | Date;
   workLogUrl?: string;
   workLogId?: string;
+  projectOwnerEmail?: string;
+  projectContractorEmail?: string;
 }
 
 const getAppUrl = (): string => {
