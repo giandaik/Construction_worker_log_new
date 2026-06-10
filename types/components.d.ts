@@ -34,6 +34,7 @@ export interface WorkLogFormData {
 
 export interface WorkLogFormProps {
   onSubmit?: (data: WorkLogFormData) => Promise<void>;
+  initialProject?: string;
 }
 
 export const WorkLogForm: FC<WorkLogFormProps>; 

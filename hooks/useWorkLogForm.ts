@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import mongoose from 'mongoose';
 import { DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIALS } from '@/lib/constants/constants';
 import type { Personnel, Equipment, Material, Signature } from '@/types/shared';
 
@@ -25,10 +24,10 @@ export type WorkLogFormData = {
  * Custom hook to manage work log form state and array field operations
  * Extracts complex form logic from the WorkLogForm component
  */
-export function useWorkLogForm() {
+export function useWorkLogForm(initialProject = '') {
   const [formData, setFormData] = useState<WorkLogFormData>({
     date: new Date().toISOString().split('T')[0],
-    project: '',
+    project: initialProject,
     workDescription: '',
     personnel: [],
     equipment: [],
@@ -166,6 +165,42 @@ export function useWorkLogForm() {
     }));
   }, []);
 
+  const updateWeather = useCallback((weather: string) => {
+    setFormData(prev => ({ ...prev, weather }));
+  }, []);
+
+  /**
+   * Seed the array fields + weather from a previous work log. Keeps the
+   * current project + today's date + blank workDescription/notes.
+   */
+  type SeedFields = Pick<WorkLogFormData, 'weather' | 'temperature' | 'personnel' | 'equipment' | 'materials'>;
+  const seedFromPrevious = useCallback((seed: Partial<SeedFields>) => {
+    setFormData(prev => ({
+      ...prev,
+      weather: seed.weather ?? prev.weather,
+      temperature: seed.temperature ?? prev.temperature,
+      personnel: seed.personnel ?? prev.personnel,
+      equipment: seed.equipment ?? prev.equipment,
+      materials: seed.materials ?? prev.materials,
+    }));
+  }, []);
+
+  /**
+   * Clear only the array fields + weather/temperature. Keeps the
+   * current project so the user can choose to start blank without
+   * losing their project selection.
+   */
+  const clearSeed = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      weather: undefined,
+      temperature: undefined,
+      personnel: [],
+      equipment: [],
+      materials: [],
+    }));
+  }, []);
+
   /**
    * Reset form to initial state
    */
@@ -181,18 +216,6 @@ export function useWorkLogForm() {
       images: [],
     });
   }, []);
-
-  /**
-   * Convert form data to API format
-   */
-  const toAPIFormat = useCallback((authorId: string) => {
-    return {
-      ...formData,
-      date: new Date(formData.date),
-      project: new mongoose.Types.ObjectId(formData.project),
-      author: authorId
-    };
-  }, [formData]);
 
   return {
     formData,
@@ -214,7 +237,9 @@ export function useWorkLogForm() {
     },
     updateSignatures,
     updateImages,
+    updateWeather,
+    seedFromPrevious,
+    clearSeed,
     resetForm,
-    toAPIFormat,
   };
 }

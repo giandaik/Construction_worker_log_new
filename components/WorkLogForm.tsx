@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import mongoose from 'mongoose';
 import type { WorkLogFormProps } from '../types/components';
 import type { IProject } from '@/lib/models';
@@ -11,6 +11,9 @@ import { FormField } from '@/components/forms/FormField';
 import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
 import { PhotoUpload } from '@/components/forms/PhotoUpload';
+import { Combobox } from '@/components/forms/Combobox';
+import { WeatherPicker } from '@/components/forms/WeatherPicker';
+import { useSuggestions } from '@/hooks/useSuggestions';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 
 function PersonnelCountField({
@@ -83,7 +86,7 @@ function PersonnelCountField({
   );
 }
 
-export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
+export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProject }) => {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
@@ -96,8 +99,19 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
     materials,
     updateSignatures,
     updateImages,
+    updateWeather,
+    seedFromPrevious,
+    clearSeed,
     resetForm,
-  } = useWorkLogForm();
+  } = useWorkLogForm(initialProject);
+
+  const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
+  const prefillAttemptedFor = useRef<Set<string>>(new Set());
+
+  const roleSuggestions = useSuggestions('personnel.role', formData.project);
+  const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
+  const materialNameSuggestions = useSuggestions('materials.name', formData.project);
+  const materialUnitSuggestions = useSuggestions('materials.unit', formData.project);
 
   const { isOnline, submitWorkLog } = useOfflineSync();
   const { toast, showError } = useToast();
@@ -137,6 +151,59 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
     fetchProjects();
   }, [showError]);
 
+  // Pre-fill personnel/equipment/materials/weather from this user's most recent
+  // log on the same project. Only runs when the form is still pristine for those
+  // fields, and only once per (projectId) per mount.
+  const projectId = formData.project;
+  const formIsPristineForSeed =
+    formData.personnel.length === 0 &&
+    formData.equipment.length === 0 &&
+    formData.materials.length === 0 &&
+    !formData.weather;
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (prefillAttemptedFor.current.has(projectId)) return;
+    if (!formIsPristineForSeed) return;
+
+    prefillAttemptedFor.current.add(projectId);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/worklogs/last?project=${encodeURIComponent(projectId)}`);
+        if (!res.ok) return;
+        const last = await res.json();
+        if (cancelled || !last) return;
+
+        const hasSeed =
+          (last.personnel?.length ?? 0) > 0 ||
+          (last.equipment?.length ?? 0) > 0 ||
+          (last.materials?.length ?? 0) > 0 ||
+          !!last.weather;
+        if (!hasSeed) return;
+
+        seedFromPrevious({
+          weather: last.weather,
+          temperature: last.temperature,
+          personnel: last.personnel ?? [],
+          equipment: last.equipment ?? [],
+          materials: last.materials ?? [],
+        });
+        setPrefilledFrom(typeof last.date === 'string' ? last.date : new Date(last.date).toISOString());
+      } catch (err) {
+        console.error('Pre-fill from last worklog failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, formIsPristineForSeed, seedFromPrevious]);
+
+  const dismissPrefill = useCallback(() => {
+    clearSeed();
+    setPrefilledFrom(null);
+  }, [clearSeed]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -151,6 +218,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         formData,
       });
       resetForm();
+      setPrefilledFrom(null);
+      prefillAttemptedFor.current.clear();
     } catch (error) {
       // Error already handled by useOfflineSync
       console.error('Form submission error:', error);
@@ -167,6 +236,28 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
       {toast && (
         <Alert variant={toast.type}>
           {toast.message}
+        </Alert>
+      )}
+      {prefilledFrom && (
+        <Alert variant="info">
+          <span>
+            Copied from your log on{' '}
+            <strong>
+              {new Date(prefilledFrom).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </strong>
+            .
+          </span>{' '}
+          <button
+            type="button"
+            onClick={dismissPrefill}
+            className="underline text-blue-700 hover:text-blue-900 ml-1"
+          >
+            Start blank
+          </button>
         </Alert>
       )}
 
@@ -200,13 +291,9 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
       </FormField>
 
       <FormField label="Weather" htmlFor="weather">
-        <input
-          type="text"
-          id="weather"
-          name="weather"
+        <WeatherPicker
           value={formData.weather || ''}
-          onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          onChange={updateWeather}
         />
       </FormField>
 
@@ -253,12 +340,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-2 gap-4 pr-8">
             <FormField label="Role" htmlFor={`personnel-role-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`personnel-role-${index}`}
                 value={item.role}
-                onChange={(e) => personnel.update(index, 'role', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => personnel.update(index, 'role', v)}
+                suggestions={roleSuggestions}
+                placeholder="e.g. Εργάτης"
               />
             </FormField>
             <FormField label="Count" htmlFor={`personnel-count-${index}`}>
@@ -281,12 +368,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Type" htmlFor={`equipment-type-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`equipment-type-${index}`}
                 value={item.type}
-                onChange={(e) => equipment.update(index, 'type', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => equipment.update(index, 'type', v)}
+                suggestions={equipmentTypeSuggestions}
+                placeholder="e.g. Εκσκαφέας"
               />
             </FormField>
             <FormField label="Count" htmlFor={`equipment-count-${index}`}>
@@ -323,12 +410,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Name" htmlFor={`material-name-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`material-name-${index}`}
                 value={item.name}
-                onChange={(e) => materials.update(index, 'name', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => materials.update(index, 'name', v)}
+                suggestions={materialNameSuggestions}
+                placeholder="e.g. Σκυρόδεμα"
               />
             </FormField>
             <FormField label="Quantity" htmlFor={`material-quantity-${index}`}>
@@ -343,12 +430,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
               />
             </FormField>
             <FormField label="Unit" htmlFor={`material-unit-${index}`}>
-              <input
-                type="text"
+              <Combobox
                 id={`material-unit-${index}`}
                 value={item.unit}
-                onChange={(e) => materials.update(index, 'unit', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={(v) => materials.update(index, 'unit', v)}
+                suggestions={materialUnitSuggestions}
+                placeholder="m³, kg, τεμ., m², ώρες"
               />
             </FormField>
           </div>
