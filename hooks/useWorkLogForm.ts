@@ -25,10 +25,10 @@ export type WorkLogFormData = {
  * Custom hook to manage work log form state and array field operations
  * Extracts complex form logic from the WorkLogForm component
  */
-export function useWorkLogForm() {
+export function useWorkLogForm(initialProject = '') {
   const [formData, setFormData] = useState<WorkLogFormData>({
     date: new Date().toISOString().split('T')[0],
-    project: '',
+    project: initialProject,
     workDescription: '',
     personnel: [],
     equipment: [],

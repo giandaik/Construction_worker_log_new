@@ -86,7 +86,7 @@ function PersonnelCountField({
   );
 }
 
-export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
+export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProject }) => {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
@@ -101,7 +101,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit }) => {
     updateImages,
     updateWeather,
     resetForm,
-  } = useWorkLogForm();
+  } = useWorkLogForm(initialProject);
 
   const roleSuggestions = useSuggestions('personnel.role', formData.project);
   const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
