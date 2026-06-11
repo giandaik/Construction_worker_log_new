@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { FileText, Plus, FolderOpen, ShieldCheck } from "lucide-react"
+import { FileText, Plus, FolderOpen, ShieldCheck, ArrowRight, HardHat } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
 import { dbConnect } from "@/lib/dbConnect"
@@ -8,14 +8,20 @@ import mongoose from "mongoose"
 import type { Project, WorkLog } from "@/types/shared"
 import { LogoutButton } from "@/components/LogoutButton"
 import { getAuthUser, isAdmin } from "@/utils/auth"
+import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
+
+const RECENT_LOGS_SHOWN = 6
+
+interface DashboardWorkLog extends WorkLog {
+  status?: string
+}
 
 async function getInitialData() {
   try {
     await dbConnect();
     const db = mongoose.connection;
-    
-    // Fetch all data in parallel with projections to reduce payload
-    const [projects, workLogs] = await Promise.all([
+
+    const [projects, workLogs, totalLogs] = await Promise.all([
       db.collection('projects').find({}, {
         projection: { _id: 1, name: 1, description: 1 }
       }).toArray(),
@@ -26,23 +32,24 @@ async function getInitialData() {
           project: 1,
           author: 1,
           workDescription: 1,
+          status: 1,
           createdAt: 1,
           updatedAt: 1
         }
       })
         .sort({ date: -1 })
         .limit(50)
-        .toArray()
+        .toArray(),
+      db.collection('worklogs').countDocuments(),
     ]);
 
-    // Convert MongoDB documents to typed objects
     const typedProjects: Project[] = projects.map(project => ({
       _id: project._id.toString(),
       name: project.name,
       description: project.description
     }));
 
-    const typedWorkLogs: WorkLog[] = workLogs.map(log => ({
+    const typedWorkLogs: DashboardWorkLog[] = workLogs.map(log => ({
       _id: log._id.toString(),
       date: log.date,
       project: log.project?.toString() || '',
@@ -54,21 +61,34 @@ async function getInitialData() {
       weather: log.weather,
       temperature: log.temperature,
       notes: log.notes,
+      status: log.status,
       createdAt: log.createdAt,
       updatedAt: log.updatedAt
     }));
 
     return {
       projects: typedProjects,
-      workLogs: typedWorkLogs
+      workLogs: typedWorkLogs,
+      totalLogs,
     };
   } catch (error) {
     console.error("Error fetching initial data:", error);
     return {
       projects: [],
-      workLogs: []
+      workLogs: [],
+      totalLogs: 0,
     };
   }
+}
+
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-md border bg-card p-4 transition-shadow hover:shadow-md">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-3xl font-bold">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  )
 }
 
 export default async function HomePage() {
@@ -78,11 +98,22 @@ export default async function HomePage() {
   ]);
   const showAdminLink = isAdmin(authUser);
 
+  const { projects, workLogs, totalLogs } = initialData;
+  const recentLogs = workLogs.slice(0, RECENT_LOGS_SHOWN);
+  const projectNames = new Map(projects.map((p) => [p._id, p.name]));
+  const lastEntry = workLogs[0]?.date
+    ? new Date(workLogs[0].date).toLocaleDateString()
+    : '—';
+
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b">
+      <header className="border-b bg-card">
+        <div className="hazard-stripe h-1.5" />
         <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-4">
-          <h1 className="text-xl sm:text-2xl font-bold">Ημερολόγιο Εργασιών</h1>
+          <div className="flex items-center gap-2">
+            <HardHat className="h-6 w-6 text-primary" aria-hidden />
+            <h1 className="text-2xl font-bold uppercase">Ημερολόγιο Εργασιών</h1>
+          </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <Button asChild>
               <Link href="/forms/new">
@@ -104,102 +135,113 @@ export default async function HomePage() {
           </div>
         </div>
       </header>
-      
-      <main>
-        <section className="py-8 sm:py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
-              <div className="space-y-4">
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl lg:text-5xl">
-                  Digitize Your Construction Site Forms
-                </h2>
-                <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Transform paper forms into digital records. Track work progress, personnel, equipment, and materials
-                  with ease.
-                </p>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  {/* <Button asChild>
-                    <Link href="/forms/new">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create New Form
-                    </Link>
-                  </Button> */}
-                  <Button variant="outline" asChild>
-                    <Link href="/projects">
-                      <FolderOpen className="w-4 h-4 mr-2" />
-                      View All Projects
-                    </Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/worklogs">
-                      <FileText className="w-4 h-4 mr-2" />
-                      View All Forms
-                    </Link>
-                  </Button>
-                </div>
-              </div>
 
-              <div className="relative w-full max-w-md mx-auto lg:mx-0">
-                <div className="p-4 bg-card border rounded-lg shadow-lg">
-                  <div className="text-center p-2 bg-muted rounded mb-4">
-                    <h3 className="font-bold text-lg">ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                        <div className="h-8 bg-muted rounded"></div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                        <div className="h-8 bg-muted rounded"></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded w-1/2"></div>
-                      <div className="h-8 bg-muted rounded"></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                        <div className="h-24 bg-muted rounded"></div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                        <div className="h-24 bg-muted rounded"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <main className="container flex-1 px-4 py-8 md:px-6">
+        <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
+          <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} />
+          <StatCard label="Projects" value={String(projects.length)} />
+          <StatCard
+            label="Quick start"
+            value="New log"
+            hint="Record today's work in minutes"
+          />
         </section>
-        
-        <section className="py-12">
-          <div className="container px-4 md:px-6">
-            <PendingSubmissions initialData={initialData} />
+
+        <section className="mt-10 grid gap-8 lg:grid-cols-3">
+          <div className="animate-fade-up lg:col-span-2" style={{ animationDelay: '80ms' }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold uppercase">Recent work logs</h2>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/worklogs">
+                  All forms <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            {recentLogs.length === 0 ? (
+              <div className="rounded-md border border-dashed bg-card p-10 text-center">
+                <FileText className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                <p className="mt-3 text-muted-foreground">No work logs yet.</p>
+                <Button className="mt-4" asChild>
+                  <Link href="/forms/new">
+                    <Plus className="mr-2 h-4 w-4" /> Create the first one
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="divide-y rounded-md border bg-card">
+                {recentLogs.map((log) => (
+                  <li key={log._id}>
+                    <Link
+                      href={`/worklogs/${log._id}`}
+                      className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-accent/50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">
+                          {projectNames.get(log.project) ?? 'Unknown project'}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {log.workDescription}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        {log.status && (
+                          <span
+                            className={`status-badge hidden sm:inline-flex ${
+                              FORM_STATUS_CLASSES[log.status as keyof typeof FORM_STATUS_CLASSES] ?? 'status-unknown'
+                            }`}
+                          >
+                            {FORM_STATUS_LABELS[log.status as keyof typeof FORM_STATUS_LABELS] ?? 'N/A'}
+                          </span>
+                        )}
+                        <span className="text-sm tabular-nums text-muted-foreground">
+                          {new Date(log.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="animate-fade-up space-y-8" style={{ animationDelay: '160ms' }}>
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold uppercase">Projects</h2>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/projects">
+                    All <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              {projects.length === 0 ? (
+                <div className="rounded-md border border-dashed bg-card p-8 text-center">
+                  <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                  <p className="mt-3 text-muted-foreground">No projects yet.</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {projects.slice(0, 5).map((project) => (
+                    <li key={project._id}>
+                      <Link
+                        href={`/projects/${project._id}`}
+                        className="block rounded-md border bg-card px-4 py-3 transition-colors hover:bg-accent/50"
+                      >
+                        <p className="truncate font-medium">{project.name}</p>
+                        {project.description && (
+                          <p className="truncate text-sm text-muted-foreground">{project.description}</p>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <PendingSubmissions initialData={{ projects, workLogs }} />
           </div>
         </section>
       </main>
-      
-      <footer className="border-t">
-        <div className="container flex flex-col items-center justify-between gap-4 px-4 py-6 md:flex-row">
-          <p className="text-sm text-muted-foreground">© 2024 ConstructionLog. All rights reserved.</p>
-          <nav className="flex gap-4 text-sm">
-            <Link href="#" className="text-muted-foreground hover:underline">
-              Terms
-            </Link>
-            <Link href="#" className="text-muted-foreground hover:underline">
-              Privacy
-            </Link>
-            <Link href="#" className="text-muted-foreground hover:underline">
-              Contact
-            </Link>
-          </nav>
-        </div>
-      </footer>
     </div>
   )
 }
-
