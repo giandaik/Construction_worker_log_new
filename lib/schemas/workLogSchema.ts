@@ -45,7 +45,8 @@ export const workLogSchema = z.object({
   materials: z.array(materialSchema).optional(),
   notes: z.string().optional(),
   signatures: z.array(signatureSchema).optional(),
-  images: z.array(z.string()).optional()
+  images: z.array(z.string()).optional(),
+  dwgRefs: z.array(z.string()).optional()
 })
 
 /**

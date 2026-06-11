@@ -59,6 +59,7 @@ export interface WorkLog {
   notes?: string;
   signatures?: Signature[];
   images?: string[];
+  dwgRefs?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }

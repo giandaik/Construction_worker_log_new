@@ -8,6 +8,17 @@ import type { FindOptions } from './base/IRepository';
 export type ProjectStatus = 'planned' | 'in-progress' | 'completed' | 'on-hold' | 'active';
 
 /**
+ * DWG file attached to a project
+ */
+export interface DwgFile {
+  url: string;
+  filename: string;
+  size: number;
+  uploadedAt?: Date | string;
+  uploadedBy?: string | ObjectId;
+}
+
+/**
  * Project entity interface
  */
 export interface Project {
@@ -27,6 +38,7 @@ export interface Project {
   contractorEmail: string;
   ownerUserId: string | ObjectId;
   contractorUserId: string | ObjectId;
+  dwgFiles?: DwgFile[];
 }
 
 /**

@@ -33,6 +33,7 @@ export interface IWorkLog extends Document {
   issues?: string;
   notes?: string;
   images?: string[];
+  dwgRefs?: string[];
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -73,7 +74,8 @@ const WorkLogSchema: Schema = new Schema(
     issues: { type: String },
     notes: { type: String },
     status: {type: String},
-    images: [{ type: String }]
+    images: [{ type: String }],
+    dwgRefs: { type: [String], default: [] }
   },
   { timestamps: true }
 );

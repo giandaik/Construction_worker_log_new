@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+export const dwgFileSchema = z.object({
+  url: z.string().url(),
+  filename: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  uploadedAt: z.union([z.string(), z.date()]).optional(),
+  uploadedBy: z.string().optional(),
+})
+
+export type DwgFile = z.infer<typeof dwgFileSchema>
+
 /**
  * Centralized Project Zod Schema
  * Used for validation in project API routes and forms
@@ -14,6 +24,7 @@ export const projectSchema = z.object({
   endDate: z.date().optional(),
   status: z.enum(['planned', 'in-progress', 'completed', 'on-hold']).optional(),
   manager: z.string().optional(),
+  dwgFiles: z.array(dwgFileSchema).optional(),
 })
 
 /**
