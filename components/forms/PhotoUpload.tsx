@@ -136,7 +136,7 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
       )}
 
       {!isOnline && value.some(isDataUrl) && (
-        <p className="text-xs text-amber-700">
+        <p className="text-xs text-muted-foreground">
           Pending photos will upload when you reconnect.
         </p>
       )}

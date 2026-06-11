@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/useToast';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/FormField';
+import { FormSection } from '@/components/forms/FormSection';
 import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
 import { PhotoUpload } from '@/components/forms/PhotoUpload';
@@ -229,7 +230,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {!isOnline && (
         <Alert variant="warning">
           You are currently offline. Submissions will be saved locally and synced later.
@@ -256,13 +257,14 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           <button
             type="button"
             onClick={dismissPrefill}
-            className="underline text-blue-700 hover:text-blue-900 ml-1"
+            className="font-medium underline ml-1"
           >
             Start blank
           </button>
         </Alert>
       )}
 
+      <FormSection step={1} title="Details" description="Date, project, conditions, and the day's work">
       <FormField label="Date" htmlFor="date" required>
         <input
           type="date"
@@ -332,7 +334,9 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
         />
       </FormField>
+      </FormSection>
 
+      <FormSection step={2} title="Resources" description="Personnel, equipment, and materials on site">
       <ArrayField
         title="Personnel"
         items={formData.personnel}
@@ -443,7 +447,9 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           </div>
         )}
       />
+      </FormSection>
 
+      <FormSection step={3} title="Attachments" description="Site photos and referenced drawings">
       <PhotoUpload
         value={formData.images}
         onChange={updateImages}
@@ -454,13 +460,16 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         value={formData.dwgRefs}
         onChange={updateDwgRefs}
       />
+      </FormSection>
 
+      <FormSection step={4} title="Signatures" description="Sign off the day's record">
       <SignatureSection
         signatures={formData.signatures || []}
         onChange={updateSignatures}
       />
+      </FormSection>
 
-      <Button type="submit" className="w-full">
+      <Button type="submit" size="lg" className="w-full">
         Submit Work Log
       </Button>
     </form>

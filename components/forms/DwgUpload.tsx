@@ -255,7 +255,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
                   href={dwg.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-w-0 items-center gap-2 text-sm text-blue-700 hover:underline"
+                  className="flex min-w-0 items-center gap-2 text-sm text-foreground underline-offset-2 hover:underline"
                 >
                   <FileText className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate">{dwg.filename}</span>
@@ -266,7 +266,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
                     href={dwg.pdfUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex min-w-0 items-center gap-2 text-sm text-blue-700 hover:underline"
+                    className="flex min-w-0 items-center gap-2 text-sm text-foreground underline-offset-2 hover:underline"
                   >
                     <FileType2 className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{dwg.pdfFilename ?? 'View PDF'}</span>
