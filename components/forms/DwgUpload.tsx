@@ -168,9 +168,9 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-foreground">
           Drawings
-          <span className="ml-2 text-xs text-gray-500">{value.length}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{value.length}</span>
         </label>
         {!readOnly && !draftOpen && (
           <Button
@@ -186,8 +186,8 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
       </div>
 
       {draftOpen && !readOnly && (
-        <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-          <p className="text-xs text-gray-600">
+        <div className="space-y-3 rounded-md border border-border bg-muted/50 p-3">
+          <p className="text-xs text-muted-foreground">
             Pick a .dwg drawing and optionally a .pdf companion that workers can preview on their phone.
           </p>
 
@@ -229,7 +229,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex gap-2">
             <Button type="button" size="sm" onClick={submitDraft} disabled={busy || !dwgFile}>
@@ -242,12 +242,12 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
         </div>
       )}
 
-      {!draftOpen && error && <p className="text-sm text-red-600">{error}</p>}
+      {!draftOpen && error && <p className="text-sm text-destructive">{error}</p>}
 
       {value.length === 0 ? (
-        <p className="text-sm text-gray-500">No drawings attached.</p>
+        <p className="text-sm text-muted-foreground">No drawings attached.</p>
       ) : (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+        <ul className="divide-y divide-border rounded-md border border-border">
           {value.map((dwg) => (
             <li key={dwg.url} className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -259,7 +259,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
                 >
                   <FileText className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate">{dwg.filename}</span>
-                  <span className="flex-shrink-0 text-xs text-gray-500">{formatSize(dwg.size)}</span>
+                  <span className="flex-shrink-0 text-xs text-muted-foreground">{formatSize(dwg.size)}</span>
                 </a>
                 {dwg.pdfUrl && (
                   <a
@@ -271,7 +271,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
                     <FileType2 className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{dwg.pdfFilename ?? 'View PDF'}</span>
                     {typeof dwg.pdfSize === 'number' && (
-                      <span className="flex-shrink-0 text-xs text-gray-500">{formatSize(dwg.pdfSize)}</span>
+                      <span className="flex-shrink-0 text-xs text-muted-foreground">{formatSize(dwg.pdfSize)}</span>
                     )}
                   </a>
                 )}
@@ -282,7 +282,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
                   onClick={() => removeFile(dwg.url)}
                   aria-label={`Remove ${dwg.filename}`}
                   disabled={busy}
-                  className="flex-shrink-0 rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  className="flex-shrink-0 rounded p-1 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

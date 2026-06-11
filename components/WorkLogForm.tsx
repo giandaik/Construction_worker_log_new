@@ -31,7 +31,7 @@ function PersonnelCountField({
   const [customValue, setCustomValue] = useState(isCustom ? String(value) : '');
 
   const selectClass =
-    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm';
+    'mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm';
 
   if (showCustom) {
     return (
@@ -57,7 +57,7 @@ function PersonnelCountField({
             setCustomValue('');
             onChange(0);
           }}
-          className="text-xs text-gray-500 underline whitespace-nowrap"
+          className="text-xs text-muted-foreground underline whitespace-nowrap"
         >
           Use list
         </button>
@@ -270,7 +270,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           name="date"
           value={formData.date}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
           required
         />
       </FormField>
@@ -281,7 +281,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           name="project"
           value={formData.project}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
           required
           disabled={isLoadingProjects}
         >
@@ -306,7 +306,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           name="temperature"
           value={formData.temperature || ''}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
         />
       </FormField>
 
@@ -317,7 +317,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           value={formData.workDescription}
           onChange={handleChange}
           rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
           required
         />
       </FormField>
@@ -329,7 +329,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           value={formData.notes || ''}
           onChange={handleChange}
           rows={2}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
         />
       </FormField>
 
@@ -385,7 +385,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 value={item.count}
                 onChange={(e) => equipment.update(index, 'count', parseInt(e.target.value) || 0)}
                 min="1"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
               />
             </FormField>
             <FormField label="Hours" htmlFor={`equipment-hours-${index}`}>
@@ -396,7 +396,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 onChange={(e) => equipment.update(index, 'hours', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.5"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
               />
             </FormField>
           </div>
@@ -428,7 +428,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 onChange={(e) => materials.update(index, 'quantity', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
               />
             </FormField>
             <FormField label="Unit" htmlFor={`material-unit-${index}`}>

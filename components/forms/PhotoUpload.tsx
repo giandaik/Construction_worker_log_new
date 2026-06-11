@@ -71,9 +71,9 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-foreground">
           Photos
-          <span className="ml-2 text-xs text-gray-500">
+          <span className="ml-2 text-xs text-muted-foreground">
             {value.length}/{maxPhotos}
           </span>
         </label>
@@ -98,7 +98,7 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
         onChange={(e) => handleFiles(e.target.files)}
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {value.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -107,7 +107,7 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
             return (
               <div
                 key={`${i}-${src.slice(0, 32)}`}
-                className="group relative aspect-square overflow-hidden rounded-md border border-gray-200 bg-gray-50"
+                className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/50"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -117,7 +117,7 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
                   loading="lazy"
                 />
                 {pending && (
-                  <span className="absolute left-1 top-1 rounded bg-yellow-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
+                  <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
                     Pending
                   </span>
                 )}
@@ -125,7 +125,7 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
                   type="button"
                   onClick={() => removeAt(i)}
                   aria-label={`Remove photo ${i + 1}`}
-                  className="absolute right-1 top-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs text-white opacity-90 hover:opacity-100"
+                  className="absolute right-1 top-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground opacity-90 hover:opacity-100"
                 >
                   ×
                 </button>

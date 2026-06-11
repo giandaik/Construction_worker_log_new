@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {ArrowLeft, FileDown, Pencil, Trash, FileText, FileType2} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
-import "../worklogs.css";
 
 const WEATHER_LABEL_MAP: Record<string, { label: string; Icon: typeof WEATHER_OPTIONS[number]['icon'] }> =
   Object.fromEntries(WEATHER_OPTIONS.map(({ key, label, icon }) => [key, { label, Icon: icon }]));
@@ -188,7 +187,7 @@ export default function WorkLogDetailPage() {
         </div>
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-red-500">{error || 'Work log not found'}</p>
+            <p className="text-destructive">{error || 'Work log not found'}</p>
             <Button onClick={() => router.back()} className="mt-4">
               Go Back
             </Button>
@@ -230,7 +229,7 @@ export default function WorkLogDetailPage() {
                 Created: {workLog.createdAt ? new Date(workLog.createdAt).toLocaleString() : 'Unknown'}
               </CardDescription>
             </div>
-            <span className={`work-log-status self-start whitespace-nowrap ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES]}`}>
+            <span className={`status-badge self-start whitespace-nowrap ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES]}`}>
               {FORM_STATUS_LABELS[workLog.status as keyof typeof FORM_STATUS_LABELS] ?? "N/A"}
             </span>
           </div>
@@ -241,24 +240,24 @@ export default function WorkLogDetailPage() {
             <h3 className="text-lg font-semibold mb-4 border-b pb-2">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500">Date</p>
+                <p className="text-sm text-muted-foreground">Date</p>
                 <p>{new Date(workLog.date).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Project</p>
+                <p className="text-sm text-muted-foreground">Project</p>
                 <p>{workLog.projectName || workLog.project || 'Unknown'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Project Location</p>
+                <p className="text-sm text-muted-foreground">Project Location</p>
                 <p>{workLog.projectLocation || workLog.project || 'Unknown'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Author</p>
+                <p className="text-sm text-muted-foreground">Author</p>
                 <p>{workLog.authorName || workLog.author || 'Unknown'}</p>
               </div>
               {workLog.weather && (
                 <div>
-                  <p className="text-sm text-gray-500">Weather</p>
+                  <p className="text-sm text-muted-foreground">Weather</p>
                   {(() => {
                     const mapped = WEATHER_LABEL_MAP[workLog.weather];
                     if (mapped) {
@@ -276,7 +275,7 @@ export default function WorkLogDetailPage() {
               )}
               {typeof workLog.temperature === 'number' && (
                 <div>
-                  <p className="text-sm text-gray-500">Temperature</p>
+                  <p className="text-sm text-muted-foreground">Temperature</p>
                   <p>{workLog.temperature}°C</p>
                 </div>
               )}
@@ -300,18 +299,18 @@ export default function WorkLogDetailPage() {
 
                 <div className="grid gap-4">
                   {workLog.personnel.map((person, index) => (
-                    <div key={index} className="border rounded-md p-4 bg-gray-50">
+                    <div key={index} className="border rounded-md p-4 bg-muted/50">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                          <p className="text-sm text-gray-500">{LABELS.role}</p>
+                          <p className="text-sm text-muted-foreground">{LABELS.role}</p>
                           <strong>{person.role || 'N/A'}</strong>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">{LABELS.count}</p>
+                          <p className="text-sm text-muted-foreground">{LABELS.count}</p>
                           <p>{person.count}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">{LABELS.workDetails}</p>
+                          <p className="text-sm text-muted-foreground">{LABELS.workDetails}</p>
                           <p>{person.workDetails}</p>
                         </div>
                       </div>
@@ -328,18 +327,18 @@ export default function WorkLogDetailPage() {
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Equipment</h3>
               <div className="grid gap-4">
                 {workLog.equipment.map((item, index) => (
-                  <div key={index} className="border rounded-md p-4 bg-gray-50">
+                  <div key={index} className="border rounded-md p-4 bg-muted/50">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-gray-500">Type</p>
+                        <p className="text-sm text-muted-foreground">Type</p>
                         <p>{item.type || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Count</p>
+                        <p className="text-sm text-muted-foreground">Count</p>
                         <p>{item.count}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Hours</p>
+                        <p className="text-sm text-muted-foreground">Hours</p>
                         <p>{item.hours}</p>
                       </div>
                     </div>
@@ -355,18 +354,18 @@ export default function WorkLogDetailPage() {
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Materials</h3>
               <div className="grid gap-4">
                 {workLog.materials.map((material, index) => (
-                  <div key={index} className="border rounded-md p-4 bg-gray-50">
+                  <div key={index} className="border rounded-md p-4 bg-muted/50">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-gray-500">Name</p>
+                        <p className="text-sm text-muted-foreground">Name</p>
                         <p>{material.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Quantity</p>
+                        <p className="text-sm text-muted-foreground">Quantity</p>
                         <p>{material.quantity}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Unit</p>
+                        <p className="text-sm text-muted-foreground">Unit</p>
                         <p>{material.unit || 'N/A'}</p>
                       </div>
                     </div>
@@ -387,7 +386,7 @@ export default function WorkLogDetailPage() {
                     href={src}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative block aspect-square overflow-hidden rounded-md border bg-gray-50"
+                    className="relative block aspect-square overflow-hidden rounded-md border bg-muted/50"
                   >
                     <Image
                       src={src}
@@ -406,15 +405,15 @@ export default function WorkLogDetailPage() {
           {workLog.dwgRefs && workLog.dwgRefs.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Drawings</h3>
-              <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+              <ul className="divide-y divide-border rounded-md border border-border">
                 {workLog.dwgRefs.map((url) => {
                   const meta = projectDwgFiles.find((f) => f.url === url);
                   const filename = meta?.filename ?? url.split('/').pop() ?? 'drawing.dwg';
                   if (!meta) {
                     return (
                       <li key={url} className="flex items-center gap-3 px-3 py-2">
-                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
-                        <span className="min-w-0 flex-1 truncate text-sm text-gray-500">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                           {filename} <span className="italic">(no longer available)</span>
                         </span>
                       </li>
@@ -423,8 +422,8 @@ export default function WorkLogDetailPage() {
                   return (
                     <li key={url} className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-center gap-2">
-                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
-                        <span className="min-w-0 truncate text-sm font-medium text-gray-800">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 truncate text-sm font-medium text-foreground">
                           {filename}
                         </span>
                       </div>
@@ -434,7 +433,7 @@ export default function WorkLogDetailPage() {
                             href={meta.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-yellow-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-600"
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                           >
                             <FileType2 className="h-4 w-4" />
                             View PDF
@@ -444,7 +443,7 @@ export default function WorkLogDetailPage() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          className="inline-flex items-center gap-1 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
                         >
                           <FileDown className="h-4 w-4" />
                           Download DWG
@@ -471,26 +470,26 @@ export default function WorkLogDetailPage() {
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Signatures</h3>
               <div className="grid gap-6">
                 {workLog.signatures.map((signature, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                  <div key={index} className="border rounded-lg p-4 bg-muted/50">
                     <div className="mb-4">
                       <div className="grid grid-cols-2 gap-4 mb-3">
                         <div>
-                          <p className="text-sm text-gray-500">Signed By</p>
+                          <p className="text-sm text-muted-foreground">Signed By</p>
                           <p className="font-semibold">{signature.signedBy}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Project Role</p>
+                          <p className="text-sm text-muted-foreground">Project Role</p>
                           <p>{signature.projectRole || 'N/A'}</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Signed At</p>
+                        <p className="text-sm text-muted-foreground">Signed At</p>
                         <p>{new Date(signature.signedAt).toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="border-t pt-4">
-                      <p className="text-sm text-gray-500 mb-2">Signature</p>
-                      <div className="border rounded p-2 bg-white">
+                      <p className="text-sm text-muted-foreground mb-2">Signature</p>
+                      <div className="border rounded p-2 bg-card">
                         <img
                           src={signature.data}
                           alt={`Signature by ${signature.signedBy}`}

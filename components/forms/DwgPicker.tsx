@@ -63,25 +63,25 @@ export function DwgPicker({ projectId, value, onChange }: DwgPickerProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-foreground">
           Drawings used today
           {dwgFiles.length > 0 && (
-            <span className="ml-2 text-xs text-gray-500">
+            <span className="ml-2 text-xs text-muted-foreground">
               {value.length} of {dwgFiles.length} selected
             </span>
           )}
         </label>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500">Loading drawings…</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">Loading drawings…</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {!isLoading && !error && dwgFiles.length === 0 && (
-        <p className="text-sm text-gray-500">No drawings attached to this project.</p>
+        <p className="text-sm text-muted-foreground">No drawings attached to this project.</p>
       )}
 
       {dwgFiles.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+        <ul className="divide-y divide-border rounded-md border border-border">
           {dwgFiles.map((dwg) => {
             const checked = value.includes(dwg.url);
             return (
@@ -93,9 +93,9 @@ export function DwgPicker({ projectId, value, onChange }: DwgPickerProps) {
                   aria-label={`Select ${dwg.filename}`}
                   className="h-4 w-4"
                 />
-                <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate text-sm">{dwg.filename}</span>
-                <span className="flex-shrink-0 text-xs text-gray-500">{formatSize(dwg.size)}</span>
+                <span className="flex-shrink-0 text-xs text-muted-foreground">{formatSize(dwg.size)}</span>
               </li>
             );
           })}

@@ -43,7 +43,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="border-2 border-gray-300 rounded-lg bg-white">
+        <div className="border-2 border-input rounded-lg bg-card">
           {existingSignature && isSigned ? (
             <div className="p-4">
               <img
@@ -85,7 +85,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         </div>
 
         {isSigned && existingSignature && (
-          <p className="text-sm text-green-600 text-center">
+          <p className="text-sm text-success text-center">
             ✓ Signature saved
           </p>
         )}

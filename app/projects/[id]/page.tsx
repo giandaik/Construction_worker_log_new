@@ -81,7 +81,7 @@ export default function ProjectDetailPage() {
         </div>
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-red-500">{error ?? 'Project not found'}</p>
+            <p className="text-destructive">{error ?? 'Project not found'}</p>
           </CardContent>
         </Card>
       </div>

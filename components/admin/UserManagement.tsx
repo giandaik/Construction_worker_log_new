@@ -161,12 +161,12 @@ export function UserManagement() {
               </Select>
             </div>
             {formError && (
-              <p className="text-sm text-red-500" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {formError}
               </p>
             )}
             {success && (
-              <p className="text-sm text-green-600" role="status">
+              <p className="text-sm text-success" role="status">
                 {success}
               </p>
             )}
@@ -182,14 +182,14 @@ export function UserManagement() {
           <CardTitle>Existing users</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading && <p className="text-sm text-gray-500">Loading...</p>}
+          {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
           {loadError && (
-            <p className="text-sm text-red-500" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {loadError}
             </p>
           )}
           {!isLoading && !loadError && users.length === 0 && (
-            <p className="text-sm text-gray-500">No users yet</p>
+            <p className="text-sm text-muted-foreground">No users yet</p>
           )}
           {!isLoading && !loadError && users.length > 0 && (
             <Table>

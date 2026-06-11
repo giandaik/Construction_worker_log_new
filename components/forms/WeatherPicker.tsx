@@ -36,8 +36,8 @@ export function WeatherPicker({ value, onChange }: WeatherPickerProps) {
               className={cn(
                 'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-md border px-3 py-2 text-xs transition-colors',
                 selected
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-100'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
+                  ? 'border-ring bg-accent text-accent-foreground'
+                  : 'border-input bg-card text-foreground hover:bg-muted/50'
               )}
             >
               <Icon className="h-5 w-5" aria-hidden />
@@ -47,7 +47,7 @@ export function WeatherPicker({ value, onChange }: WeatherPickerProps) {
         })}
       </div>
       {value && !matchedKey && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           Current: <span className="italic">{value}</span> — tap an icon to update.
         </p>
       )}

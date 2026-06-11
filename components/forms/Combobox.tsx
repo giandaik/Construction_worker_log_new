@@ -96,13 +96,13 @@ export function Combobox({
         aria-expanded={open}
         aria-autocomplete="list"
         aria-controls={`${inputId}-listbox`}
-        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
       />
       {open && filtered.length > 0 && (
         <ul
           id={`${inputId}-listbox`}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-popover py-1 text-sm shadow-lg"
         >
           {filtered.map((s, i) => (
             <li
@@ -119,8 +119,8 @@ export function Combobox({
               className={cn(
                 'cursor-pointer px-3 py-2',
                 i === activeIndex
-                  ? 'bg-indigo-50 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-100'
-                  : 'text-gray-900 dark:text-gray-100'
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-foreground'
               )}
             >
               {s}

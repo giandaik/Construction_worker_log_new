@@ -63,7 +63,7 @@ export default function NewWorkLogForm() {
           </Button>
         </div>
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Loading form...</p>
+          <p className="text-muted-foreground">Loading form...</p>
         </div>
       </div>
     }>

@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { FORM_STATUS_LABELS, LABELS, FORM_STATUS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
-import "./worklogs.css";
 
 interface WorkLog {
   _id: string;
@@ -182,7 +181,7 @@ function WorkLogsPageContent() {
         <div>
           <h1 className="text-2xl font-bold">Work Logs ({filteredLogs.length})</h1>
           {project && filterProjectId && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Filtered by project: <strong>{project.name}</strong>
             </p>
           )}
@@ -198,35 +197,35 @@ function WorkLogsPageContent() {
         <CardContent className="pt-6">
           <div className="grid gap-4 md:grid-cols-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 From date
               </label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 To date
               </label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Project
               </label>
               <select
                 value={filterProjectId}
                 onChange={(e) => setFilterProjectId(e.target.value)}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">All projects</option>
                 {projects.map((proj) => (
@@ -251,7 +250,7 @@ function WorkLogsPageContent() {
       {error && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-red-500">{error}</p>
+            <p className="text-destructive">{error}</p>
             <Button onClick={() => window.location.reload()} className="mt-4">
               Retry
             </Button>
@@ -262,7 +261,7 @@ function WorkLogsPageContent() {
       {!error && workLogs.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {filterProjectId ? `No work logs found for this project` : 'No work logs found'}
             </p>
             {filterProjectId && (
@@ -284,7 +283,7 @@ function WorkLogsPageContent() {
       {!error && workLogs.length > 0 && filteredLogs.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               No work logs match the selected filters.
             </p>
             <Button 
@@ -306,12 +305,12 @@ function WorkLogsPageContent() {
                 <CardTitle>{new Date(log.date).toLocaleDateString()}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Project: <strong>{getProjectName(log.project)}</strong>
                 </p>
                 <p className="mt-2"><strong>Work Description:</strong> {log.workDescription}</p>
                   <p className="mt-2"><strong>{LABELS.status}:</strong>
-                      <span className={`work-log-list-status ${FORM_STATUS_CLASSES[log.status as keyof typeof FORM_STATUS_CLASSES]}`}>
+                      <span className={`status-badge ml-2 ${FORM_STATUS_CLASSES[log.status as keyof typeof FORM_STATUS_CLASSES]}`}>
                         {FORM_STATUS_LABELS[log.status as keyof typeof FORM_STATUS_LABELS] ?? "Ν/Α"}
                         </span>
                   </p>

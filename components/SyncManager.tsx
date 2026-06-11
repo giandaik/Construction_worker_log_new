@@ -71,7 +71,7 @@ export const SyncManager: React.FC = () => {
 
   // Render the sync status message
   return syncMessage ? (
-    <div className="fixed bottom-4 left-4 bg-gray-900 bg-opacity-80 text-white px-4 py-2 rounded-md z-50">
+    <div className="fixed bottom-4 left-4 bg-foreground/90 text-background px-4 py-2 rounded-md z-50">
       {syncMessage}
     </div>
   ) : null;

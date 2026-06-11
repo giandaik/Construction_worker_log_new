@@ -84,7 +84,7 @@ export default function ProjectsPage() {
       {error && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-red-500">{error}</p>
+            <p className="text-destructive">{error}</p>
             <Button onClick={() => window.location.reload()} className="mt-4">
               Retry
             </Button>
@@ -95,7 +95,7 @@ export default function ProjectsPage() {
       {!error && projects.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-gray-500">No projects found</p>
+            <p className="text-muted-foreground">No projects found</p>
           </CardContent>
         </Card>
       )}

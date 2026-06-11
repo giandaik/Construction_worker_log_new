@@ -83,8 +83,8 @@ export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initial
       <CardContent>
         {isLoading ? (
           <div className="space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
+            <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+            <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
           </div>
         ) : pendingLogs.length === 0 ? (
           <div className="text-muted-foreground text-center py-8">
@@ -124,7 +124,7 @@ export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initial
         </Button>
       </CardFooter>
       {syncStatus && (
-        <div className="px-4 pb-4 text-sm text-gray-500">
+        <div className="px-4 pb-4 text-sm text-muted-foreground">
           {syncStatus}
         </div>
       )}

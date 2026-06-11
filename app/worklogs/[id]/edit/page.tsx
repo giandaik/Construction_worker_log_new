@@ -245,7 +245,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Basic Information</h2>
 
               {submitError && (
-                <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-4">
+                <div className="border border-destructive/30 bg-destructive/10 text-destructive rounded-md p-4 mb-4">
                   <p>{submitError}</p>
                 </div>
               )}
@@ -258,7 +258,7 @@ export default function EditWorkLogForm() {
                     type="date"
                     {...register('date')}
                   />
-                  {errors.date && <p className="text-red-500">{errors.date.message}</p>}
+                  {errors.date && <p className="text-destructive">{errors.date.message}</p>}
                 </div>
 
                 <div>
@@ -268,7 +268,7 @@ export default function EditWorkLogForm() {
                     value={watch('project') || ''}
                     required
                   >
-                    <SelectTrigger id="project" className={errors.project ? "border-red-500" : ""}>
+                    <SelectTrigger id="project" className={errors.project ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
@@ -285,7 +285,7 @@ export default function EditWorkLogForm() {
                       )}
                     </SelectContent>
                   </Select>
-                  {errors.project && <p className="text-red-500">{errors.project.message}</p>}
+                  {errors.project && <p className="text-destructive">{errors.project.message}</p>}
                 </div>
 
                 <div>
@@ -295,7 +295,7 @@ export default function EditWorkLogForm() {
                     value={watch('author') || ''}
                     required
                   >
-                    <SelectTrigger id="author" className={errors.author ? "border-red-500" : ""}>
+                    <SelectTrigger id="author" className={errors.author ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select author" />
                     </SelectTrigger>
                     <SelectContent>
@@ -312,7 +312,7 @@ export default function EditWorkLogForm() {
                       )}
                     </SelectContent>
                   </Select>
-                  {errors.author && <p className="text-red-500">{errors.author.message}</p>}
+                  {errors.author && <p className="text-destructive">{errors.author.message}</p>}
                 </div>
 
                 <div>
@@ -321,7 +321,7 @@ export default function EditWorkLogForm() {
                     value={watch('weather') || ''}
                     onChange={(v) => setValue('weather', v, { shouldDirty: true })}
                   />
-                  {errors.weather && <p className="text-red-500">{errors.weather.message}</p>}
+                  {errors.weather && <p className="text-destructive">{errors.weather.message}</p>}
                 </div>
 
                 <div>
@@ -331,7 +331,7 @@ export default function EditWorkLogForm() {
                     type="number"
                     {...register('temperature', { valueAsNumber: true })}
                   />
-                  {errors.temperature && <p className="text-red-500">{errors.temperature.message}</p>}
+                  {errors.temperature && <p className="text-destructive">{errors.temperature.message}</p>}
                 </div>
               </div>
             </div>
@@ -346,7 +346,7 @@ export default function EditWorkLogForm() {
                   {...register('workDescription')}
                   rows={4}
                 />
-                {errors.workDescription && <p className="text-red-500">{errors.workDescription.message}</p>}
+                {errors.workDescription && <p className="text-destructive">{errors.workDescription.message}</p>}
               </div>
             </div>
 
@@ -355,7 +355,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Personnel</h2>
               <div className="space-y-4">
                 {watch('personnel')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
                       <Label>Role</Label>
                       <Combobox
@@ -396,7 +396,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Equipment</h2>
               <div className="space-y-4">
                 {watch('equipment')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
                       <Label>Type</Label>
                       <Combobox
@@ -435,7 +435,7 @@ export default function EditWorkLogForm() {
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Materials</h2>
               <div className="space-y-4">
                 {watch('materials')?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
                       <Label>Name</Label>
                       <Combobox
@@ -480,7 +480,7 @@ export default function EditWorkLogForm() {
                   {...register('notes')}
                   rows={3}
                 />
-                {errors.notes && <p className="text-red-500">{errors.notes.message}</p>}
+                {errors.notes && <p className="text-destructive">{errors.notes.message}</p>}
               </div>
             </div>
 

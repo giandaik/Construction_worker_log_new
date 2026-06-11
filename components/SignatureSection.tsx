@@ -155,9 +155,9 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
                   <div>
                     <CardTitle className="text-base">{sig.signedBy}</CardTitle>
                     {sig.projectRole && (
-                      <p className="text-sm text-gray-500 mt-1">{sig.projectRole}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{sig.projectRole}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Signed: {new Date(sig.signedAt).toLocaleString()}
                     </p>
                   </div>
@@ -172,7 +172,7 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-lg p-2 bg-white">
+                <div className="border rounded-lg p-2 bg-card">
                   <img
                     src={sig.data}
                     alt={`Signature by ${sig.signedBy}`}
@@ -193,19 +193,19 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Name 
               </label>              
-              <div className="w-full rounded-md border bg-gray-100 px-3 py-2 text-sm">
+              <div className="w-full rounded-md border bg-muted px-3 py-2 text-sm">
                   {newSignatureName || '-'}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Project Role
               </label>
-              <div className="w-full rounded-md border bg-gray-100 px-3 py-2 text-sm">
+              <div className="w-full rounded-md border bg-muted px-3 py-2 text-sm">
                   {newSignatureRole || '-'}
               </div>
             </div>
@@ -232,7 +232,7 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
       )}
 
       {signatures.length === 0 && !showAddSignature && (
-        <p className="text-sm text-gray-500 text-center py-4">
+        <p className="text-sm text-muted-foreground text-center py-4">
           No signatures added yet. Click "Add Signature" to get started.
         </p>
       )}

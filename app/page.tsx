@@ -113,7 +113,7 @@ export default async function HomePage() {
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl lg:text-5xl">
                   Digitize Your Construction Site Forms
                 </h2>
-                <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
+                <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Transform paper forms into digital records. Track work progress, personnel, equipment, and materials
                   with ease.
                 </p>
@@ -140,33 +140,33 @@ export default async function HomePage() {
               </div>
 
               <div className="relative w-full max-w-md mx-auto lg:mx-0">
-                <div className="p-4 bg-white border rounded-lg shadow-lg">
-                  <div className="text-center p-2 bg-gray-100 rounded mb-4">
+                <div className="p-4 bg-card border rounded-lg shadow-lg">
+                  <div className="text-center p-2 bg-muted rounded mb-4">
                     <h3 className="font-bold text-lg">ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ</h3>
                   </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-8 bg-gray-100 rounded"></div>
+                        <div className="h-4 bg-muted rounded w-3/4"></div>
+                        <div className="h-8 bg-muted rounded"></div>
                       </div>
                       <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-8 bg-gray-100 rounded"></div>
+                        <div className="h-4 bg-muted rounded w-3/4"></div>
+                        <div className="h-8 bg-muted rounded"></div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-8 bg-gray-100 rounded"></div>
+                      <div className="h-4 bg-muted rounded w-1/2"></div>
+                      <div className="h-8 bg-muted rounded"></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-24 bg-gray-100 rounded"></div>
+                        <div className="h-4 bg-muted rounded w-3/4"></div>
+                        <div className="h-24 bg-muted rounded"></div>
                       </div>
                       <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-24 bg-gray-100 rounded"></div>
+                        <div className="h-4 bg-muted rounded w-3/4"></div>
+                        <div className="h-24 bg-muted rounded"></div>
                       </div>
                     </div>
                   </div>
@@ -185,15 +185,15 @@ export default async function HomePage() {
       
       <footer className="border-t">
         <div className="container flex flex-col items-center justify-between gap-4 px-4 py-6 md:flex-row">
-          <p className="text-sm text-gray-500">© 2024 ConstructionLog. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 ConstructionLog. All rights reserved.</p>
           <nav className="flex gap-4 text-sm">
-            <Link href="#" className="text-gray-500 hover:underline">
+            <Link href="#" className="text-muted-foreground hover:underline">
               Terms
             </Link>
-            <Link href="#" className="text-gray-500 hover:underline">
+            <Link href="#" className="text-muted-foreground hover:underline">
               Privacy
             </Link>
-            <Link href="#" className="text-gray-500 hover:underline">
+            <Link href="#" className="text-muted-foreground hover:underline">
               Contact
             </Link>
           </nav>
