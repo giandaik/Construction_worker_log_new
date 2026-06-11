@@ -12,6 +12,7 @@ vi.mock('@vercel/blob', () => ({
     url: `https://fake-blob-store.test/${pathname}`,
     pathname,
   })),
+  del: vi.fn(async () => undefined),
 }));
 
 vi.mock('@/utils/auth', () => ({
@@ -23,7 +24,12 @@ vi.mock('@/utils/auth', () => ({
 process.env.BLOB_READ_WRITE_TOKEN = 'fake-token';
 
 import { POST as uploadDwg } from '../app/api/upload/dwg/route';
+import {
+  POST as attachDwg,
+  DELETE as removeDwg,
+} from '../app/api/projects/[id]/dwgs/route';
 import { getAuthUser } from '@/utils/auth';
+import { del as blobDel } from '@vercel/blob';
 
 const mockedGetAuthUser = vi.mocked(getAuthUser);
 
@@ -146,7 +152,7 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 403 when authenticated as worker (role=user)', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user', password: 'x' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
     const res = await uploadDwg(makeRequest({ file: new Blob(['x']), projectId: 'irrelevant' }));
     expect(res.status).toBe(403);
   });
@@ -170,7 +176,7 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 400 when file exceeds 25MB', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager', password: 'x' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
     const big = new Blob([new Uint8Array(26 * 1024 * 1024)]);
     const file = new File([big], 'big.dwg', { type: 'application/acad' });
     const res = await uploadDwg(
@@ -180,7 +186,7 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 200 with url/pathname/filename/size on happy path (manager + .dwg + valid projectId)', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager', password: 'x' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
     const projectId = new Types.ObjectId().toString();
     const file = new File(['CAD-bytes'], 'site-plan.dwg', { type: 'application/acad' });
     const res = await uploadDwg(makeRequest({ file, projectId }));
@@ -190,5 +196,143 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
     expect(body.size).toBe(9);
     expect(body.url).toContain(`projects/${projectId}/dwgs/`);
     expect(body.pathname).toMatch(/^projects\/.+\/dwgs\/\d+-[a-f0-9-]+\.dwg$/);
+  });
+});
+
+async function makeProject(): Promise<string> {
+  const u = await User.create({
+    name: 'PM',
+    email: `pm-${Date.now()}-${Math.random()}@test`,
+    role: 'manager',
+    password: 'x',
+  });
+  const project = await Project.create({
+    name: 'P',
+    description: 'd',
+    location: 'L',
+    startDate: new Date(),
+    ownerEmail: 'a@test',
+    contractorEmail: 'b@test',
+    ownerUserId: u._id,
+    contractorUserId: u._id,
+    manager: u._id,
+  });
+  return (project._id as Types.ObjectId).toString();
+}
+
+function jsonRequest(body: unknown): Request {
+  return { json: async () => body } as unknown as Request;
+}
+
+describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
+  it('POST returns 401 when unauthenticated', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce(null);
+    const res = await attachDwg(
+      jsonRequest({ url: 'https://x/a.dwg', pathname: 'p', filename: 'a.dwg', size: 1 }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('POST returns 403 when role=user', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    const res = await attachDwg(
+      jsonRequest({ url: 'https://x/a.dwg', pathname: 'p', filename: 'a.dwg', size: 1 }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('POST returns 400 for malformed body', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    const res = await attachDwg(
+      jsonRequest({ url: 'not-a-url', filename: 'a.dwg', size: -1 }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('POST returns 404 for unknown project', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({
+      userId: new Types.ObjectId().toString(),
+      name: 'n',
+      role: 'admin',
+    });
+    const res = await attachDwg(
+      jsonRequest({ url: 'https://x/a.dwg', pathname: 'p', filename: 'a.dwg', size: 1 }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('POST happy path: appends DWG to project.dwgFiles', async () => {
+    const projectId = await makeProject();
+    const userId = new Types.ObjectId().toString();
+    mockedGetAuthUser.mockResolvedValueOnce({ userId, name: 'n', role: 'manager' });
+
+    const res = await attachDwg(
+      jsonRequest({
+        url: 'https://fake-blob-store.test/projects/x/dwgs/1.dwg',
+        pathname: 'projects/x/dwgs/1.dwg',
+        filename: 'site.dwg',
+        size: 4242,
+      }),
+      { params: Promise.resolve({ id: projectId }) },
+    );
+    expect(res.status).toBe(200);
+
+    const fresh = await Project.findById(projectId).lean();
+    expect(fresh?.dwgFiles).toHaveLength(1);
+    expect(fresh?.dwgFiles[0].filename).toBe('site.dwg');
+    expect(fresh?.dwgFiles[0].size).toBe(4242);
+    expect(fresh?.dwgFiles[0].uploadedBy?.toString()).toBe(userId);
+    expect(fresh?.dwgFiles[0].uploadedAt).toBeInstanceOf(Date);
+  });
+
+  it('DELETE happy path: removes the entry by url and calls blob del()', async () => {
+    const projectId = await makeProject();
+    const keepUrl = 'https://fake-blob-store.test/projects/y/dwgs/keep.dwg';
+    const dropUrl = 'https://fake-blob-store.test/projects/y/dwgs/drop.dwg';
+
+    const userId = new Types.ObjectId();
+    await Project.findByIdAndUpdate(projectId, {
+      $push: {
+        dwgFiles: {
+          $each: [
+            { url: keepUrl, pathname: 'p1', filename: 'keep.dwg', size: 1, uploadedBy: userId },
+            { url: dropUrl, pathname: 'p2', filename: 'drop.dwg', size: 2, uploadedBy: userId },
+          ],
+        },
+      },
+    });
+
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: userId.toString(), name: 'n', role: 'admin' });
+    const res = await removeDwg(
+      jsonRequest({ url: dropUrl }),
+      { params: Promise.resolve({ id: projectId }) },
+    );
+    expect(res.status).toBe(200);
+
+    const fresh = await Project.findById(projectId).lean();
+    expect(fresh?.dwgFiles).toHaveLength(1);
+    expect(fresh?.dwgFiles[0].url).toBe(keepUrl);
+
+    expect(blobDel).toHaveBeenCalledWith(dropUrl);
+  });
+
+  it('DELETE returns 401 unauth, 403 worker', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce(null);
+    let res = await removeDwg(
+      jsonRequest({ url: 'https://x/a.dwg' }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(401);
+
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    res = await removeDwg(
+      jsonRequest({ url: 'https://x/a.dwg' }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(403);
   });
 });

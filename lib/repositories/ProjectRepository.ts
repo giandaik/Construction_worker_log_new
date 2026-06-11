@@ -1,6 +1,7 @@
 import type { Collection, ObjectId } from 'mongodb';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
+import { ValidationUtils } from '@/lib/api/validation';
 
 /**
  * Project status enum
@@ -145,6 +146,57 @@ export class ProjectRepository extends BaseRepository<Project> {
 
       await this.create(defaultProject);
     }
+  }
+
+  /**
+   * Atomically push a DWG file entry onto a project's dwgFiles array.
+   * Returns the updated project.
+   */
+  async addDwgFile(
+    projectId: string | ObjectId,
+    dwg: Omit<DwgFile, 'uploadedAt'> & { uploadedAt?: Date }
+  ): Promise<Project | null> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+    const entry: DwgFile = {
+      ...dwg,
+      uploadedBy: dwg.uploadedBy
+        ? ValidationUtils.normalizeObjectId(dwg.uploadedBy)
+        : undefined,
+      uploadedAt: dwg.uploadedAt ?? new Date(),
+    };
+
+    const result = await this.collection.findOneAndUpdate(
+      { _id: objectId } as any,
+      {
+        $push: { dwgFiles: entry },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: 'after' }
+    );
+
+    return result ? this.mapToEntity(result) : null;
+  }
+
+  /**
+   * Atomically remove a DWG file entry (matched by url) from a project's dwgFiles array.
+   * Returns the updated project, or null if not found.
+   */
+  async removeDwgFile(
+    projectId: string | ObjectId,
+    url: string
+  ): Promise<Project | null> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+
+    const result = await this.collection.findOneAndUpdate(
+      { _id: objectId } as any,
+      {
+        $pull: { dwgFiles: { url } },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: 'after' }
+    );
+
+    return result ? this.mapToEntity(result) : null;
   }
 
   /**
