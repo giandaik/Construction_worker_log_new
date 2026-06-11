@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, History, PlusCircle } from "lucide-react";
+import { ArrowLeft, History, PlusCircle, Eye } from "lucide-react";
 
 interface Project {
   _id: string;
@@ -127,6 +127,12 @@ export default function ProjectsPage() {
                   <p className="mb-2"><strong>Manager:</strong> {project.manager}</p>
                 )}
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <Link href={`/projects/${project._id}`}>
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
+                  </Link>
                   <Link href={`/worklogs?project=${project._id}`}>
                     <Button variant="outline" size="sm">
                       <History className="w-4 h-4 mr-2" />
