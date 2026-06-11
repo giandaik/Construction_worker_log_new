@@ -9,6 +9,9 @@ const attachBodySchema = z.object({
   pathname: z.string().min(1),
   filename: z.string().min(1),
   size: z.number().int().nonnegative(),
+  pdfUrl: z.string().url().optional(),
+  pdfFilename: z.string().min(1).optional(),
+  pdfSize: z.number().int().nonnegative().optional(),
 });
 
 const removeBodySchema = z.object({
@@ -58,18 +61,25 @@ export async function DELETE(
       return ApiError.badRequest(parsed.error.issues.map(i => i.message).join(', '));
     }
 
-    const updated = await RepositoryFactory.withProjectRepository((projectRepo) =>
-      projectRepo.removeDwgFile(id, parsed.data.url),
+    const { updated, removedPdfUrl } = await RepositoryFactory.withProjectRepository(
+      async (projectRepo) => {
+        const existing = await projectRepo.findById(id);
+        const pdfUrl = existing?.dwgFiles?.find((d) => d.url === parsed.data.url)?.pdfUrl;
+        const result = await projectRepo.removeDwgFile(id, parsed.data.url);
+        return { updated: result, removedPdfUrl: pdfUrl };
+      },
     );
     if (!updated) return ApiError.notFound('Project');
 
     // Best-effort blob cleanup. The document is already updated; a failed blob delete
     // leaves an orphaned file but doesn't break the user-visible state.
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      try {
-        await del(parsed.data.url);
-      } catch (blobError) {
-        console.error('Failed to delete blob for DWG:', parsed.data.url, blobError);
+      for (const url of [parsed.data.url, removedPdfUrl].filter((u): u is string => Boolean(u))) {
+        try {
+          await del(url);
+        } catch (blobError) {
+          console.error('Failed to delete blob:', url, blobError);
+        }
       }
     }
 

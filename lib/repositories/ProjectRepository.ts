@@ -15,6 +15,9 @@ export interface DwgFile {
   url: string;
   filename: string;
   size: number;
+  pdfUrl?: string;
+  pdfFilename?: string;
+  pdfSize?: number;
   uploadedAt?: Date | string;
   uploadedBy?: string | ObjectId;
 }

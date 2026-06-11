@@ -4,6 +4,9 @@ export const dwgFileSchema = z.object({
   url: z.string().url(),
   filename: z.string().min(1),
   size: z.number().int().nonnegative(),
+  pdfUrl: z.string().url().optional(),
+  pdfFilename: z.string().min(1).optional(),
+  pdfSize: z.number().int().nonnegative().optional(),
   uploadedAt: z.union([z.string(), z.date()]).optional(),
   uploadedBy: z.string().optional(),
 })

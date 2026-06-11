@@ -24,6 +24,7 @@ vi.mock('@/utils/auth', () => ({
 process.env.BLOB_READ_WRITE_TOKEN = 'fake-token';
 
 import { POST as uploadDwg } from '../app/api/upload/dwg/route';
+import { POST as uploadPdf } from '../app/api/upload/pdf/route';
 import {
   POST as attachDwg,
   DELETE as removeDwg,
@@ -141,6 +142,182 @@ describe('Task 1 — Data model: Project.dwgFiles + WorkLog.dwgRefs', () => {
     ).toBe(true);
 
     expect(dwgFileSchema.safeParse({ url: 'not-a-url', filename: 'a.dwg', size: 1 }).success).toBe(false);
+  });
+
+  it('dwgFileSchema accepts optional PDF companion fields', () => {
+    expect(
+      dwgFileSchema.safeParse({
+        url: 'https://x/a.dwg',
+        filename: 'a.dwg',
+        size: 10,
+        pdfUrl: 'https://x/a.pdf',
+        pdfFilename: 'a.pdf',
+        pdfSize: 20,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      dwgFileSchema.safeParse({
+        url: 'https://x/a.dwg',
+        filename: 'a.dwg',
+        size: 10,
+        pdfUrl: 'not-a-url',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('Project persists optional PDF companion fields on dwgFiles', async () => {
+    const u = await User.create({ name: 'PD', email: 'pd@test', role: 'manager', password: 'x' });
+    const project = await Project.create({
+      name: 'P-PDF',
+      description: 'd',
+      location: 'L',
+      startDate: new Date(),
+      ownerEmail: 'a@test',
+      contractorEmail: 'b@test',
+      ownerUserId: u._id,
+      contractorUserId: u._id,
+      manager: u._id,
+      dwgFiles: [
+        {
+          url: 'https://blob/x.dwg',
+          filename: 'x.dwg',
+          size: 100,
+          pdfUrl: 'https://blob/x.pdf',
+          pdfFilename: 'x.pdf',
+          pdfSize: 200,
+          uploadedBy: u._id,
+        },
+      ],
+    });
+    const fresh = await Project.findById(project._id).lean<any>();
+    expect(fresh?.dwgFiles[0].pdfUrl).toBe('https://blob/x.pdf');
+    expect(fresh?.dwgFiles[0].pdfFilename).toBe('x.pdf');
+    expect(fresh?.dwgFiles[0].pdfSize).toBe(200);
+  });
+});
+
+describe('Task 4 — POST /api/upload/pdf validation', () => {
+  it('returns 401 when unauthenticated', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce(null);
+    const res = await uploadPdf(makeRequest({ file: new Blob(['x']), projectId: 'irrelevant' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when authenticated as worker (role=user)', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    const res = await uploadPdf(makeRequest({ file: new Blob(['x']), projectId: 'irrelevant' }));
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when file is not .pdf', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    const file = new File(['hello'], 'plan.png', { type: 'image/png' });
+    const res = await uploadPdf(
+      makeRequest({ file, projectId: new Types.ObjectId().toString() }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/\.pdf/);
+  });
+
+  it('returns 400 when file exceeds 25MB', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    const big = new Blob([new Uint8Array(26 * 1024 * 1024)]);
+    const file = new File([big], 'big.pdf', { type: 'application/pdf' });
+    const res = await uploadPdf(
+      makeRequest({ file, projectId: new Types.ObjectId().toString() }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 with url/pathname/filename/size on happy path', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    const projectId = new Types.ObjectId().toString();
+    const file = new File(['%PDF-bytes'], 'site-plan.pdf', { type: 'application/pdf' });
+    const res = await uploadPdf(makeRequest({ file, projectId }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.filename).toBe('site-plan.pdf');
+    expect(body.url).toContain(`projects/${projectId}/pdfs/`);
+    expect(body.pathname).toMatch(/^projects\/.+\/pdfs\/\d+-[a-f0-9-]+\.pdf$/);
+  });
+});
+
+describe('Task 5 — attach route accepts optional PDF fields', () => {
+  it('POST happy path persists pdfUrl/pdfFilename/pdfSize', async () => {
+    const projectId = await makeProject();
+    const userId = new Types.ObjectId().toString();
+    mockedGetAuthUser.mockResolvedValueOnce({ userId, name: 'n', role: 'manager' });
+
+    const res = await attachDwg(
+      jsonRequest({
+        url: 'https://fake-blob-store.test/projects/x/dwgs/with-pdf.dwg',
+        pathname: 'projects/x/dwgs/with-pdf.dwg',
+        filename: 'site.dwg',
+        size: 1000,
+        pdfUrl: 'https://fake-blob-store.test/projects/x/pdfs/with-pdf.pdf',
+        pdfFilename: 'site.pdf',
+        pdfSize: 2000,
+      }),
+      { params: Promise.resolve({ id: projectId }) },
+    );
+    expect(res.status).toBe(200);
+
+    const fresh = await Project.findById(projectId).lean<any>();
+    expect(fresh?.dwgFiles).toHaveLength(1);
+    expect(fresh?.dwgFiles[0].pdfUrl).toBe('https://fake-blob-store.test/projects/x/pdfs/with-pdf.pdf');
+    expect(fresh?.dwgFiles[0].pdfFilename).toBe('site.pdf');
+    expect(fresh?.dwgFiles[0].pdfSize).toBe(2000);
+  });
+
+  it('POST returns 400 when pdfUrl is not a valid URL', async () => {
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    const res = await attachDwg(
+      jsonRequest({
+        url: 'https://x/a.dwg',
+        pathname: 'p',
+        filename: 'a.dwg',
+        size: 1,
+        pdfUrl: 'not-a-url',
+        pdfFilename: 'a.pdf',
+        pdfSize: 1,
+      }),
+      { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('DELETE also removes the PDF blob when present', async () => {
+    const projectId = await makeProject();
+    const dwgUrl = 'https://fake-blob-store.test/projects/d/dwgs/del.dwg';
+    const pdfUrl = 'https://fake-blob-store.test/projects/d/pdfs/del.pdf';
+    const userId = new Types.ObjectId();
+
+    await Project.findByIdAndUpdate(projectId, {
+      $push: {
+        dwgFiles: {
+          url: dwgUrl,
+          filename: 'del.dwg',
+          size: 1,
+          pdfUrl,
+          pdfFilename: 'del.pdf',
+          pdfSize: 2,
+          uploadedBy: userId,
+        },
+      },
+    });
+
+    vi.mocked(blobDel).mockClear();
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: userId.toString(), name: 'n', role: 'admin' });
+    const res = await removeDwg(
+      jsonRequest({ url: dwgUrl }),
+      { params: Promise.resolve({ id: projectId }) },
+    );
+    expect(res.status).toBe(200);
+
+    expect(blobDel).toHaveBeenCalledWith(dwgUrl);
+    expect(blobDel).toHaveBeenCalledWith(pdfUrl);
   });
 });
 

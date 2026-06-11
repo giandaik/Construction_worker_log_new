@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {ArrowLeft, FileDown, Pencil, Trash, FileText} from "lucide-react";
+import {ArrowLeft, FileDown, Pencil, Trash, FileText, FileType2} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 import "../worklogs.css";
@@ -68,6 +68,9 @@ interface ProjectDwgFile {
   url: string;
   filename: string;
   size: number;
+  pdfUrl?: string;
+  pdfFilename?: string;
+  pdfSize?: number;
 }
 
 export default function WorkLogDetailPage() {
@@ -407,23 +410,46 @@ export default function WorkLogDetailPage() {
                 {workLog.dwgRefs.map((url) => {
                   const meta = projectDwgFiles.find((f) => f.url === url);
                   const filename = meta?.filename ?? url.split('/').pop() ?? 'drawing.dwg';
+                  if (!meta) {
+                    return (
+                      <li key={url} className="flex items-center gap-3 px-3 py-2">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <span className="min-w-0 flex-1 truncate text-sm text-gray-500">
+                          {filename} <span className="italic">(no longer available)</span>
+                        </span>
+                      </li>
+                    );
+                  }
                   return (
-                    <li key={url} className="flex items-center gap-3 px-3 py-2">
-                      <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
-                      {meta ? (
+                    <li key={url} className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <span className="min-w-0 truncate text-sm font-medium text-gray-800">
+                          {filename}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {meta.pdfUrl && (
+                          <a
+                            href={meta.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md bg-yellow-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-600"
+                          >
+                            <FileType2 className="h-4 w-4" />
+                            View PDF
+                          </a>
+                        )}
                         <a
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="min-w-0 flex-1 truncate text-sm text-blue-700 hover:underline"
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
-                          {filename}
+                          <FileDown className="h-4 w-4" />
+                          Download DWG
                         </a>
-                      ) : (
-                        <span className="min-w-0 flex-1 truncate text-sm text-gray-500">
-                          {filename} <span className="italic">(no longer available)</span>
-                        </span>
-                      )}
+                      </div>
                     </li>
                   );
                 })}

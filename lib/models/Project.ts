@@ -6,6 +6,9 @@ export interface IDwgFile {
   url: string;
   filename: string;
   size: number;
+  pdfUrl?: string;
+  pdfFilename?: string;
+  pdfSize?: number;
   uploadedAt: Date;
   uploadedBy: mongoose.Types.ObjectId | IUser;
 }
@@ -66,6 +69,9 @@ const ProjectSchema: Schema = new Schema(
           url: { type: String, required: true },
           filename: { type: String, required: true },
           size: { type: Number, required: true },
+          pdfUrl: { type: String },
+          pdfFilename: { type: String },
+          pdfSize: { type: Number },
           uploadedAt: { type: Date, default: Date.now },
           uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
