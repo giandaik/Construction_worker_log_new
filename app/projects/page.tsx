@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, History, PlusCircle, Eye } from "lucide-react";
+import { ArrowLeft, History, PlusCircle } from "lucide-react";
 
 interface Project {
   _id: string;
@@ -71,14 +71,16 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="mb-6">
         <Button variant="ghost" onClick={() => router.push('/')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
         </Button>
       </div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Projects</h1>
+      <div className="animate-fade-up flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold uppercase">
+          Projects <span className="text-muted-foreground">({projects.length})</span>
+        </h1>
       </div>
 
       {error && (
@@ -101,50 +103,65 @@ export default function ProjectsPage() {
       )}
 
       {!error && projects.length > 0 && (
-        <div className="grid gap-4">
+        <div className="animate-fade-up grid gap-4 md:grid-cols-2" style={{ animationDelay: '60ms' }}>
           {projects.map((project) => (
-            <Card key={project._id}>
-              <CardHeader>
-                <CardTitle>{project.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Card key={project._id} className="relative flex flex-col transition-shadow hover:shadow-md">
+              <Link
+                href={`/projects/${project._id}`}
+                className="absolute inset-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`View ${project.name}`}
+              />
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="text-xl uppercase">{project.name}</CardTitle>
+                  {project.status && (
+                    <span className="status-badge status-unknown shrink-0">{project.status}</span>
+                  )}
+                </div>
                 {project.description && (
-                  <p className="mb-2"><strong>Description:</strong> {project.description}</p>
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
                 )}
-                {project.location && (
-                  <p className="mb-2"><strong>Location:</strong> {project.location}</p>
-                )}
-                {project.status && (
-                  <p className="mb-2"><strong>Status:</strong> {project.status}</p>
-                )}
-                {project.startDate && (
-                  <p className="mb-2"><strong>Start Date:</strong> {new Date(project.startDate).toLocaleDateString()}</p>
-                )}
-                {project.endDate && (
-                  <p className="mb-2"><strong>End Date:</strong> {new Date(project.endDate).toLocaleDateString()}</p>
-                )}
-                {project.manager && (
-                  <p className="mb-2"><strong>Manager:</strong> {project.manager}</p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link href={`/projects/${project._id}`}>
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
-                  </Link>
-                  <Link href={`/worklogs?project=${project._id}`}>
-                    <Button variant="outline" size="sm">
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col justify-end gap-4">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  {project.location && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</dt>
+                      <dd>{project.location}</dd>
+                    </div>
+                  )}
+                  {project.manager && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Manager</dt>
+                      <dd>{project.manager}</dd>
+                    </div>
+                  )}
+                  {project.startDate && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Start</dt>
+                      <dd className="tabular-nums">{new Date(project.startDate).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                  {project.endDate && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">End</dt>
+                      <dd className="tabular-nums">{new Date(project.endDate).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="relative z-10 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/worklogs?project=${project._id}`}>
                       <History className="w-4 h-4 mr-2" />
                       History
-                    </Button>
-                  </Link>
-                  <Link href={`/forms/new?project=${project._id}`}>
-                    <Button size="sm">
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href={`/forms/new?project=${project._id}`}>
                       <PlusCircle className="w-4 h-4 mr-2" />
                       New Form
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
