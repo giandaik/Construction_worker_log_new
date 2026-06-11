@@ -1,3 +1,117 @@
+# Session Summary — 2026-06-11
+
+## Project: Construction Worker Daily Log
+
+A Next.js 15 web application for managing construction worker daily logs, project progress, and site documentation with role-based access control (Workers, Site Supervisors, Admins). Stack: Next.js 15 (app router), MongoDB/Mongoose, JWT/jose, Vercel Blob, Tailwind CSS.
+
+---
+
+## What Happened This Session
+
+### DWG (AutoCAD Drawing) File Attachments — End-to-End
+
+Shipped a complete DWG attachment system: admins/supervisors upload AutoCAD `.dwg` files to a project; workers select a per-worklog subset via checkbox, creating an audit trail of which drawings were referenced on each log entry.
+
+fp parent issue: **CWL-zudetbeq** — all 8 subissues closed and assigned to commits.
+
+| Subissue | Commit | What it covers |
+|---|---|---|
+| CWL-qzsljhaa | 4e95b79 | Data model — `dwgFiles` on Project, `dwgRefs` on WorkLog |
+| CWL-ypzbbvwq | 01e43e6 | Upload endpoint `POST /api/upload/dwg` |
+| CWL-vnydakov | 23e296e | Project DWG attach/remove API |
+| CWL-opklmhmt | 2f066ba | `DwgUpload` component |
+| CWL-aqajbqzn | 2f066ba | Project detail page |
+| CWL-sweldynu | 30b06d7 | `DwgPicker` component |
+| CWL-gulfaqoy | 30b06d7 | Wire picker into worklog form |
+| CWL-tgoiqegi | 30b06d7 | Worklog detail download links |
+
+Test commit: 917da88
+
+#### Files created
+
+| File | Purpose |
+|---|---|
+| `app/api/upload/dwg/route.ts` | POST endpoint, multipart/form-data, calls `put()` from `@vercel/blob`. Limit: 25 MB, `.dwg` only. Gated by `getAuthUser()` + admin/supervisor role check. |
+| `app/api/projects/[id]/route.ts` | GET single project (did not previously exist). |
+| `app/api/projects/[id]/dwgs/route.ts` | POST attach + DELETE remove, both gated to admin/supervisor. DELETE does best-effort Vercel Blob `del()`. |
+| `app/projects/[id]/page.tsx` | Project detail page (did not previously exist). Metadata + DWG list + upload UI. |
+| `components/forms/DwgUpload.tsx` | Admin/supervisor UI: DWG list with remove button and file input. |
+| `components/forms/DwgPicker.tsx` | Worker checkbox list fetching project DWGs, used in worklog form. |
+| `__tests__/verify-dwg.test.ts` | 17 vitest unit tests — all passing. |
+
+#### Files modified
+
+| File | Change |
+|---|---|
+| `lib/models/Project.ts` | `dwgFiles` subdoc array |
+| `lib/models/WorkLog.ts` | `dwgRefs: string[]` |
+| `lib/schemas/projectSchema.ts` | `dwgFileSchema` + included in `projectSchema` |
+| `lib/schemas/workLogSchema.ts` | `dwgRefs: z.array(z.string()).optional()` |
+| `lib/repositories/ProjectRepository.ts` | `DwgFile` interface; `addDwgFile()` + `removeDwgFile()` with atomic `$push`/`$pull` |
+| `lib/repositories/WorkLogRepository.ts` | `dwgRefs?: string[]` on `WorkLog` interface |
+| `hooks/useWorkLogForm.ts` | `dwgRefs` state + `updateDwgRefs` setter + reset |
+| `components/WorkLogForm.tsx` | Renders `<DwgPicker>` below `<PhotoUpload>` |
+| `app/worklogs/[id]/page.tsx` | Drawings section; joins refs against project at read time |
+| `app/worklogs/[id]/edit/page.tsx` | Local `dwgRefs` state hydrated from worklog, included in PUT |
+| `app/projects/page.tsx` | "View" button on project cards linking to detail page |
+
+#### Architectural decisions
+
+- **Access**: Admin + supervisor only for upload/manage. Worker role = `user`; `isAdmin` helper covers `admin` + `manager`.
+- **Max file size**: 25 MB per DWG (vs 8 MB for photos). Enforced client-side and in upload route.
+- **Per-worklog linking**: Worker picks a subset of project DWGs at worklog time. "Show all project DWGs" was intentionally rejected — the audit trail is the point.
+- **No in-browser preview**: DWGs render as download links only. AutoCAD/Navisworks is the client's problem.
+- **No offline DWG upload**: 25 MB files are impractical for IndexedDB. Admins/supervisors are assumed to be online.
+- **Worklog stores URLs only** (`dwgRefs: string[]`); detail page joins against `project.dwgFiles` at read time for human filenames. Degrades to "(no longer available)" if a referenced DWG was removed.
+- **DELETE is best-effort** on Vercel Blob — DB is authoritative; blob failures are logged and swallowed.
+- **No new env var**: reuses existing `BLOB_READ_WRITE_TOKEN`.
+
+#### Verification
+
+- 17 vitest unit tests in `__tests__/verify-dwg.test.ts`: schema persistence, backward compat (empty default), Zod schemas, upload route auth gates (401/403/400/200), attach/remove route auth gates + happy paths.
+- Live end-to-end against dev server + real Vercel Blob + real MongoDB confirmed: upload, attach, GET, DELETE, worklog POST with `dwgRefs`, worklog GET.
+
+---
+
+## Git State at Session End
+
+- Branch: `main`
+- 7 commits ahead of `origin/main` — **NOT pushed** (user to push when ready)
+- `AGENTS.md` and `CLAUDE.md` have unstaged user edits (GitNexus stat bump) — committed together with session wrap-up docs
+
+---
+
+## Open Follow-ups
+
+- **Browser verification**: User was asking for test credentials at session wrap. Admin test user: `test@local.dev` / `test1234` (seed with `scripts/seed-test-user.mjs`, role: `admin`). Worker test user is not yet seeded — no script exists.
+- **Push**: 7 commits on `main` need to be pushed to `https://github.com/giandaik/Construction_worker_log_new.git` when ready.
+- **CWL-gupyodxk**: Password hashing (unsalted SHA-256 → bcrypt) remains open. Priority before any real user data.
+- **Pre-existing TS errors**: `__tests__/` workLog fixture shape mismatches and `resend-email` `signatureTimestamp` — untouched, not regressions from this session.
+- **ESLint**: Circular structure in ESLint config — pre-existing, not introduced this session.
+
+---
+
+## Next Session Priorities
+
+1. `git push origin main` — ship the 7 commits.
+2. Verify DWG flow in browser (admin login, upload a DWG to a project, switch to worker, create worklog, pick the DWG, verify it appears on the detail page as a download link).
+3. Seed a worker test user if browser testing of the worker flow is needed.
+4. Pick up **CWL-gupyodxk**: replace unsalted SHA-256 with `bcryptjs`, fix `POST /api/users` password persistence.
+
+---
+
+## Architectural Notes (Actual Stack)
+
+- **Framework**: Next.js 15, `app/` router
+- **Database**: MongoDB via Mongoose — `lib/models/`, `lib/schemas/`, `lib/repositories/`
+- **Auth**: JWT via `jose`; `bcryptjs` in `package.json` but unused (see CWL-gupyodxk)
+- **File Uploads**: Vercel Blob — photos (8 MB, offline-first) + DWGs (25 MB, online-only for admins/supervisors)
+- **Offline Sync**: `hooks/useOfflineSync.ts` + `lib/syncService.ts` (photos only; DWGs excluded)
+- **API Routes**: `app/api/` Next.js route handlers
+- **Middleware**: `middleware.ts` at project root — JWT verification
+
+---
+
 # Session Summary — 2026-06-08
 
 ## Project: Construction Worker Daily Log

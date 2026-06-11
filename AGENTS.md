@@ -12,13 +12,21 @@ Key files: `app/api/upload/route.ts`, `lib/imageResize.ts`, `components/forms/Ph
 Required env var: `BLOB_READ_WRITE_TOKEN` (Vercel Blob Store).
 Offline flow: `data:` URLs held in IndexedDB, pre-uploaded to Blob before worklog POST/PUT.
 
+## DWG (AutoCAD Drawing) Attachment Feature (added 2026-06-11)
+Admins/supervisors upload DWG files to a project; workers pick a subset per worklog (audit trail).
+Key files: `app/api/upload/dwg/route.ts`, `app/api/projects/[id]/dwgs/route.ts`, `app/projects/[id]/page.tsx`, `components/forms/DwgUpload.tsx`, `components/forms/DwgPicker.tsx`.
+Data model: `Project.dwgFiles[]` (subdoc with url/filename/uploadedBy/uploadedAt), `WorkLog.dwgRefs: string[]`.
+Worklog detail joins `dwgRefs` against `project.dwgFiles` at read time to resolve filenames — degrades to "(no longer available)" if a DWG was removed.
+No offline upload (25 MB cap, IndexedDB impractical). No in-browser preview — download links only.
+Same `BLOB_READ_WRITE_TOKEN` env var; no new env vars needed.
+
 ## Open Security Issue (fp CWL-gupyodxk)
 Passwords hashed with unsalted SHA-256 — switch to `bcryptjs`. `POST /api/users` does not persist passwords. Fix before production.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (1661 symbols, 2991 relationships, 139 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1784 symbols, 3278 relationships, 150 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

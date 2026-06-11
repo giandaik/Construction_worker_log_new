@@ -175,6 +175,54 @@ Added in session 2026-06-08. Photos can be attached to any WorkLog (create and e
 3. On reconnect (or at submit time if online): `data:` URLs pre-uploaded to Blob, HTTPS URLs replace them, then worklog POST/PUT fires with HTTPS URLs only.
 4. The MongoDB document and Blob store only ever hold HTTPS URLs.
 
+## DWG Attachment Feature
+
+Added in session 2026-06-11. Admins and supervisors can upload AutoCAD DWG files to a project; workers can reference a subset of those drawings on individual worklogs, creating a per-log audit trail.
+
+### Access model
+
+Upload and project-level management (attach/remove) is restricted to admins and supervisors. The existing `isAdmin` helper covers both `admin` and `manager` roles; the `user` (worker) role is excluded. Workers use the read-only `DwgPicker` to select drawings at worklog creation/edit time.
+
+### Files added
+
+| File | Purpose |
+|---|---|
+| `app/api/upload/dwg/route.ts` | POST endpoint — multipart/form-data, calls `put()` from `@vercel/blob`. Limit: 25 MB, `.dwg` only. Pathname: `projects/{projectId}/dwgs/{timestamp}-{uuid}.dwg`. Gated by `getAuthUser()` + admin/supervisor role check. |
+| `app/api/projects/[id]/route.ts` | GET single project — did not previously exist. |
+| `app/api/projects/[id]/dwgs/route.ts` | POST to attach a DWG (push to `project.dwgFiles`); DELETE to remove (pull from array + best-effort Vercel Blob `del()`). Both gated to admin/supervisor. |
+| `app/projects/[id]/page.tsx` | Project detail page — did not previously exist. Shows project metadata + DWG list with upload UI for admins/supervisors. |
+| `components/forms/DwgUpload.tsx` | Admin/supervisor UI: lists existing DWGs with remove button, file input to upload new ones. |
+| `components/forms/DwgPicker.tsx` | Worker checkbox list: fetches project's DWG files, lets user select a subset to reference on the worklog. |
+| `__tests__/verify-dwg.test.ts` | 17 vitest unit tests — schema persistence, backward compat, Zod schemas, upload route auth gates, attach/remove route auth gates + happy paths. |
+
+### Files modified
+
+| File | Change |
+|---|---|
+| `lib/models/Project.ts` | Added `dwgFiles` subdocument array (`url`, `filename`, `uploadedBy`, `uploadedAt`). |
+| `lib/models/WorkLog.ts` | Added `dwgRefs: string[]`. |
+| `lib/schemas/projectSchema.ts` | Added `dwgFileSchema`; included in `projectSchema`. |
+| `lib/schemas/workLogSchema.ts` | Added `dwgRefs: z.array(z.string()).optional()`. |
+| `lib/repositories/ProjectRepository.ts` | Added `DwgFile` interface; `addDwgFile()` and `removeDwgFile()` using atomic `$push`/`$pull`. |
+| `lib/repositories/WorkLogRepository.ts` | Added `dwgRefs?: string[]` to `WorkLog` interface. |
+| `hooks/useWorkLogForm.ts` | Added `dwgRefs: string[]` state + `updateDwgRefs` setter + reset. |
+| `components/WorkLogForm.tsx` | Renders `<DwgPicker>` below `<PhotoUpload>`. |
+| `app/worklogs/[id]/page.tsx` | Drawings section between Photos and Notes; joins `dwgRefs` against `project.dwgFiles` at read time to resolve filenames (degrades to "(no longer available)" if removed). |
+| `app/worklogs/[id]/edit/page.tsx` | Local `dwgRefs` state hydrated from worklog; included in PUT body. |
+| `app/projects/page.tsx` | Added "View" button on project cards linking to `/projects/[id]`. |
+
+### Key design decisions
+
+- **No in-browser DWG preview** — DWGs surface as plain download links. Viewing is the client's problem (AutoCAD, Navisworks, etc.).
+- **No offline DWG upload** — DWGs can be up to 25 MB, impractical for IndexedDB. Admins/supervisors are assumed online.
+- **Worklog stores URLs only** (`dwgRefs: string[]`); the detail page joins against `project.dwgFiles` at read time to resolve filenames. Avoids stale filename drift; degrades gracefully.
+- **DELETE is best-effort** on Vercel Blob — DB state is authoritative; blob delete failures are logged and swallowed.
+- **Max file size**: 25 MB per DWG (vs 8 MB for photos). Enforced both client-side and in the upload route.
+
+### Required env var
+
+`BLOB_READ_WRITE_TOKEN` — same token used by photo uploads (Vercel Blob Store). No additional env var needed.
+
 ## Code Style Guidelines (from .cursorrules)
 
 ### TypeScript Conventions
@@ -221,7 +269,7 @@ Added in session 2026-06-08. Photos can be attached to any WorkLog (create and e
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (1661 symbols, 2991 relationships, 139 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1784 symbols, 3278 relationships, 150 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
