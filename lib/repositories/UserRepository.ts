@@ -70,10 +70,10 @@ export class UserRepository extends BaseRepository<User> {
   /**
    * Get users summary (lightweight for dropdowns)
    */
-  async findSummary(): Promise<Pick<User, '_id' | 'name' | 'email'>[]> {
+  async findSummary(): Promise<Pick<User, '_id' | 'name' | 'email' | 'role'>[]> {
     const documents = await this.collection
       .find({})
-      .project({ _id: 1, name: 1, email: 1 })
+      .project({ _id: 1, name: 1, email: 1, role: 1 })
       .sort({ name: 1 })
       .toArray();
 

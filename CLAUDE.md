@@ -254,9 +254,9 @@ Upload and project-level management (attach/remove) is restricted to admins and 
 
 1. **Actual Stack (NOTE: the Tech Stack section above is outdated)**: The running codebase is **Next.js 15** (app router), **MongoDB/Mongoose** for persistence (models in `lib/models/`, schemas in `lib/schemas/`, repository pattern in `lib/repositories/`), and **JWT via jose** for auth (`middleware.ts` + `app/api/login/`). The Vite/Express/Firebase description is a legacy artifact and does not reflect what is on disk.
 
-2. **Password Hashing (open security issue — fp CWL-gupyodxk)**: Passwords are currently hashed with unsalted SHA-256 (`crypto.createHash`). `bcryptjs` is in `package.json` but unused. Replace with `bcryptjs.hash` / `bcryptjs.compare` before any real user data is stored.
+2. **Password Hashing**: Passwords are hashed with `bcryptjs.hash(password, 12)` on user creation (`app/api/users/route.ts`, `app/api/signup/route.ts`) and verified with `bcryptjs.compare` on login (`app/api/login/route.ts`). A migration script (`scripts/migrate-sha256-passwords.mjs`) exists for legacy SHA-256 hashes.
 
-3. **Role Assignment**: Roles are stored in MongoDB on the `User` document. Default role is `WORKER`. Note: `POST /api/users` currently does not persist passwords correctly (tracked in CWL-gupyodxk).
+3. **Role Assignment**: Roles are stored in MongoDB on the `User` document. The schema enum is `'admin' | 'user' | 'manager'` (`lib/schemas/userSchema.ts`); new accounts default to `'user'`. Public signup (`POST /api/signup`) always forces `'user'` and ignores any client-supplied role.
 
 4. **Photo Storage**: Photos are stored in **Vercel Blob** (`@vercel/blob`). The upload endpoint is `app/api/upload/route.ts` (POST, multipart/form-data, max 8 MB, JPEG/PNG/WebP). Client-side resize (`lib/imageResize.ts`) compresses to ≤2000 px / 0.85 JPEG quality before upload. When offline, photos are held as `data:` URLs in form state and IndexedDB; they are pre-uploaded on reconnect or at submit time. The `WorkLog` model stores only HTTPS Blob URLs. Required env var: `BLOB_READ_WRITE_TOKEN` (Vercel dashboard → Storage → Blob Store).
 

@@ -1,12 +1,13 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { FileText, Plus, FolderOpen } from "lucide-react"
+import { FileText, Plus, FolderOpen, ShieldCheck } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
 import { dbConnect } from "@/lib/dbConnect"
 import mongoose from "mongoose"
 import type { Project, WorkLog } from "@/types/shared"
 import { LogoutButton } from "@/components/LogoutButton"
+import { getAuthUser, isAdmin } from "@/utils/auth"
 
 async function getInitialData() {
   try {
@@ -71,7 +72,11 @@ async function getInitialData() {
 }
 
 export default async function HomePage() {
-  const initialData = await getInitialData();
+  const [initialData, authUser] = await Promise.all([
+    getInitialData(),
+    getAuthUser(),
+  ]);
+  const showAdminLink = isAdmin(authUser);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -86,6 +91,14 @@ export default async function HomePage() {
                 <span className="sm:hidden">New</span>
               </Link>
             </Button>
+            {showAdminLink && (
+              <Button variant="outline" asChild>
+                <Link href="/admin/users">
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              </Button>
+            )}
             <ThemeToggle />
             <LogoutButton />
           </div>
