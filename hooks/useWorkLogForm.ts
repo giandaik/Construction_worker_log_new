@@ -18,6 +18,7 @@ export type WorkLogFormData = {
   notes?: string;
   signatures?: Signature[];
   images: string[];
+  dwgRefs: string[];
 };
 
 /**
@@ -34,6 +35,7 @@ export function useWorkLogForm(initialProject = '') {
     materials: [],
     signatures: [],
     images: [],
+    dwgRefs: [],
   });
 
   /**
@@ -165,6 +167,16 @@ export function useWorkLogForm(initialProject = '') {
     }));
   }, []);
 
+  /**
+   * Update dwgRefs array (URLs of project DWGs selected for this worklog)
+   */
+  const updateDwgRefs = useCallback((dwgRefs: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      dwgRefs
+    }));
+  }, []);
+
   const updateWeather = useCallback((weather: string) => {
     setFormData(prev => ({ ...prev, weather }));
   }, []);
@@ -214,6 +226,7 @@ export function useWorkLogForm(initialProject = '') {
       materials: [],
       signatures: [],
       images: [],
+      dwgRefs: [],
     });
   }, []);
 
@@ -237,6 +250,7 @@ export function useWorkLogForm(initialProject = '') {
     },
     updateSignatures,
     updateImages,
+    updateDwgRefs,
     updateWeather,
     seedFromPrevious,
     clearSeed,

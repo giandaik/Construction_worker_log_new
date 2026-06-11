@@ -17,6 +17,7 @@ import { ArrowLeft } from "lucide-react"
 import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
 import { PhotoUpload } from '@/components/forms/PhotoUpload'
+import { DwgPicker } from '@/components/forms/DwgPicker'
 import { Combobox } from '@/components/forms/Combobox'
 import { WeatherPicker } from '@/components/forms/WeatherPicker'
 import { useSuggestions } from '@/hooks/useSuggestions'
@@ -36,6 +37,7 @@ export default function EditWorkLogForm() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [signatures, setSignatures] = useState<Signature[]>([])
   const [images, setImages] = useState<string[]>([])
+  const [dwgRefs, setDwgRefs] = useState<string[]>([])
 
   const {
     register,
@@ -102,6 +104,11 @@ export default function EditWorkLogForm() {
           setImages(workLog.images)
         }
 
+        // Set dwgRefs if they exist
+        if (Array.isArray(workLog.dwgRefs)) {
+          setDwgRefs(workLog.dwgRefs)
+        }
+
         setIsLoading(false)
       } catch (error) {
         console.error('Error loading data:', error)
@@ -156,6 +163,7 @@ export default function EditWorkLogForm() {
           ...data,
           signatures,
           images: resolvedImages,
+          dwgRefs,
           status
         }),
       })
@@ -480,6 +488,8 @@ export default function EditWorkLogForm() {
             <div>
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Photos</h2>
               <PhotoUpload value={images} onChange={setImages} />
+
+              <DwgPicker projectId={watchedProject} value={dwgRefs} onChange={setDwgRefs} />
             </div>
 
             {/* Signatures Section */}

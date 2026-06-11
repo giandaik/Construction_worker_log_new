@@ -11,6 +11,7 @@ import { FormField } from '@/components/forms/FormField';
 import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
 import { PhotoUpload } from '@/components/forms/PhotoUpload';
+import { DwgPicker } from '@/components/forms/DwgPicker';
 import { Combobox } from '@/components/forms/Combobox';
 import { WeatherPicker } from '@/components/forms/WeatherPicker';
 import { useSuggestions } from '@/hooks/useSuggestions';
@@ -99,6 +100,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     materials,
     updateSignatures,
     updateImages,
+    updateDwgRefs,
     updateWeather,
     seedFromPrevious,
     clearSeed,
@@ -445,6 +447,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       <PhotoUpload
         value={formData.images}
         onChange={updateImages}
+      />
+
+      <DwgPicker
+        projectId={formData.project}
+        value={formData.dwgRefs}
+        onChange={updateDwgRefs}
       />
 
       <SignatureSection

@@ -82,7 +82,7 @@ describe('Task 1 — Data model: Project.dwgFiles + WorkLog.dwgRefs', () => {
       ],
     });
 
-    const fresh = await Project.findById(project._id).lean();
+    const fresh = await Project.findById(project._id).lean<any>();
     expect(fresh?.dwgFiles).toHaveLength(1);
     expect(fresh?.dwgFiles[0].filename).toBe('plan-a.dwg');
     expect(fresh?.dwgFiles[0].size).toBe(1234);
@@ -102,7 +102,7 @@ describe('Task 1 — Data model: Project.dwgFiles + WorkLog.dwgRefs', () => {
       contractorUserId: u._id,
       manager: u._id,
     });
-    const fresh = await Project.findById(project._id).lean();
+    const fresh = await Project.findById(project._id).lean<any>();
     expect(fresh?.dwgFiles).toEqual([]);
   });
 
@@ -116,7 +116,7 @@ describe('Task 1 — Data model: Project.dwgFiles + WorkLog.dwgRefs', () => {
       workDescription: 'work',
       dwgRefs: ['https://blob/a.dwg', 'https://blob/b.dwg'],
     });
-    const fresh = await WorkLog.findById(wl._id).lean();
+    const fresh = await WorkLog.findById(wl._id).lean<any>();
     expect(fresh?.dwgRefs).toEqual(['https://blob/a.dwg', 'https://blob/b.dwg']);
   });
 
@@ -281,7 +281,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
     );
     expect(res.status).toBe(200);
 
-    const fresh = await Project.findById(projectId).lean();
+    const fresh = await Project.findById(projectId).lean<any>();
     expect(fresh?.dwgFiles).toHaveLength(1);
     expect(fresh?.dwgFiles[0].filename).toBe('site.dwg');
     expect(fresh?.dwgFiles[0].size).toBe(4242);
@@ -313,7 +313,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
     );
     expect(res.status).toBe(200);
 
-    const fresh = await Project.findById(projectId).lean();
+    const fresh = await Project.findById(projectId).lean<any>();
     expect(fresh?.dwgFiles).toHaveLength(1);
     expect(fresh?.dwgFiles[0].url).toBe(keepUrl);
 

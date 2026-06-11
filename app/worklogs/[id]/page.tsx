@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {ArrowLeft, FileDown, Pencil, Trash} from "lucide-react";
+import {ArrowLeft, FileDown, Pencil, Trash, FileText} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 import "../worklogs.css";
@@ -59,8 +59,15 @@ interface WorkLog {
   status?:string;
   signatures?: Signature[];
   images?: string[];
+  dwgRefs?: string[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface ProjectDwgFile {
+  url: string;
+  filename: string;
+  size: number;
 }
 
 export default function WorkLogDetailPage() {
@@ -69,6 +76,7 @@ export default function WorkLogDetailPage() {
   const { id } = params;
 
   const [workLog, setWorkLog] = useState<WorkLog | null>(null);
+  const [projectDwgFiles, setProjectDwgFiles] = useState<ProjectDwgFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +95,18 @@ export default function WorkLogDetailPage() {
         
         const data = await response.json();
         setWorkLog(data);
+
+        if (Array.isArray(data.dwgRefs) && data.dwgRefs.length > 0 && data.project) {
+          try {
+            const projectRes = await fetch(`/api/projects/${data.project}`);
+            if (projectRes.ok) {
+              const project = await projectRes.json();
+              setProjectDwgFiles(project.dwgFiles ?? []);
+            }
+          } catch (e) {
+            console.error('Failed to fetch project DWGs:', e);
+          }
+        }
 
       } catch (error) {
         console.error('Error fetching work log:', error);
@@ -376,6 +396,38 @@ export default function WorkLogDetailPage() {
                   </a>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Drawings */}
+          {workLog.dwgRefs && workLog.dwgRefs.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 border-b pb-2">Drawings</h3>
+              <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+                {workLog.dwgRefs.map((url) => {
+                  const meta = projectDwgFiles.find((f) => f.url === url);
+                  const filename = meta?.filename ?? url.split('/').pop() ?? 'drawing.dwg';
+                  return (
+                    <li key={url} className="flex items-center gap-3 px-3 py-2">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                      {meta ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="min-w-0 flex-1 truncate text-sm text-blue-700 hover:underline"
+                        >
+                          {filename}
+                        </a>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate text-sm text-gray-500">
+                          {filename} <span className="italic">(no longer available)</span>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
 
