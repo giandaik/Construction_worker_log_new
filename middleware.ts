@@ -5,7 +5,7 @@ import { validateJWTSecret } from "./utils/auth";
 
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ["/login", "/api/login", "/api/logout", "/_next", "/favicon.ico"];
+const PUBLIC_PATHS = ["/login", "/signup", "/api/login", "/api/signup", "/api/logout", "/_next", "/favicon.ico"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((publicPath) => pathname.startsWith(publicPath));
