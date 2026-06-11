@@ -12,8 +12,14 @@ import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constan
 
 const RECENT_LOGS_SHOWN = 6
 
-interface DashboardWorkLog extends WorkLog {
+interface DashboardWorkLog extends Omit<WorkLog, '_id' | 'project'> {
+  _id: string
+  project: string
   status?: string
+}
+
+interface DashboardProject extends Omit<Project, '_id'> {
+  _id: string
 }
 
 async function getInitialData() {
@@ -43,7 +49,7 @@ async function getInitialData() {
       db.collection('worklogs').countDocuments(),
     ]);
 
-    const typedProjects: Project[] = projects.map(project => ({
+    const typedProjects: DashboardProject[] = projects.map(project => ({
       _id: project._id.toString(),
       name: project.name,
       description: project.description
