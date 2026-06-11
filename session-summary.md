@@ -1,4 +1,65 @@
-# Session Summary — 2026-06-11
+# Session Summary — 2026-06-11 (planning session)
+
+## Project: Construction Worker Daily Log
+
+A Next.js 15 web application for managing construction worker daily logs, project progress, and site documentation with role-based access control (Workers, Site Supervisors, Admins). Stack: Next.js 15 (app router), MongoDB/Mongoose, JWT/jose, Vercel Blob, Tailwind CSS.
+
+---
+
+## What Happened This Session
+
+**Planning only — no code written.** Scoped three new feature initiatives and broke them into 11 atomic fp subissues. Discussed tradeoffs, locked the high-level design decisions, and queued issues in the recommended implementation order.
+
+### Three feature initiatives scoped
+
+| fp root | Feature | Subissues |
+|---|---|---|
+| **CWL-stfdsadi** | Per-project calendar view of worklog counts | 3 |
+| **CWL-yapwnfum** | Upgrade `/projects` into a PM project grid with sort/filter + log counts | 3 |
+| **CWL-mjmzwgxn** | Admin-managed type collections for personnel / material / equipment | 5 |
+
+### Subissue breakdown
+
+**CWL-stfdsadi — Per-project calendar**
+- CWL-nxzflhul — API: `GET /api/projects/[id]/worklog-counts?month=YYYY-MM`
+- CWL-obmxvyda — `/projects/[id]/calendar` month-grid page
+- CWL-ajrzsmfb — "Calendar" link from `/projects` card and `/projects/[id]` detail
+
+**CWL-yapwnfum — Project grid upgrade**
+- CWL-dwpciyex — Backend: include `worklogCount` + `lastLogDate` on `GET /api/projects`
+- CWL-kbhyhobv — Responsive 1/2/3-col grid with denser cards
+- CWL-ykzqwqeo — Sort + status filter + name/location search controls
+
+**CWL-mjmzwgxn — Admin-managed types**
+- CWL-nnrajzlf — Mongoose models + Zod schemas + repositories for 3 type collections
+- CWL-jxhumviq — Admin CRUD API routes for type collections
+- CWL-qwlvghjg — Admin pages `/admin/personnel-types`, `/admin/material-types`, `/admin/equipment-types`
+- CWL-gyneueco — Rewire WorkLogForm Comboboxes to use new type endpoints
+- CWL-oxocrztc — Migration script: extract distinct values from existing worklogs into type collections
+
+### Key design decisions (locked)
+
+- **Calendar is per-project, not portfolio-wide.** User chose one-project-at-a-time over a multi-project badge calendar. Picker at top of the calendar page selects which project to render.
+- **Type collections are global and admin-managed.** Not hardcoded constants, not per-project. Admins curate without a deploy. Three small collections: `PersonnelType`, `MaterialType`, `EquipmentType`.
+- **Migration approach: import distinct existing values.** Not "keep free-text fallback" and not "hard cutover". A one-time script (`scripts/migrate-types.mjs`) scans worklogs, extracts distinct trimmed non-empty values for `personnel.role` / `equipment.type` / `materials.name` / `materials.unit`, and upserts type records.
+- **Project grid: upgrade existing `/projects` route**, do not add a parallel PM-only selector. Avoids two near-duplicate routes.
+
+### Dependencies & ordering
+
+- **CWL-oxocrztc depends on CWL-mghvmqng** (existing issue under CWL-hxzxytmd, "Backfill: dedupe & normalize stub values in worklog.personnel.role / equipment.type / materials.name|unit"). Run the dedupe first or alongside, otherwise the type-import migration will copy garbage values into the new collections.
+- **CWL-mjmzwgxn builds on CWL-ooafxbcl** (already done — "Win #2: Replace free-text role/type/unit/weather with pickers"). The Combobox UX stays; only its suggestion source swaps from `useSuggestions` (history-derived) to fetched admin-curated types.
+- **Recommended implementation order:**
+  1. **CWL-yapwnfum** (project grid) — smallest, no migration risk, warm-up.
+  2. **CWL-stfdsadi** (calendar) — depends on the grid for navigation entry points.
+  3. **CWL-mjmzwgxn** (types) — largest, touches the worklog form and requires a migration.
+
+### Files NOT changed this session
+
+No application code was modified. The two uncommitted files (`AGENTS.md`, `CLAUDE.md`) carry only GitNexus index stat bumps (symbols 1828→1896, relationships 3349→3497, flows 154→160), unrelated to this session.
+
+---
+
+# Session Summary — 2026-06-11 (DWG attachments)
 
 ## Project: Construction Worker Daily Log
 

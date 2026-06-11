@@ -23,10 +23,17 @@ Same `BLOB_READ_WRITE_TOKEN` env var; no new env vars needed.
 ## Open Security Issue (fp CWL-gupyodxk)
 Passwords hashed with unsalted SHA-256 — switch to `bcryptjs`. `POST /api/users` does not persist passwords. Fix before production.
 
+## Planned Features (scoped 2026-06-11, not yet implemented)
+- **CWL-stfdsadi** — Per-project calendar view of worklog counts (3 subissues). One project at a time; month grid with per-day log count.
+- **CWL-yapwnfum** — Upgrade `/projects` into a responsive PM grid with `worklogCount` + `lastLogDate`, sort, status filter, search (3 subissues).
+- **CWL-mjmzwgxn** — Admin-managed type collections for personnel / material / equipment, replacing the history-derived `useSuggestions` source behind the existing Comboboxes (5 subissues). Depends on **CWL-mghvmqng** (dedupe stub values) before the migration step **CWL-oxocrztc**.
+
+Recommended order: CWL-yapwnfum → CWL-stfdsadi → CWL-mjmzwgxn. See `session-summary.md` for design decisions.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (1828 symbols, 3349 relationships, 154 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (1896 symbols, 3497 relationships, 160 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
