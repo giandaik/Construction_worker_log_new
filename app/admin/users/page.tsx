@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FolderPlus } from "lucide-react";
 import { getAuthUser, isAdmin } from "@/utils/auth";
 import { Button } from "@/components/ui/button";
 import { UserManagement } from "@/components/admin/UserManagement";
@@ -27,6 +27,11 @@ export default async function AdminUsersPage() {
       </div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">User Management</h1>
+        <Button asChild>
+          <Link href="/admin/projects/new">
+            <FolderPlus className="mr-2 h-4 w-4" /> New Project
+          </Link>
+        </Button>
       </div>
       <UserManagement />
     </div>
