@@ -73,6 +73,15 @@ export interface DayCount {
 }
 
 /**
+ * Aggregate worklog stats for a project (project grid)
+ */
+export interface ProjectLogStats {
+  project: string;
+  worklogCount: number;
+  lastLogDate: string | null;
+}
+
+/**
  * WorkLog with populated references
  */
 export interface WorkLogWithDetails extends WorkLog {
@@ -193,6 +202,31 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     ]).toArray();
 
     return documents.map((doc: any) => ({ date: doc._id, count: doc.count }));
+  }
+
+  /**
+   * Aggregate per-project worklog count and most recent log date.
+   * Project keys are normalized to strings so callers can join against
+   * project._id regardless of how the reference was stored.
+   */
+  async getProjectStats(): Promise<ProjectLogStats[]> {
+    const documents = await this.collection.aggregate([
+      {
+        $group: {
+          _id: { $toString: '$project' },
+          worklogCount: { $sum: 1 },
+          lastLogDate: {
+            $max: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
+          },
+        },
+      },
+    ]).toArray();
+
+    return documents.map((doc: any) => ({
+      project: doc._id,
+      worklogCount: doc.worklogCount,
+      lastLogDate: doc.lastLogDate ? doc.lastLogDate.toISOString() : null,
+    }));
   }
 
   /**

@@ -5,14 +5,27 @@ import { getAuthUser, isAdmin } from "@/utils/auth";
 
 export async function GET() {
   try {
-    return await RepositoryFactory.withProjectRepository(async (projectRepo) => {
+    return await RepositoryFactory.withRepositories(async ({ projects: projectRepo, workLogs: workLogRepo }) => {
       // Ensure default project exists
       await projectRepo.ensureDefaultProject();
 
-      // Return project summary (lightweight for dropdowns)
-      const projects = await projectRepo.findSummary();
+      const [projects, logStats] = await Promise.all([
+        projectRepo.findSummary(),
+        workLogRepo.getProjectStats(),
+      ]);
 
-      return ApiError.success(projects);
+      const statsByProject = new Map(logStats.map((stats) => [stats.project, stats]));
+
+      const projectsWithStats = projects.map((project) => {
+        const stats = statsByProject.get(String(project._id));
+        return {
+          ...project,
+          worklogCount: stats?.worklogCount ?? 0,
+          lastLogDate: stats?.lastLogDate ?? null,
+        };
+      });
+
+      return ApiError.success(projectsWithStats);
     });
   } catch (error) {
     return ApiError.handle(error);

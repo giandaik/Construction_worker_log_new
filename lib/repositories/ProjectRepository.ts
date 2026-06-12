@@ -114,10 +114,10 @@ export class ProjectRepository extends BaseRepository<Project> {
   /**
    * Get projects summary (lightweight for dropdowns)
    */
-  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'ownerEmail' | 'contractorEmail' | 'ownerUserId' | 'contractorUserId'>[]> {
+  async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'manager' | 'startDate' | 'endDate' | 'ownerEmail' | 'contractorEmail' | 'ownerUserId' | 'contractorUserId'>[]> {
     const documents = await this.collection
       .find({})
-      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, ownerEmail: 1, contractorEmail: 1, ownerUserId: 1, contractorUserId: 1 })
+      .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, manager: 1, startDate: 1, endDate: 1, ownerEmail: 1, contractorEmail: 1, ownerUserId: 1, contractorUserId: 1 })
       .sort({ name: 1 })
       .toArray();
 
