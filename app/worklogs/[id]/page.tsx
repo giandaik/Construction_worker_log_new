@@ -512,4 +512,4 @@ export default function WorkLogDetailPage() {
       </Card>
     </div>
   );
-} 
+}

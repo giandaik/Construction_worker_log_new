@@ -500,6 +500,7 @@ export default function EditWorkLogForm() {
                 onChange={setSignatures}
                 projectOwnerUserId={projects.find((project) => project._id === watch('project'))?.ownerUserId}
                 projectContractorUserId={projects.find((project) => project._id === watch('project'))?.contractorUserId}
+                allowDraftSignatureRemoval={false}
               />
             </div>
 

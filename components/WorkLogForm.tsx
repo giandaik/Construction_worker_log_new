@@ -18,6 +18,8 @@ import { WeatherPicker } from '@/components/forms/WeatherPicker';
 import { useSuggestions } from '@/hooks/useSuggestions';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 
+const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
+
 function PersonnelCountField({
   id,
   value,
@@ -109,6 +111,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
   } = useWorkLogForm(initialProject);
 
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const prefillAttemptedFor = useRef<Set<string>>(new Set());
 
   const roleSuggestions = useSuggestions('personnel.role', formData.project);
@@ -157,6 +160,15 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
 
     fetchProjects();
   }, [showError]);
+
+  useEffect(() => {
+    if (toast) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    }
+  }, [toast]);
 
   // Pre-fill personnel/equipment/materials/weather from this user's most recent
   // log on the same project. Only runs when the form is still pristine for those
@@ -211,6 +223,39 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     setPrefilledFrom(null);
   }, [clearSeed]);
 
+  useEffect(() => {
+    setDuplicateError(null);
+  }, [formData.date, formData.project]);
+
+  const checkDuplicateWorkLog = useCallback(async () => {
+    if (!isOnline || !formData.project || !formData.date) {
+      return false;
+    }
+
+    const params = new URLSearchParams({
+      project: formData.project,
+      date: formData.date,
+    });
+
+    const response = await fetch(`/api/worklogs?${params.toString()}`, {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const result = await response.json();
+    if (result.exists) {
+      setDuplicateError(DUPLICATE_WORKLOG_MESSAGE);
+      showError(DUPLICATE_WORKLOG_MESSAGE, TOAST_DURATION.MEDIUM);
+      return true;
+    }
+
+    setDuplicateError(null);
+    return false;
+  }, [formData.date, formData.project, isOnline, showError]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -220,11 +265,17 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     }
 
     try {
+      const isDuplicate = await checkDuplicateWorkLog();
+      if (isDuplicate) {
+        return;
+      }
+
       await submitWorkLog({
         onlineSubmit: onSubmit,
         formData,
       });
       resetForm();
+      setDuplicateError(null);
       setPrefilledFrom(null);
       prefillAttemptedFor.current.clear();
     } catch (error) {
@@ -245,6 +296,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           {toast.message}
         </Alert>
       )}
+     
       {prefilledFrom && (
         <Alert variant="info">
           <span>

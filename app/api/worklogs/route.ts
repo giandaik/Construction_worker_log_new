@@ -25,8 +25,24 @@ export async function GET(request: Request) {
       // Get project filter from query parameters
       const { searchParams } = new URL(request.url);
       const projectId = searchParams.get('project');
+      const date = searchParams.get('date');
 
       let workLogs;
+
+      if (projectId && date) {
+        const selectedDate = new Date(date);
+        if (Number.isNaN(selectedDate.getTime())) {
+          return ApiError.badRequest('Date is required.');
+        }
+
+        const selectedDay = selectedDate.toISOString().split('T')[0];
+        const existingWorkLog = await workLogRepo.findByProjectAndDay(projectId, selectedDay);
+
+        return ApiError.success({
+          exists: Boolean(existingWorkLog),
+          workLogId: existingWorkLog?._id ?? null,
+        });
+      }
 
       if (projectId) {
         // Get work logs for a specific project
@@ -67,6 +83,18 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const selectedDate = new Date(data.date);
+      if (Number.isNaN(selectedDate.getTime())) {
+        return ApiError.badRequest('Date is required.');
+      }
+
+      const selectedDay = selectedDate.toISOString().split('T')[0];
+      const existingWorkLogForDay = await workLogRepo.findByProjectAndDay(data.project, selectedDay);
+
+      if (existingWorkLogForDay) {
+        return ApiError.badRequest('A work log already exists for this project on the selected day.');
+      }
+
       // Determine if the selected project already defines signature parties
       let projectOwnerName: string | undefined;
       let projectContractorName: string | undefined;

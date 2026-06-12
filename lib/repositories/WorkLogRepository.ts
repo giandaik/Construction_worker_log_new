@@ -205,6 +205,38 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
   }
 
   /**
+   * Find a work log for a project on a specific calendar day.
+   * The day is a 'YYYY-MM-DD' string and date values are converted in MongoDB
+   * so both Date and ISO string documents are considered.
+   */
+  async findByProjectAndDay(
+    projectId: string | ObjectId,
+    day: string
+  ): Promise<WorkLog | null> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+    const idString = typeof projectId === 'string' ? projectId : projectId.toString();
+
+    const documents = await this.collection.aggregate([
+      { $match: { $or: [{ project: objectId }, { project: idString }] } },
+      {
+        $addFields: {
+          day: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
+              onNull: null,
+            },
+          },
+        },
+      },
+      { $match: { day } },
+      { $limit: 1 },
+    ]).toArray();
+
+    return documents.length ? this.mapToEntity(documents[0]) : null;
+  }
+
+  /**
    * Aggregate per-project worklog count and most recent log date.
    * Project keys are normalized to strings so callers can join against
    * project._id regardless of how the reference was stored.

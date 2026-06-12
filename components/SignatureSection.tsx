@@ -193,8 +193,8 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Name 
-              </label>              
+                Name
+              </label>
               <div className="w-full rounded-md border bg-muted px-3 py-2 text-sm">
                   {newSignatureName || '-'}
               </div>
