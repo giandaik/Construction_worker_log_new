@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useParams, useRouter } from 'next/navigation'
@@ -24,6 +24,7 @@ import { useSuggestions } from '@/hooks/useSuggestions'
 import type { Signature } from '@/types/shared'
 import { Skeleton } from "@/components/ui/skeleton"
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
+import { PERSONNEL_ROLES } from '@/lib/constants/constantValues'
 import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize'
 
 export default function EditWorkLogForm() {
@@ -56,7 +57,11 @@ export default function EditWorkLogForm() {
   })
 
   const watchedProject = watch('project') || ''
-  const roleSuggestions = useSuggestions('personnel.role', watchedProject)
+  const roleApiSuggestions = useSuggestions('personnel.role', watchedProject)
+  const roleSuggestions = useMemo(
+    () => Array.from(new Set([...PERSONNEL_ROLES, ...roleApiSuggestions])),
+    [roleApiSuggestions]
+  )
   const equipmentTypeSuggestions = useSuggestions('equipment.type', watchedProject)
   const materialNameSuggestions = useSuggestions('materials.name', watchedProject)
   const materialUnitSuggestions = useSuggestions('materials.unit', watchedProject)

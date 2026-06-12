@@ -17,6 +17,7 @@ import { Combobox } from '@/components/forms/Combobox';
 import { WeatherPicker } from '@/components/forms/WeatherPicker';
 import { useSuggestions } from '@/hooks/useSuggestions';
 import { TOAST_DURATION } from '@/lib/constants/constants';
+import { PERSONNEL_ROLES } from '@/lib/constants/constantValues';
 
 const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
 
@@ -114,7 +115,11 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const prefillAttemptedFor = useRef<Set<string>>(new Set());
 
-  const roleSuggestions = useSuggestions('personnel.role', formData.project);
+  const roleApiSuggestions = useSuggestions('personnel.role', formData.project);
+  const roleSuggestions = useMemo(
+    () => Array.from(new Set([...PERSONNEL_ROLES, ...roleApiSuggestions])),
+    [roleApiSuggestions]
+  );
   const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
   const materialNameSuggestions = useSuggestions('materials.name', formData.project);
   const materialUnitSuggestions = useSuggestions('materials.unit', formData.project);
