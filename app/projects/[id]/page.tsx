@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, History, PlusCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, History, PlusCircle } from 'lucide-react';
 import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -95,6 +95,11 @@ export default function ProjectDetailPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
         </Button>
         <div className="flex gap-2">
+          <Link href={`/projects/${project._id}/calendar`}>
+            <Button variant="outline" size="sm">
+              <CalendarDays className="mr-2 h-4 w-4" /> Calendar
+            </Button>
+          </Link>
           <Link href={`/worklogs?project=${project._id}`}>
             <Button variant="outline" size="sm">
               <History className="mr-2 h-4 w-4" /> History

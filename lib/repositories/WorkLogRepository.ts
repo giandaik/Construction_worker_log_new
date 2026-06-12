@@ -65,6 +65,14 @@ export interface WorkLog {
 }
 
 /**
+ * Per-day worklog count for calendar views
+ */
+export interface DayCount {
+  date: string;
+  count: number;
+}
+
+/**
  * WorkLog with populated references
  */
 export interface WorkLogWithDetails extends WorkLog {
@@ -151,6 +159,40 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
       .next();
 
     return document ? this.mapToEntity(document) : null;
+  }
+
+  /**
+   * Count work logs per day for a project within a date range (inclusive).
+   * Dates are compared as 'YYYY-MM-DD' strings; documents whose date cannot
+   * be parsed are excluded.
+   */
+  async countByDayForProject(
+    projectId: string | ObjectId,
+    startDay: string,
+    endDay: string
+  ): Promise<DayCount[]> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+    const idString = typeof projectId === 'string' ? projectId : projectId.toString();
+
+    const documents = await this.collection.aggregate([
+      { $match: { $or: [{ project: objectId }, { project: idString }] } },
+      {
+        $addFields: {
+          day: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
+              onNull: null,
+            },
+          },
+        },
+      },
+      { $match: { day: { $gte: startDay, $lte: endDay } } },
+      { $group: { _id: '$day', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]).toArray();
+
+    return documents.map((doc: any) => ({ date: doc._id, count: doc.count }));
   }
 
   /**

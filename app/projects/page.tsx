@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, History, PlusCircle } from "lucide-react";
+import { ArrowLeft, CalendarDays, History, PlusCircle } from "lucide-react";
 import { toGreekUpperCase } from "@/lib/utils";
 
 interface Project {
@@ -151,6 +151,12 @@ export default function ProjectsPage() {
                   )}
                 </dl>
                 <div className="relative z-10 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/projects/${project._id}/calendar`}>
+                      <CalendarDays className="w-4 h-4 mr-2" />
+                      Calendar
+                    </Link>
+                  </Button>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/worklogs?project=${project._id}`}>
                       <History className="w-4 h-4 mr-2" />
