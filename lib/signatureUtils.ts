@@ -1,4 +1,5 @@
 import type { Signature } from '@/types/shared';
+import { FORM_STATUS } from '@/lib/constants/constantValues';
 
 const normalizeText = (value?: string): string => {
   return value?.trim().toLowerCase() || '';
@@ -54,10 +55,10 @@ export const getWorkLogStatusFromSignatures = (
   projectContractorName?: string
 ): string => {
   if (hasContractorThenOwnerSignatures(signatures, projectOwnerName, projectContractorName)) {
-    return 'completed';
+    return FORM_STATUS.COMPLETED;
   }
 
-  return signatures.length > 0 ? 'signed' : 'pending';
+  return signatures.length > 0 ? FORM_STATUS.SIGNED : FORM_STATUS.PENDING;
 };
 
 export const isWorkLogCompletedBySignatures = (

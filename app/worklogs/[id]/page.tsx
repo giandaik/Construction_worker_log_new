@@ -235,7 +235,7 @@ export default function WorkLogDetailPage() {
                 Created: {workLog.createdAt ? new Date(workLog.createdAt).toLocaleString() : 'Unknown'}
               </CardDescription>
             </div>
-            <span className={`status-badge self-start whitespace-nowrap ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES]}`}>
+            <span className={`status-badge self-start whitespace-nowrap ${FORM_STATUS_CLASSES[workLog.status as keyof typeof FORM_STATUS_CLASSES] ?? 'status-unknown'}`}>
               {FORM_STATUS_LABELS[workLog.status as keyof typeof FORM_STATUS_LABELS] ?? "N/A"}
             </span>
           </div>
