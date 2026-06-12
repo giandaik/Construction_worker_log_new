@@ -37,3 +37,6 @@ next-env.d.ts
 
 # Fiberplane local issue tracking
 .fp/
+
+# private planning docs
+docs/commercialization-plan.md
