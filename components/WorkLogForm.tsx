@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import mongoose from 'mongoose';
 import type { WorkLogFormProps } from '../types/components';
 import type { IProject } from '@/lib/models';
 import { useWorkLogForm } from '@/hooks/useWorkLogForm';

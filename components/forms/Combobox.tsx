@@ -24,10 +24,13 @@ export function Combobox({
   const inputId = id ?? generatedId;
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  // Filter only after the user types; on plain focus show the full list so
+  // pre-filled values (e.g. seeded from a previous log) don't hide options.
+  const [hasTyped, setHasTyped] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
-    const q = value.trim().toLowerCase();
+    const q = hasTyped ? value.trim().toLowerCase() : '';
     const seen = new Set<string>();
     const matches: string[] = [];
     for (const s of suggestions) {
@@ -36,13 +39,16 @@ export function Combobox({
       if (seen.has(key)) continue;
       seen.add(key);
       if (!q || key.includes(q)) matches.push(s);
-      if (matches.length >= 8) break;
+      if (q && matches.length >= 8) break;
     }
     return matches;
-  }, [suggestions, value]);
+  }, [suggestions, value, hasTyped]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setHasTyped(false);
+      return;
+    }
     const handleClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
@@ -85,6 +91,7 @@ export function Combobox({
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
+          setHasTyped(true);
           setOpen(true);
           setActiveIndex(-1);
         }}

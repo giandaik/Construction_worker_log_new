@@ -55,7 +55,7 @@ export const REQUEST_TIMEOUT_MS = 30000;
  * Default values for personnel form entries
  */
 export const DEFAULT_PERSONNEL = {
-  role: 'Worker',
+  role: '',
   count: 1,
 } as const;
 
@@ -63,7 +63,7 @@ export const DEFAULT_PERSONNEL = {
  * Default values for equipment form entries
  */
 export const DEFAULT_EQUIPMENT = {
-  type: 'Excavator',
+  type: '',
   count: 1,
   hours: 8,
 } as const;
@@ -72,9 +72,9 @@ export const DEFAULT_EQUIPMENT = {
  * Default values for material form entries
  */
 export const DEFAULT_MATERIALS = {
-  name: 'Concrete',
-  quantity: 10,
-  unit: 'cubic meters',
+  name: '',
+  quantity: 0,
+  unit: '',
 } as const;
 
 // ========================================

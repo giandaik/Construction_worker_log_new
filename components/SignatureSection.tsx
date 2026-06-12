@@ -42,9 +42,6 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
   );
 
   const handleAddSignatureClick = () => {
-    console.log('Current user:', user);
-    console.log('Project role:', projectRole);
-
     if (user && projectRole) {
       setNewSignatureName(user.name);
       setNewSignatureRole(projectRole);
@@ -123,6 +120,19 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
   }
 
   const canAddSignature = canUserAddSignature();
+
+  function getEmptyStateMessage() {
+    if (canAddSignature) {
+      return 'No signatures added yet. Click "Add Signature" to get started.';
+    }
+    if (!projectOwnerUserId && !projectContractorUserId) {
+      return 'Signatures become available once the project has an owner and a contractor assigned.';
+    }
+    if (projectRole === 'owner') {
+      return "The project's contractor must sign before the owner can countersign.";
+    }
+    return "Only the project's contractor can add the first signature.";
+  }
 
   return (
     <div className="space-y-4">
@@ -232,7 +242,7 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
 
       {signatures.length === 0 && !showAddSignature && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          No signatures added yet. Click "Add Signature" to get started.
+          {getEmptyStateMessage()}
         </p>
       )}
     </div>
