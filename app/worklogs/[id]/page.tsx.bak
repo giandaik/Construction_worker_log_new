@@ -197,8 +197,6 @@ export default function WorkLogDetailPage() {
     );
   }
 
-  const isCompleted = workLog.status === FORM_STATUS.COMPLETED;
-
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
@@ -206,21 +204,17 @@ export default function WorkLogDetailPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Work Logs
         </Button>
         <div className="flex flex-wrap gap-2">
-          {!isCompleted && (
-            <Button variant="outline" asChild>
-              <Link href={`/worklogs/${id}/edit`}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </Link>
-            </Button>
-          )}
+          <Button variant="outline" asChild>
+            <Link href={`/worklogs/${id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </Link>
+          </Button>
           <Button variant="outline" onClick={handleExportPDF}>
               <FileDown className="mr-2 h-4 w-4" /> Export
           </Button>
-          {!isCompleted && (
-            <Button variant="destructive" onClick={handleDelete}>
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          )}
+          <Button variant="destructive" onClick={handleDelete}>
+            <Trash className="mr-2 h-4 w-4" /> Delete
+          </Button>
         </div>
       </div>
 

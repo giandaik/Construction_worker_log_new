@@ -6,11 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus, X } from 'lucide-react';
 import type { Signature } from '@/types/shared';
-import {
-  getSignatureAddError,
-  getSignatureRoleType,
-  hasContractorThenOwnerSignatures
-} from '@/lib/signatureUtils';
+import { getSignatureAddError } from '@/lib/signatureUtils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useProjectRole } from '@/hooks/useProjectRole';
 
@@ -20,15 +16,13 @@ interface SignatureSectionProps {
   onChange: (signatures: Signature[]) => void;
   projectOwnerUserId?: string;
   projectContractorUserId?: string;
-  allowDraftSignatureRemoval?: boolean;
 }
 
 export const SignatureSection: React.FC<SignatureSectionProps> = ({
   signatures,
   onChange,
   projectOwnerUserId,
-  projectContractorUserId,
-  allowDraftSignatureRemoval = true
+  projectContractorUserId
 }) => {
   const [showAddSignature, setShowAddSignature] = useState(false);
   const [newSignatureName, setNewSignatureName] = useState('');
@@ -88,41 +82,51 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
     onChange(signatures.filter((_, i) => i !== index));
   };
 
-  function canUserAddSignature() {
+  //const isAuthorized = user && (user.role === 'admin' || user.role === 'supervisor');
+  function canUserAddSignature({
+    user,
+    signatures,
+    projectOwnerUserId,
+    projectContractorUserId,
+    showAddSignature,
+    projectRole
+  }: any) {
     if (!user) return false;
-    if (showAddSignature) return false;
-    if (hasContractorThenOwnerSignatures(signatures, projectOwnerUserId, projectContractorUserId)) {
-      return false;
-    }
 
     const hasUserSigned = signatures.some(
-      (sig) => sig.signedByUserId === user.userId
+      (sig: any) => sig.signedByUserId === user.userId
     );
 
     const contractorHasSigned = signatures.some(
-      (sig) => getSignatureRoleType(sig, projectOwnerUserId, projectContractorUserId) === 'contractor'
+      (sig: any) => sig.projectRole === 'contractor'
     );
 
-    if (hasUserSigned || signatures.length >= 2) return false;
-    if (projectRole === 'contractor') return signatures.length === 0;
-    if (projectRole === 'owner') return signatures.length === 1 && contractorHasSigned;
+    
 
-    return false;
+    const isAllowedByRole =
+      projectRole === 'contractor'
+        ? true
+        : projectRole === 'owner'
+          ? contractorHasSigned
+          : false;
+
+    return (
+      !showAddSignature &&
+      signatures.length < 2 &&
+      !hasUserSigned &&
+      isAllowedByRole
+    );
   }
 
-  function canUserRemoveSignature(signature: Signature) {
-    if (!allowDraftSignatureRemoval || !user) return false;
-    if (signatures.length !== 1) return false;
-    if (signature.signedByUserId !== user.userId) return false;
 
-    return getSignatureRoleType(
-      signature,
-      projectOwnerUserId,
-      projectContractorUserId
-    ) === 'contractor';
-  }
-
-  const canAddSignature = canUserAddSignature();
+  const canAddSignature = canUserAddSignature({
+    user,
+    signatures,
+    projectOwnerUserId,
+    projectContractorUserId,
+    showAddSignature,
+    projectRole
+  });
 
   return (
     <div className="space-y-4">
@@ -139,7 +143,7 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
             Add Signature
           </Button>
         )}
-      </div>
+      </div>      
 
       {/* Existing Signatures */}
       {signatures.length > 0 && (
@@ -157,17 +161,14 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
                       Signed: {new Date(sig.signedAt).toLocaleString()}
                     </p>
                   </div>
-                  {canUserRemoveSignature(sig) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSignature(index)}
-                      aria-label={`Remove signature by ${sig.signedBy}`}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeSignature(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>

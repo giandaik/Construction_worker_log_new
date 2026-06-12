@@ -4,14 +4,6 @@ const normalizeText = (value?: string): string => {
   return value?.trim().toLowerCase() || '';
 };
 
-const normalizeSignatureForCompare = (signature: Signature) => ({
-  data: signature.data,
-  signedBy: signature.signedBy,
-  signedAt: new Date(signature.signedAt).toISOString(),
-  projectRole: signature.projectRole,
-  signedByUserId: signature.signedByUserId?.toString(),
-});
-
 export const getSignatureRoleType = (
   signature: Signature,
   projectOwnerName?: string,
@@ -58,14 +50,6 @@ export const getWorkLogStatusFromSignatures = (
   }
 
   return signatures.length > 0 ? 'signed' : 'pending';
-};
-
-export const isWorkLogCompletedBySignatures = (
-  signatures: Signature[],
-  projectOwnerName?: string,
-  projectContractorName?: string
-): boolean => {
-  return hasContractorThenOwnerSignatures(signatures, projectOwnerName, projectContractorName);
 };
 
 export const validateSignatureOrder = (
@@ -116,10 +100,6 @@ export const getSignatureAddError = (
   projectOwnerName?: string,
   projectContractorName?: string
 ): string | null => {
-  if (hasContractorThenOwnerSignatures(signatures, projectOwnerName, projectContractorName)) {
-    return 'This work log is completed and locked.';
-  }
-
   // Prevent adding if already two signatures
   if (signatures.length >= 2) {
     return 'A work log can have at most two signatures.';
@@ -133,16 +113,8 @@ export const getSignatureAddError = (
 
   const newSignatureType = getSignatureRoleType(newSignature, projectOwnerName, projectContractorName);
 
-  if (newSignatureType === 'contractor') {
-    if (signatures.length > 0) {
-      return 'The contractor can only sign while the work log is in draft.';
-    }
-
-    return null;
-  }
-
   if (newSignatureType !== 'owner') {
-    return 'Only the project contractor or owner can sign this work log.';
+    return null;
   }
 
   const hasContractorSignature = signatures.some((signature) =>
@@ -154,65 +126,4 @@ export const getSignatureAddError = (
   }
 
   return null;
-};
-
-export const validateSignatureWorkflowChange = (
-  existingSignatures: Signature[],
-  updatedSignatures: Signature[],
-  projectOwnerName?: string,
-  projectContractorName?: string
-): string | null => {
-  if (isWorkLogCompletedBySignatures(existingSignatures, projectOwnerName, projectContractorName)) {
-    return 'This work log is completed and locked.';
-  }
-
-  if (updatedSignatures.length < existingSignatures.length) {
-    return 'Signatures cannot be removed after the work log is awaiting owner signature.';
-  }
-
-  if (updatedSignatures.length === existingSignatures.length) {
-    if (
-      existingSignatures.length > 0 &&
-      JSON.stringify(existingSignatures.map(normalizeSignatureForCompare)) !==
-        JSON.stringify(updatedSignatures.map(normalizeSignatureForCompare))
-    ) {
-      return 'Signatures cannot be changed after the work log is awaiting owner signature.';
-    }
-
-    return validateSignatureOrder(updatedSignatures, projectOwnerName, projectContractorName);
-  }
-
-  if (updatedSignatures.length !== existingSignatures.length + 1) {
-    return 'Only one signature can be added at a time.';
-  }
-
-  const addedSignature = updatedSignatures[updatedSignatures.length - 1];
-  const addError = getSignatureAddError(
-    addedSignature,
-    existingSignatures,
-    projectOwnerName,
-    projectContractorName
-  );
-
-  if (addError) {
-    return addError;
-  }
-
-  return validateSignatureOrder(updatedSignatures, projectOwnerName, projectContractorName);
-};
-
-export const validateDraftSignatures = (
-  signatures: Signature[],
-  projectOwnerName?: string,
-  projectContractorName?: string
-): string | null => {
-  if (signatures.length === 0) {
-    return null;
-  }
-
-  if (signatures.length > 1) {
-    return 'A draft work log can only be signed by the contractor.';
-  }
-
-  return getSignatureAddError(signatures[0], [], projectOwnerName, projectContractorName);
 };

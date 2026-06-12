@@ -128,10 +128,6 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     ));
   }, [projects]);
 
-  const selectedProject = useMemo(() => {
-    return projects.find(project => project._id?.toString() === formData.project);
-  }, [projects, formData.project]);
-
   // Fetch real projects from API
   useEffect(() => {
     const fetchProjects = async () => {
@@ -470,8 +466,6 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       <SignatureSection
         signatures={formData.signatures || []}
         onChange={updateSignatures}
-        projectOwnerUserId={selectedProject?.ownerUserId?.toString()}
-        projectContractorUserId={selectedProject?.contractorUserId?.toString()}
       />
       </FormSection>
 
@@ -480,4 +474,4 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       </Button>
     </form>
   );
-});
+}); 

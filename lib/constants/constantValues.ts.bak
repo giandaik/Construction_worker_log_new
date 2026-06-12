@@ -18,20 +18,17 @@ export const LABELS = {
 
 export const FORM_STATUS = {
     PENDING: "pending",
-    SIGNED: "signed",
-    COMPLETED: "completed"
+    SIGNED: "signed"
   }
 
-// Rendered inside `.status-badge` (text-transform: uppercase).
+// Rendered inside `.status-badge` (text-transform: uppercase); Greek all-caps take no accents.
 export const FORM_STATUS_LABELS = {
-  pending: "Προχειρο",
-  signed: "Αναμονη Υπογραφης Ιδιοκτητη",
-  completed: "Ολοκληρωμενο"
+  pending: "ΣΕ ΕΞΕΛΙΞΗ",
+  signed: "ΥΠΟΓΕΓΡΑΜΜΕΝΗ"
 };
 
 export const FORM_STATUS_CLASSES = {
     pending: "status-pending",
     signed: "status-signed",
-    completed: "status-completed",
     unknown: "status-unknown",
-  }
+  } 

@@ -98,9 +98,6 @@
   .status-signed {
     @apply border-success/40 bg-success/15 text-success;
   }
-  .status-completed {
-    @apply border-foreground/30 bg-foreground/10 text-foreground;
-  }
   .status-unknown {
     @apply border-border bg-muted text-muted-foreground;
   }
