@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, History, PlusCircle } from "lucide-react";
+import { toGreekUpperCase } from "@/lib/utils";
 
 interface Project {
   _id: string;
@@ -113,7 +114,7 @@ export default function ProjectsPage() {
               />
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="text-xl uppercase">{project.name}</CardTitle>
+                  <CardTitle className="text-xl uppercase">{toGreekUpperCase(project.name)}</CardTitle>
                   {project.status && (
                     <span className="status-badge status-unknown shrink-0">{project.status}</span>
                   )}

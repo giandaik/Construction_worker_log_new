@@ -118,7 +118,7 @@ export default async function HomePage() {
         <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             <HardHat className="h-6 w-6 text-primary" aria-hidden />
-            <h1 className="text-2xl font-bold uppercase">Ημερολόγιο Εργασιών</h1>
+            <h1 className="text-2xl font-bold uppercase">ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <Button asChild>

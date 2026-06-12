@@ -21,9 +21,10 @@ export const FORM_STATUS = {
     SIGNED: "signed"
   }
 
+// Rendered inside `.status-badge` (text-transform: uppercase); Greek all-caps take no accents.
 export const FORM_STATUS_LABELS = {
-  pending: "Σε εξέλιξη",
-  signed: "Υπογεγραμμένη"
+  pending: "ΣΕ ΕΞΕΛΙΞΗ",
+  signed: "ΥΠΟΓΕΓΡΑΜΜΕΝΗ"
 };
 
 export const FORM_STATUS_CLASSES = {
