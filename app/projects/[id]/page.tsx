@@ -73,7 +73,7 @@ export default function ProjectDetailPage() {
 
   if (error || !project) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => router.push('/projects')}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
@@ -89,12 +89,12 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.push('/projects')}>
+    <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="ghost" className="self-start" onClick={() => router.push('/projects')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canManageDwgs && (
             <Link href={`/projects/${project._id}/edit`}>
               <Button variant="outline" size="sm">
