@@ -87,12 +87,29 @@ async function getInitialData() {
   }
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-md border bg-card p-4 transition-shadow hover:shadow-md">
+function StatCard({ label, value, hint, href }: { label: string; value: string; hint?: string; href?: string }) {
+  const body = (
+    <>
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-3xl font-bold">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-md border bg-card p-4 transition-shadow hover:shadow-md hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {body}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="rounded-md border bg-card p-4 transition-shadow hover:shadow-md">
+      {body}
     </div>
   )
 }
@@ -144,12 +161,13 @@ export default async function HomePage() {
 
       <main className="container flex-1 px-4 py-8 md:px-6">
         <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
-          <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} />
-          <StatCard label="Projects" value={String(projects.length)} />
+          <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} href="/worklogs" />
+          <StatCard label="Projects" value={String(projects.length)} href="/projects" />
           <StatCard
             label="Quick start"
             value="New log"
             hint="Record today's work in minutes"
+            href="/forms/new"
           />
         </section>
 
