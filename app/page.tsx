@@ -7,6 +7,7 @@ import { dbConnect } from "@/lib/dbConnect"
 import mongoose from "mongoose"
 import type { Project, WorkLog } from "@/types/shared"
 import { LogoutButton } from "@/components/LogoutButton"
+import { WorkerActionRow } from "@/components/WorkerActionRow"
 import { getAuthUser, isAdmin } from "@/utils/auth"
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
 
@@ -120,6 +121,7 @@ export default async function HomePage() {
     getAuthUser(),
   ]);
   const showAdminLink = isAdmin(authUser);
+  const isWorker = authUser?.role === 'user';
 
   const { projects, workLogs, totalLogs } = initialData;
   const recentLogs = workLogs.slice(0, RECENT_LOGS_SHOWN);
@@ -160,16 +162,20 @@ export default async function HomePage() {
       </header>
 
       <main className="container flex-1 px-4 py-8 md:px-6">
-        <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
-          <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} href="/worklogs" />
-          <StatCard label="Projects" value={String(projects.length)} href="/projects" />
-          <StatCard
-            label="Quick start"
-            value="New log"
-            hint="Record today's work in minutes"
-            href="/forms/new"
-          />
-        </section>
+        {isWorker && authUser ? (
+          <WorkerActionRow userId={authUser.userId} />
+        ) : (
+          <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
+            <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} href="/worklogs" />
+            <StatCard label="Projects" value={String(projects.length)} href="/projects" />
+            <StatCard
+              label="Quick start"
+              value="New log"
+              hint="Record today's work in minutes"
+              href="/forms/new"
+            />
+          </section>
+        )}
 
         <section className="mt-10 grid gap-8 lg:grid-cols-3">
           <div className="animate-fade-up lg:col-span-2" style={{ animationDelay: '80ms' }}>
