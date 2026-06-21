@@ -31,6 +31,22 @@ export const projectSchema = z.object({
 })
 
 /**
+ * Schema for editing an existing project.
+ * Mirrors projectSchema but coerces incoming date strings (JSON has no Date type).
+ */
+export const projectUpdateSchema = z.object({
+  name: z.string().min(1, 'Project name is required'),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  ownerEmail: z.string().email('Invalid owner email'),
+  contractorEmail: z.string().email('Invalid contractor email'),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  status: z.enum(['planned', 'in-progress', 'completed', 'on-hold']).optional(),
+  manager: z.string().optional(),
+})
+
+/**
  * TypeScript type inferred from the schema
  */
 export type ProjectFormData = z.infer<typeof projectSchema>
