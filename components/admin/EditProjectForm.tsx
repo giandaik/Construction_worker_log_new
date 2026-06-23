@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LocationPicker } from "@/components/projects/LocationPicker";
 
 type ProjectStatus = "planned" | "in-progress" | "completed" | "on-hold";
 
@@ -39,6 +40,8 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [ownerEmail, setOwnerEmail] = useState("");
   const [contractorEmail, setContractorEmail] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("planned");
@@ -51,6 +54,20 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  function handleCoordinates(result: {
+    latitude: number;
+    longitude: number;
+    address?: string | null;
+  }) {
+    setLatitude(result.latitude);
+    setLongitude(result.longitude);
+    const address = result.address;
+    // Best-effort: only pre-fill the text label while the user hasn't typed one.
+    if (address) {
+      setLocation((prev) => prev || address);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     async function loadProject() {
@@ -62,6 +79,8 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
         setName(project.name ?? "");
         setDescription(project.description ?? "");
         setLocation(project.location ?? "");
+        setLatitude(project.latitude ?? null);
+        setLongitude(project.longitude ?? null);
         setOwnerEmail(project.ownerEmail ?? "");
         setContractorEmail(project.contractorEmail ?? "");
         setStatus((project.status as ProjectStatus) ?? "planned");
@@ -93,6 +112,8 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
           name,
           description: description || undefined,
           location: location || undefined,
+          latitude: latitude ?? undefined,
+          longitude: longitude ?? undefined,
           ownerEmail,
           contractorEmail,
           status,
@@ -172,6 +193,14 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
               id="project-location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Map location</Label>
+            <LocationPicker
+              latitude={latitude}
+              longitude={longitude}
+              onCoordinates={handleCoordinates}
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
