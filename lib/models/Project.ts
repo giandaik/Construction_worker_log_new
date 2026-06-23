@@ -17,6 +17,8 @@ export interface IProject extends Document {
   name: string;
   description: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   startDate: Date;
   endDate?: Date;
   status: 'planned' | 'in-progress' | 'completed' | 'on-hold';
@@ -35,6 +37,8 @@ const ProjectSchema: Schema = new Schema(
     name: { type: String, required: true },
     description: { type: String},
     location: { type: String, required: true },
+    latitude: { type: Number },
+    longitude: { type: Number },
     startDate: { type: Date, required: true },
     endDate: { type: Date },
     status: { 

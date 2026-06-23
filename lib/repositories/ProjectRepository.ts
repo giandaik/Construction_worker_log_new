@@ -30,6 +30,8 @@ export interface Project {
   name: string;
   description?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   client?: string;
   startDate?: Date;
   endDate?: Date;
