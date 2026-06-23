@@ -84,7 +84,10 @@ describe('Project geolocation — persistence', () => {
       longitude: -122.4194,
     });
 
-    const reloaded = await Project.findById(created._id).lean();
+    const reloaded = (await Project.findById(created._id).lean()) as {
+      latitude?: number;
+      longitude?: number;
+    } | null;
     expect(reloaded?.latitude).toBe(37.7749);
     expect(reloaded?.longitude).toBe(-122.4194);
   });
