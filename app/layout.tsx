@@ -4,6 +4,7 @@ import { AuthProvider } from "../components/session-provider"
 import { Fira_Sans, Fira_Sans_Condensed } from "next/font/google"
 import { cn } from "@/lib/utils"
 import { SyncManager } from "@/components/SyncManager"
+import { AppShell } from "@/components/layout/AppShell"
 
 // Fira covers Greek — the UI mixes Greek and English strings.
 const fontSans = Fira_Sans({
@@ -41,7 +42,7 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <SyncManager />
-            {children}
+            <AppShell>{children}</AppShell>
           </ThemeProvider>
         </AuthProvider>
       </body>

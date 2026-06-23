@@ -1,14 +1,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { FileText, Plus, FolderOpen, ShieldCheck, ArrowRight, HardHat } from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { FileText, Plus, FolderOpen, ArrowRight } from "lucide-react"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
 import { dbConnect } from "@/lib/dbConnect"
 import mongoose from "mongoose"
 import type { Project, WorkLog } from "@/types/shared"
-import { LogoutButton } from "@/components/LogoutButton"
 import { WorkerActionRow } from "@/components/WorkerActionRow"
-import { getAuthUser, isAdmin } from "@/utils/auth"
+import { getAuthUser } from "@/utils/auth"
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
 
 const RECENT_LOGS_SHOWN = 6
@@ -120,7 +118,6 @@ export default async function HomePage() {
     getInitialData(),
     getAuthUser(),
   ]);
-  const showAdminLink = isAdmin(authUser);
   const isWorker = authUser?.role === 'user';
 
   const { projects, workLogs, totalLogs } = initialData;
@@ -132,35 +129,6 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b bg-card">
-        <div className="hazard-stripe h-1.5" />
-        <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <HardHat className="h-6 w-6 text-primary" aria-hidden />
-            <h1 className="text-2xl font-bold uppercase">ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <Button asChild>
-              <Link href="/forms/new">
-                <Plus className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">New Form</span>
-                <span className="sm:hidden">New</span>
-              </Link>
-            </Button>
-            {showAdminLink && (
-              <Button variant="outline" asChild>
-                <Link href="/admin/users">
-                  <ShieldCheck className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Admin</span>
-                </Link>
-              </Button>
-            )}
-            <ThemeToggle />
-            <LogoutButton />
-          </div>
-        </div>
-      </header>
-
       <main className="container flex-1 px-4 py-8 md:px-6">
         {isWorker && authUser ? (
           <WorkerActionRow userId={authUser.userId} />
