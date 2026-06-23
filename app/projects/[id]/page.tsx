@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CalendarDays, History, PlusCircle, Pencil } from 'lucide-react';
+import { CalendarDays, History, PlusCircle, Pencil } from 'lucide-react';
 import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -26,7 +26,6 @@ interface Project {
 
 export default function ProjectDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const { user } = useCurrentUser();
@@ -60,11 +59,6 @@ export default function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/projects')}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
-          </Button>
-        </div>
         <Skeleton className="mb-4 h-10 w-1/3" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -74,11 +68,6 @@ export default function ProjectDetailPage() {
   if (error || !project) {
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/projects')}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
-          </Button>
-        </div>
         <Card>
           <CardContent className="py-10 text-center">
             <p className="text-destructive">{error ?? 'Project not found'}</p>
@@ -91,9 +80,6 @@ export default function ProjectDetailPage() {
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="ghost" className="self-start" onClick={() => router.push('/projects')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
-        </Button>
         <div className="flex flex-wrap gap-2">
           {canManageDwgs && (
             <Link href={`/projects/${project._id}/edit`}>

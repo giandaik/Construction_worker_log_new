@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {ArrowLeft, FileDown, Pencil, Trash, FileText, FileType2} from "lucide-react";
+import {FileDown, Pencil, Trash, FileText, FileType2} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 
@@ -157,11 +157,6 @@ export default function WorkLogDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-        </div>
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-1/3 mb-2" />
@@ -180,11 +175,6 @@ export default function WorkLogDetailPage() {
   if (error || !workLog) {
     return (
       <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-        </div>
         <Card>
           <CardContent className="py-10 text-center">
             <p className="text-destructive">{error || 'Work log not found'}</p>
@@ -202,9 +192,6 @@ export default function WorkLogDetailPage() {
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-        <Button variant="ghost" className="self-start" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Work Logs
-        </Button>
         <div className="flex flex-wrap gap-2">
           {!isCompleted && (
             <Button variant="outline" asChild>

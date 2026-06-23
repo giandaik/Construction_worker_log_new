@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ProjectSummary {
   _id: string;
@@ -120,12 +120,6 @@ export default function ProjectCalendarPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push(`/projects/${projectId}`)}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
-        </Button>
-      </div>
-
       <div className="animate-fade-up mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold uppercase">
           Calendar{projectName ? <span className="text-muted-foreground"> — {projectName}</span> : null}

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
 
 const ALL_PROJECTS = "all";
@@ -162,11 +162,6 @@ function WorkLogsPageContent() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/')}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-          </Button>
-        </div>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold uppercase">Work Logs</h1>
           <Skeleton className="h-10 w-32" />
@@ -182,11 +177,6 @@ function WorkLogsPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push('/')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-        </Button>
-      </div>
       <div className="animate-fade-up flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold uppercase">
@@ -359,11 +349,6 @@ export default function WorkLogsPage() {
   return (
     <Suspense fallback={
       <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Button variant="ghost" disabled>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-          </Button>
-        </div>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold uppercase">Work Logs</h1>
           <Skeleton className="h-10 w-32" />

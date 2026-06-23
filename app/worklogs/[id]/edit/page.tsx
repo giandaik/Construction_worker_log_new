@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { fetchProjects, fetchUsers, ProjectWithId, UserWithId } from '@/lib/data-fetchers'
 import { getWorkLogStatusFromSignatures } from '@/lib/signatureUtils'
-import { ArrowLeft } from "lucide-react"
 import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
 import { PhotoUpload } from '@/components/forms/PhotoUpload'
@@ -212,11 +211,6 @@ export default function EditWorkLogForm() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-3 py-4 sm:px-4">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-        </div>
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-1/3 mb-2" />
@@ -234,11 +228,6 @@ export default function EditWorkLogForm() {
   return (
     <div className="container mx-auto px-3 py-4 sm:px-4">
       <Toaster />
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-      </div>
       <Card>
         <CardHeader>
           <CardTitle>Edit Work Log Entry</CardTitle>

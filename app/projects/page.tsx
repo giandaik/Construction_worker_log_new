@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
+import { CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
 import { toGreekUpperCase } from "@/lib/utils";
 
 interface Project {
@@ -114,11 +114,6 @@ export default function ProjectsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/')}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-          </Button>
-        </div>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Projects</h1>
           <Skeleton className="h-10 w-32" />
@@ -134,11 +129,6 @@ export default function ProjectsPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push('/')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-        </Button>
-      </div>
       <div className="animate-fade-up flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold uppercase">
           Projects <span className="text-muted-foreground">({visibleProjects.length})</span>
