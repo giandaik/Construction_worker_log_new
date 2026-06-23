@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarDays, History, PlusCircle, Pencil } from 'lucide-react';
 import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
+import { ProjectMap } from '@/components/projects/ProjectMap';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface Project {
@@ -15,6 +16,8 @@ interface Project {
   name: string;
   description?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   startDate?: string;
   endDate?: string;
   status?: string;
@@ -113,6 +116,11 @@ export default function ProjectDetailPage() {
         <CardContent className="space-y-2 text-sm">
           {project.description && <p><strong>Description:</strong> {project.description}</p>}
           {project.location && <p><strong>Location:</strong> {project.location}</p>}
+          {project.latitude != null && project.longitude != null && (
+            <div className="pt-2">
+              <ProjectMap latitude={project.latitude} longitude={project.longitude} />
+            </div>
+          )}
           {project.status && <p><strong>Status:</strong> {project.status}</p>}
           {project.startDate && (
             <p><strong>Start:</strong> {new Date(project.startDate).toLocaleDateString()}</p>
