@@ -223,6 +223,54 @@ Upload and project-level management (attach/remove) is restricted to admins and 
 
 `BLOB_READ_WRITE_TOKEN` — same token used by photo uploads (Vercel Blob Store). No additional env var needed.
 
+## Geolocation Feature
+
+Added in session 2026-06-24. Admins and supervisors can pin a project's exact location on an interactive map or capture it via device GPS; coordinates are stored on the project and shown on a read-only map on the project detail page.
+
+### Capture model
+
+Coordinates are optional and live alongside the existing free-text `location` label (kept as the human-readable name; still powers list search and worklog joins). Dropping a pin or using GPS reverse-geocodes the point (best-effort) to pre-fill the `location` text field **only while it is empty** — user edits are never overwritten.
+
+### Files added
+
+| File | Purpose |
+|---|---|
+| `components/projects/LeafletMap.tsx` | Browser-only Leaflet map (`'use client'`). Self-contained inline-SVG pin (no external marker assets). Draggable marker + click-to-place when `onSelect` is provided, otherwise read-only. |
+| `components/projects/ProjectMap.tsx` | SSR-safe wrapper — `next/dynamic({ ssr: false })` around `LeafletMap` (Leaflet touches `window`). This is what the app imports. |
+| `components/projects/LocationPicker.tsx` | Form control: renders `ProjectMap` plus a "Use my current location" button (`navigator.geolocation`) with permission-error handling, and best-effort reverse geocoding to pre-fill the Location label. |
+| `lib/geocode.ts` | `reverseGeocode(lat, lng): Promise<string \| null>` — OSM Nominatim reverse lookup; returns `null` on any failure. Unit-tested. |
+| `__tests__/geocode.test.ts` | 5 vitest cases for `reverseGeocode` (success, request shape, non-ok, network failure, missing display_name). |
+| `__tests__/verify-geo.test.ts` | 6 cases — Zod schema accept/reject + DB persistence of lat/lng. |
+| `__tests__/verify-geo-api.test.ts` | 3 cases — POST/PUT/GET `/api/projects[/:id]` pass coordinates through. |
+
+### Files modified
+
+| File | Change |
+|---|---|
+| `lib/models/Project.ts` | Added `latitude?: number`, `longitude?: number` to `IProject` + Mongoose schema. |
+| `lib/schemas/projectSchema.ts` | Added validated `latitude` (-90..90) / `longitude` (-180..180) to `projectSchema` and `projectUpdateSchema`. |
+| `lib/repositories/ProjectRepository.ts` | Added the two fields to the `Project` interface type; `mapToEntity` spreads the doc so they round-trip with no extra wiring. |
+| `components/admin/NewProjectForm.tsx` | `latitude`/`longitude` state + `<LocationPicker>` under the Location input; coords in POST body; reset on success. |
+| `components/admin/EditProjectForm.tsx` | Same, plus hydrates coordinates from the loaded project; coords in PUT body. |
+| `app/projects/[id]/page.tsx` | Renders a read-only `<ProjectMap>` under the Location line when coords exist. |
+
+### API
+
+No new routes. The existing `POST /api/projects`, `GET|PUT /api/projects/[id]` carry `latitude`/`longitude` automatically (they spread the Zod-validated body; `mapToEntity` spreads the doc). The list `GET /api/projects` uses `findSummary()` which intentionally does **not** project coordinates (there is no map on the list).
+
+### Key design decisions
+
+- **Leaflet + OpenStreetMap** — no API key, no env vars, no billing. Tile attribution is shown on the map. `leaflet@1.9` + `react-leaflet@4` (React 18).
+- **`next/dynamic({ ssr: false })` is mandatory** — Leaflet accesses `window` at import; the wrapper isolates it to the client.
+- **Self-contained SVG pin** via `L.divIcon` — avoids Leaflet's bundler-broken default marker icon and any CDN dependency.
+- **Reverse geocoding is best-effort and external** (OSM Nominatim, one request per pin/GPS fix, never in a loop; identifies the app via the browser `Referer`). Fails silently to `null` → label untouched, coordinates still saved.
+- **Plain `latitude`/`longitude` numbers, no geo-index.** Proximity / "near me" / distance display were deferred (YAGNI); a 2dsphere index can be added later without a schema change.
+- **GPS requires a secure context** — `localhost` and HTTPS (Vercel) qualify; plain HTTP blocks geolocation.
+
+### Required env var
+
+None. The feature adds no environment variables and uses no API keys.
+
 ## Code Style Guidelines (from .cursorrules)
 
 ### TypeScript Conventions
@@ -269,7 +317,7 @@ Upload and project-level management (attach/remove) is restricted to admins and 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (1896 symbols, 3497 relationships, 160 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (2084 symbols, 3929 relationships, 176 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
