@@ -11,7 +11,7 @@
     "test:perf:watch": "vitest __tests__/performance",
     "test:perf:ui": "vitest --ui __tests__/performance",
     "test:all": "vitest run && npm run build",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",
@@ -38,7 +38,6 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.54.2",
-    "react-leaflet": "^4.2.1",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "sonner": "^2.0.2",
     "tailwind-merge": "^3.1.0",

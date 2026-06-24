@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -23,17 +23,6 @@ interface LeafletMapProps {
   zoom?: number;
 }
 
-function ClickHandler({
-  onSelect,
-}: {
-  onSelect: (latitude: number, longitude: number) => void;
-}) {
-  useMapEvents({
-    click: (event) => onSelect(event.latlng.lat, event.latlng.lng),
-  });
-  return null;
-}
-
 export function LeafletMap({
   latitude,
   longitude,
@@ -41,37 +30,78 @@ export function LeafletMap({
   height = 300,
   zoom,
 }: LeafletMapProps) {
-  const interactive = Boolean(onSelect);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  // Keep the latest onSelect without forcing the map to be torn down and rebuilt.
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
+  // Create the Leaflet map exactly once per mount. Doing the create + remove in a
+  // single effect guarantees the cleanup (which clears Leaflet's `_leaflet_id`)
+  // always runs before the next setup — so React 18 StrictMode's
+  // setup → cleanup → setup cycle can never hit "Map container is already
+  // initialized". (react-leaflet splits these across a ref callback and a
+  // separate effect, which is what made the error possible.)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const interactive = Boolean(onSelectRef.current);
+    const map = L.map(container, {
+      center: [latitude, longitude],
+      zoom: zoom ?? (interactive ? 13 : 15),
+      scrollWheelZoom: interactive,
+    });
+    mapRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    const marker = L.marker([latitude, longitude], {
+      icon: pinIcon,
+      draggable: interactive,
+    }).addTo(map);
+    markerRef.current = marker;
+
+    if (interactive) {
+      marker.on("dragend", () => {
+        const { lat, lng } = marker.getLatLng();
+        onSelectRef.current?.(lat, lng);
+      });
+      map.on("click", (event: L.LeafletMouseEvent) => {
+        onSelectRef.current?.(event.latlng.lat, event.latlng.lng);
+      });
+    }
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+    // Mount-once: prop-driven updates are handled by the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reflect external coordinate changes (GPS fix, click-to-place, edit hydration)
+  // onto the existing map without recreating it.
+  useEffect(() => {
+    const map = mapRef.current;
+    const marker = markerRef.current;
+    if (!map || !marker) return;
+    marker.setLatLng([latitude, longitude]);
+    map.setView([latitude, longitude], map.getZoom());
+  }, [latitude, longitude]);
 
   return (
-    <MapContainer
-      center={[latitude, longitude]}
-      zoom={zoom ?? (interactive ? 13 : 15)}
-      scrollWheelZoom={interactive}
+    <div
+      ref={containerRef}
       style={{ height, width: "100%" }}
       className="rounded-md"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker
-        position={[latitude, longitude]}
-        icon={pinIcon}
-        draggable={interactive}
-        eventHandlers={
-          interactive
-            ? {
-                dragend: (event) => {
-                  const marker = event.target as L.Marker;
-                  const { lat, lng } = marker.getLatLng();
-                  onSelect?.(lat, lng);
-                },
-              }
-            : undefined
-        }
-      />
-      {interactive && onSelect && <ClickHandler onSelect={onSelect} />}
-    </MapContainer>
+    />
   );
 }
