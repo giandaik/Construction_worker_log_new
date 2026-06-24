@@ -66,15 +66,16 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         <div className="flex gap-2">
           {!isSigned || !existingSignature ? (
             <>
-              <Button onClick={save} className="flex-1">
+              <Button type="button" onClick={save} className="flex-1">
                 Save Signature
               </Button>
-              <Button onClick={clear} variant="outline" className="flex-1">
+              <Button type="button" onClick={clear} variant="outline" className="flex-1">
                 Clear
               </Button>
             </>
           ) : (
             <Button
+              type="button"
               onClick={() => setIsSigned(false)}
               variant="outline"
               className="w-full"
