@@ -238,6 +238,72 @@ export class ProjectRepository extends BaseRepository<Project> {
   }
 
   /**
+   * Additively merge a source catalog into a project, per kind. Unions and
+   * de-duplicates against the existing arrays; never deletes. Returns the
+   * updated project, or null if the project does not exist.
+   */
+  async mergeCatalog(
+    projectId: string | ObjectId,
+    source: Partial<Record<CatalogKind, string[]>>
+  ): Promise<Project | null> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+    const existing = await this.collection.findOne({ _id: objectId } as any);
+    if (!existing) return null;
+
+    const kinds: CatalogKind[] = [
+      'personnelRoles',
+      'equipmentTypes',
+      'materialNames',
+      'materialUnits',
+    ];
+    const merged: Partial<Record<CatalogKind, string[]>> = {};
+    for (const kind of kinds) {
+      const base = Array.isArray(existing[kind]) ? (existing[kind] as string[]) : [];
+      const incoming = source[kind] ?? [];
+      merged[kind] = Array.from(
+        new Set([...base, ...incoming].map((v) => v.trim()).filter(Boolean))
+      );
+    }
+
+    const result = await this.collection.findOneAndUpdate(
+      { _id: objectId } as any,
+      { $set: { ...merged, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    return result ? this.mapToEntity(result) : null;
+  }
+
+  /**
+   * Lightweight summaries for the catalog source picker: id, name, and the total
+   * number of option values across the four catalog arrays.
+   */
+  async findCatalogSummaries(): Promise<Array<{ _id: string; name: string; total: number }>> {
+    const documents = await this.collection
+      .find({})
+      .project({
+        _id: 1,
+        name: 1,
+        personnelRoles: 1,
+        equipmentTypes: 1,
+        materialNames: 1,
+        materialUnits: 1,
+      })
+      .sort({ name: 1 })
+      .toArray();
+
+    return documents.map((doc: any) => ({
+      _id: doc._id.toString(),
+      name: doc.name,
+      total:
+        (doc.personnelRoles?.length ?? 0) +
+        (doc.equipmentTypes?.length ?? 0) +
+        (doc.materialNames?.length ?? 0) +
+        (doc.materialUnits?.length ?? 0),
+    }));
+  }
+
+  /**
    * Find projects within budget range
    */
   async findByBudgetRange(minBudget: number, maxBudget: number, options: FindOptions = {}): Promise<Project[]> {

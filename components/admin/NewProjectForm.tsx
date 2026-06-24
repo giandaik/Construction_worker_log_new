@@ -15,8 +15,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationPicker } from "@/components/projects/LocationPicker";
+import { CatalogFields } from "@/components/projects/CatalogFields";
+import { CatalogImportDialog } from "@/components/projects/CatalogImportDialog";
+import {
+  totalCatalogCount,
+  type ProjectCatalog,
+} from "@/lib/catalog/mergeCatalog";
+import type { CatalogKind } from "@/lib/schemas/projectSchema";
 
 type ProjectStatus = "planned" | "in-progress" | "completed" | "on-hold";
+
+function emptyCatalog(): ProjectCatalog {
+  return {
+    personnelRoles: [],
+    equipmentTypes: [],
+    materialNames: [],
+    materialUnits: [],
+  };
+}
 
 const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
   { value: "planned", label: "Planned" },
@@ -36,6 +52,8 @@ export function NewProjectForm() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [contractorEmail, setContractorEmail] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("planned");
+  const [catalog, setCatalog] = useState<ProjectCatalog>(emptyCatalog);
+  const [showCatalog, setShowCatalog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -73,6 +91,10 @@ export function NewProjectForm() {
           ownerEmail,
           contractorEmail,
           status,
+          personnelRoles: catalog.personnelRoles,
+          equipmentTypes: catalog.equipmentTypes,
+          materialNames: catalog.materialNames,
+          materialUnits: catalog.materialUnits,
         }),
       });
 
@@ -91,6 +113,8 @@ export function NewProjectForm() {
       setOwnerEmail("");
       setContractorEmail("");
       setStatus("planned");
+      setCatalog(emptyCatalog());
+      setShowCatalog(false);
       router.refresh();
       if (project?._id) {
         router.push(`/projects/${project._id}`);
@@ -183,6 +207,45 @@ export function NewProjectForm() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-3 rounded-md border p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Κατάλογος επιλογών (προαιρετικό)</p>
+                <p className="text-xs text-muted-foreground">
+                  {totalCatalogCount(catalog) > 0
+                    ? `${totalCatalogCount(catalog)} επιλογές έτοιμες`
+                    : "Φέρε τις λίστες από άλλο project ή πρόσθεσέ τες αργότερα."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCatalog((prev) => !prev)}
+              >
+                {showCatalog ? "Απόκρυψη" : "Επεξεργασία"}
+              </Button>
+            </div>
+
+            <CatalogImportDialog
+              mode="prefill"
+              currentCatalog={catalog}
+              onPrefill={(merged) => {
+                setCatalog(merged);
+                setShowCatalog(true);
+              }}
+            />
+
+            {showCatalog && (
+              <CatalogFields
+                catalog={catalog}
+                onChange={(kind: CatalogKind, values) =>
+                  setCatalog((prev) => ({ ...prev, [kind]: values }))
+                }
+              />
+            )}
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}

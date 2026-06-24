@@ -1,34 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { CatalogEditor } from './CatalogEditor';
+import { CatalogFields } from './CatalogFields';
+import { CatalogImportDialog } from './CatalogImportDialog';
 import { useToast } from '@/hooks/useToast';
 import { Alert } from '@/components/ui/alert';
+import { toProjectCatalog, type ProjectCatalog } from '@/lib/catalog/mergeCatalog';
 import type { CatalogKind } from '@/lib/schemas/projectSchema';
 
-export interface ProjectCatalog {
-  personnelRoles: string[];
-  equipmentTypes: string[];
-  materialNames: string[];
-  materialUnits: string[];
-}
+export type { ProjectCatalog };
 
 interface ProjectCatalogManagerProps {
   projectId: string;
   initial: ProjectCatalog;
   readOnly?: boolean;
 }
-
-const FIELDS: Array<{
-  key: CatalogKind;
-  label: string;
-  placeholder: string;
-}> = [
-  { key: 'personnelRoles', label: 'Ρόλοι Προσωπικού', placeholder: 'π.χ. Εργάτης' },
-  { key: 'equipmentTypes', label: 'Μηχανήματα', placeholder: 'π.χ. Εκσκαφέας' },
-  { key: 'materialNames', label: 'Υλικά', placeholder: 'π.χ. Σκυρόδεμα' },
-  { key: 'materialUnits', label: 'Μονάδες Μέτρησης', placeholder: 'π.χ. m³, kg, τεμ.' },
-];
 
 export function ProjectCatalogManager({
   projectId,
@@ -65,19 +51,25 @@ export function ProjectCatalogManager({
   return (
     <div className="space-y-4">
       {toast && <Alert variant={toast.type}>{toast.message}</Alert>}
-      <div className="grid gap-6 sm:grid-cols-2">
-        {FIELDS.map((field) => (
-          <div key={field.key}>
-            <CatalogEditor
-              label={field.label}
-              placeholder={field.placeholder}
-              values={catalog[field.key]}
-              onChange={(next) => persist(field.key, next)}
-              disabled={readOnly || savingKind === field.key}
-            />
-          </div>
-        ))}
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <CatalogImportDialog
+            mode="apply"
+            currentProjectId={projectId}
+            currentCatalog={catalog}
+            onApplied={(updated) => {
+              setCatalog(toProjectCatalog(updated as Partial<ProjectCatalog>));
+              showSuccess('Αντιγράφηκαν οι επιλογές');
+            }}
+          />
+        </div>
+      )}
+      <CatalogFields
+        catalog={catalog}
+        onChange={persist}
+        busyKind={savingKind}
+        readOnly={readOnly}
+      />
     </div>
   );
 }

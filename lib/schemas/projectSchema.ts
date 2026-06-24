@@ -76,6 +76,10 @@ export const catalogUpdateSchema = z.object({
   values: catalogValuesSchema,
 })
 
+export const catalogImportSchema = z.object({
+  sourceProjectId: z.string().trim().min(1, 'sourceProjectId is required'),
+})
+
 /**
  * TypeScript type inferred from the schema
  */
