@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useMemo } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useParams, useRouter } from 'next/navigation'
@@ -17,13 +17,12 @@ import { Toaster } from '@/components/ui/toaster'
 import { SignatureSection } from '@/components/SignatureSection'
 import { PhotoUpload } from '@/components/forms/PhotoUpload'
 import { DwgPicker } from '@/components/forms/DwgPicker'
-import { Combobox } from '@/components/forms/Combobox'
+import { CatalogSelect } from '@/components/forms/CatalogSelect'
 import { WeatherPicker } from '@/components/forms/WeatherPicker'
-import { useSuggestions } from '@/hooks/useSuggestions'
+import { useProjectCatalog } from '@/hooks/useProjectCatalog'
 import type { Signature } from '@/types/shared'
 import { Skeleton } from "@/components/ui/skeleton"
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
-import { PERSONNEL_ROLES } from '@/lib/constants/constantValues'
 import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize'
 
 export default function EditWorkLogForm() {
@@ -56,14 +55,14 @@ export default function EditWorkLogForm() {
   })
 
   const watchedProject = watch('project') || ''
-  const roleApiSuggestions = useSuggestions('personnel.role', watchedProject)
-  const roleSuggestions = useMemo(
-    () => Array.from(new Set([...PERSONNEL_ROLES, ...roleApiSuggestions])),
-    [roleApiSuggestions]
-  )
-  const equipmentTypeSuggestions = useSuggestions('equipment.type', watchedProject)
-  const materialNameSuggestions = useSuggestions('materials.name', watchedProject)
-  const materialUnitSuggestions = useSuggestions('materials.unit', watchedProject)
+  const { catalog } = useProjectCatalog(watchedProject)
+  const personnelEmpty = !!watchedProject && catalog.personnelRoles.length === 0
+  const equipmentEmpty = !!watchedProject && catalog.equipmentTypes.length === 0
+  const materialsEmpty =
+    !!watchedProject &&
+    catalog.materialNames.length === 0 &&
+    catalog.materialUnits.length === 0
+  const emptyCatalogMessage = 'Ζητήστε από admin να προσθέσει επιλογές σε αυτό το project.'
 
   useEffect(() => {
     const loadData = async () => {
@@ -351,12 +350,13 @@ export default function EditWorkLogForm() {
                 {watch('personnel')?.map((_, index) => (
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
-                      <Label>Role</Label>
-                      <Combobox
+                      <Label htmlFor={`edit-personnel-role-${index}`}>Role</Label>
+                      <CatalogSelect
+                        id={`edit-personnel-role-${index}`}
                         value={watch(`personnel.${index}.role`) || ''}
                         onChange={(v) => setValue(`personnel.${index}.role`, v, { shouldDirty: true })}
-                        suggestions={roleSuggestions}
-                        placeholder="Role"
+                        options={catalog.personnelRoles}
+                        placeholder="Επιλέξτε ρόλο…"
                       />
                     </div>
                     <div>
@@ -379,7 +379,16 @@ export default function EditWorkLogForm() {
                     </div>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={addPersonnel} className="mt-2">
+                {personnelEmpty && (
+                  <p className="text-sm text-muted-foreground italic">{emptyCatalogMessage}</p>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addPersonnel}
+                  disabled={personnelEmpty}
+                  className="mt-2"
+                >
                   Add Personnel
                 </Button>
               </div>
@@ -392,12 +401,13 @@ export default function EditWorkLogForm() {
                 {watch('equipment')?.map((_, index) => (
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
-                      <Label>Type</Label>
-                      <Combobox
+                      <Label htmlFor={`edit-equipment-type-${index}`}>Type</Label>
+                      <CatalogSelect
+                        id={`edit-equipment-type-${index}`}
                         value={watch(`equipment.${index}.type`) || ''}
                         onChange={(v) => setValue(`equipment.${index}.type`, v, { shouldDirty: true })}
-                        suggestions={equipmentTypeSuggestions}
-                        placeholder="Type"
+                        options={catalog.equipmentTypes}
+                        placeholder="Επιλέξτε μηχάνημα…"
                       />
                     </div>
                     <div>
@@ -418,7 +428,16 @@ export default function EditWorkLogForm() {
                     </div>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={addEquipment} className="mt-2">
+                {equipmentEmpty && (
+                  <p className="text-sm text-muted-foreground italic">{emptyCatalogMessage}</p>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addEquipment}
+                  disabled={equipmentEmpty}
+                  className="mt-2"
+                >
                   Add Equipment
                 </Button>
               </div>
@@ -431,12 +450,13 @@ export default function EditWorkLogForm() {
                 {watch('materials')?.map((_, index) => (
                   <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/50">
                     <div>
-                      <Label>Name</Label>
-                      <Combobox
+                      <Label htmlFor={`edit-material-name-${index}`}>Name</Label>
+                      <CatalogSelect
+                        id={`edit-material-name-${index}`}
                         value={watch(`materials.${index}.name`) || ''}
                         onChange={(v) => setValue(`materials.${index}.name`, v, { shouldDirty: true })}
-                        suggestions={materialNameSuggestions}
-                        placeholder="Name"
+                        options={catalog.materialNames}
+                        placeholder="Επιλέξτε υλικό…"
                       />
                     </div>
                     <div>
@@ -448,17 +468,27 @@ export default function EditWorkLogForm() {
                       />
                     </div>
                     <div>
-                      <Label>Unit</Label>
-                      <Combobox
+                      <Label htmlFor={`edit-material-unit-${index}`}>Unit</Label>
+                      <CatalogSelect
+                        id={`edit-material-unit-${index}`}
                         value={watch(`materials.${index}.unit`) || ''}
                         onChange={(v) => setValue(`materials.${index}.unit`, v, { shouldDirty: true })}
-                        suggestions={materialUnitSuggestions}
-                        placeholder="m³, kg, τεμ., m², ώρες"
+                        options={catalog.materialUnits}
+                        placeholder="Επιλέξτε μονάδα…"
                       />
                     </div>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={addMaterial} className="mt-2">
+                {materialsEmpty && (
+                  <p className="text-sm text-muted-foreground italic">{emptyCatalogMessage}</p>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addMaterial}
+                  disabled={materialsEmpty}
+                  className="mt-2"
+                >
                   Add Material
                 </Button>
               </div>

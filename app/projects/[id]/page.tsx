@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarDays, History, PlusCircle, Pencil } from 'lucide-react';
 import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
 import { ProjectMap } from '@/components/projects/ProjectMap';
+import { ProjectCatalogManager } from '@/components/projects/ProjectCatalogManager';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface Project {
@@ -25,6 +26,10 @@ interface Project {
   ownerEmail?: string;
   contractorEmail?: string;
   dwgFiles?: DwgFile[];
+  personnelRoles?: string[];
+  equipmentTypes?: string[];
+  materialNames?: string[];
+  materialUnits?: string[];
 }
 
 export default function ProjectDetailPage() {
@@ -146,6 +151,25 @@ export default function ProjectDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {canManageDwgs && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Κατάλογος Επιλογών</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProjectCatalogManager
+              projectId={project._id}
+              initial={{
+                personnelRoles: project.personnelRoles ?? [],
+                equipmentTypes: project.equipmentTypes ?? [],
+                materialNames: project.materialNames ?? [],
+                materialUnits: project.materialUnits ?? [],
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

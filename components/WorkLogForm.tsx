@@ -12,11 +12,10 @@ import { ArrayField } from '@/components/forms/ArrayField';
 import { SignatureSection } from '@/components/SignatureSection';
 import { PhotoUpload } from '@/components/forms/PhotoUpload';
 import { DwgPicker } from '@/components/forms/DwgPicker';
-import { Combobox } from '@/components/forms/Combobox';
+import { CatalogSelect } from '@/components/forms/CatalogSelect';
 import { WeatherPicker } from '@/components/forms/WeatherPicker';
-import { useSuggestions } from '@/hooks/useSuggestions';
+import { useProjectCatalog } from '@/hooks/useProjectCatalog';
 import { TOAST_DURATION } from '@/lib/constants/constants';
-import { PERSONNEL_ROLES } from '@/lib/constants/constantValues';
 
 const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
 
@@ -114,14 +113,16 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const prefillAttemptedFor = useRef<Set<string>>(new Set());
 
-  const roleApiSuggestions = useSuggestions('personnel.role', formData.project);
-  const roleSuggestions = useMemo(
-    () => Array.from(new Set([...PERSONNEL_ROLES, ...roleApiSuggestions])),
-    [roleApiSuggestions]
-  );
-  const equipmentTypeSuggestions = useSuggestions('equipment.type', formData.project);
-  const materialNameSuggestions = useSuggestions('materials.name', formData.project);
-  const materialUnitSuggestions = useSuggestions('materials.unit', formData.project);
+  const { catalog } = useProjectCatalog(formData.project);
+  const projectSelected = !!formData.project;
+  const personnelEmpty = projectSelected && catalog.personnelRoles.length === 0;
+  const equipmentEmpty = projectSelected && catalog.equipmentTypes.length === 0;
+  const materialsEmpty =
+    projectSelected &&
+    catalog.materialNames.length === 0 &&
+    catalog.materialUnits.length === 0;
+  const needsProjectMessage = 'Επιλέξτε πρώτα project.';
+  const emptyCatalogMessage = 'Ζητήστε από admin να προσθέσει επιλογές σε αυτό το project.';
 
   const { isOnline, submitWorkLog } = useOfflineSync();
   const { toast, showError } = useToast();
@@ -403,15 +404,17 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={personnel.add}
         onRemove={personnel.remove}
         addButtonText="Add Personnel"
+        addDisabled={!projectSelected || personnelEmpty}
+        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-2 gap-4 pr-8">
             <FormField label="Role" htmlFor={`personnel-role-${index}`}>
-              <Combobox
+              <CatalogSelect
                 id={`personnel-role-${index}`}
                 value={item.role}
                 onChange={(v) => personnel.update(index, 'role', v)}
-                suggestions={roleSuggestions}
-                placeholder="e.g. Εργάτης"
+                options={catalog.personnelRoles}
+                placeholder="Επιλέξτε ρόλο…"
               />
             </FormField>
             <FormField label="Count" htmlFor={`personnel-count-${index}`}>
@@ -431,15 +434,17 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={equipment.add}
         onRemove={equipment.remove}
         addButtonText="Add Equipment"
+        addDisabled={!projectSelected || equipmentEmpty}
+        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Type" htmlFor={`equipment-type-${index}`}>
-              <Combobox
+              <CatalogSelect
                 id={`equipment-type-${index}`}
                 value={item.type}
                 onChange={(v) => equipment.update(index, 'type', v)}
-                suggestions={equipmentTypeSuggestions}
-                placeholder="e.g. Εκσκαφέας"
+                options={catalog.equipmentTypes}
+                placeholder="Επιλέξτε μηχάνημα…"
               />
             </FormField>
             <FormField label="Count" htmlFor={`equipment-count-${index}`}>
@@ -473,15 +478,17 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={materials.add}
         onRemove={materials.remove}
         addButtonText="Add Material"
+        addDisabled={!projectSelected || materialsEmpty}
+        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Name" htmlFor={`material-name-${index}`}>
-              <Combobox
+              <CatalogSelect
                 id={`material-name-${index}`}
                 value={item.name}
                 onChange={(v) => materials.update(index, 'name', v)}
-                suggestions={materialNameSuggestions}
-                placeholder="e.g. Σκυρόδεμα"
+                options={catalog.materialNames}
+                placeholder="Επιλέξτε υλικό…"
               />
             </FormField>
             <FormField label="Quantity" htmlFor={`material-quantity-${index}`}>
@@ -496,12 +503,12 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
               />
             </FormField>
             <FormField label="Unit" htmlFor={`material-unit-${index}`}>
-              <Combobox
+              <CatalogSelect
                 id={`material-unit-${index}`}
                 value={item.unit}
                 onChange={(v) => materials.update(index, 'unit', v)}
-                suggestions={materialUnitSuggestions}
-                placeholder="m³, kg, τεμ., m², ώρες"
+                options={catalog.materialUnits}
+                placeholder="Επιλέξτε μονάδα…"
               />
             </FormField>
           </div>

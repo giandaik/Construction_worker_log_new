@@ -13,6 +13,10 @@ export const dwgFileSchema = z.object({
 
 export type DwgFile = z.infer<typeof dwgFileSchema>
 
+const catalogValuesSchema = z
+  .array(z.string().trim().min(1))
+  .transform((values) => Array.from(new Set(values)))
+
 /**
  * Centralized Project Zod Schema
  * Used for validation in project API routes and forms
@@ -30,6 +34,10 @@ export const projectSchema = z.object({
   status: z.enum(['planned', 'in-progress', 'completed', 'on-hold']).optional(),
   manager: z.string().optional(),
   dwgFiles: z.array(dwgFileSchema).optional(),
+  personnelRoles: catalogValuesSchema.optional(),
+  equipmentTypes: catalogValuesSchema.optional(),
+  materialNames: catalogValuesSchema.optional(),
+  materialUnits: catalogValuesSchema.optional(),
 })
 
 /**
@@ -48,6 +56,24 @@ export const projectUpdateSchema = z.object({
   endDate: z.coerce.date().optional(),
   status: z.enum(['planned', 'in-progress', 'completed', 'on-hold']).optional(),
   manager: z.string().optional(),
+  personnelRoles: catalogValuesSchema.optional(),
+  equipmentTypes: catalogValuesSchema.optional(),
+  materialNames: catalogValuesSchema.optional(),
+  materialUnits: catalogValuesSchema.optional(),
+})
+
+export const CATALOG_KINDS = [
+  'personnelRoles',
+  'equipmentTypes',
+  'materialNames',
+  'materialUnits',
+] as const
+
+export type CatalogKind = (typeof CATALOG_KINDS)[number]
+
+export const catalogUpdateSchema = z.object({
+  kind: z.enum(CATALOG_KINDS),
+  values: catalogValuesSchema,
 })
 
 /**

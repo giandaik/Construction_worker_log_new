@@ -30,6 +30,10 @@ export interface IProject extends Document {
   ownerUserId: mongoose.Types.ObjectId | IUser;
   contractorUserId: mongoose.Types.ObjectId | IUser;
   dwgFiles: IDwgFile[];
+  personnelRoles: string[];
+  equipmentTypes: string[];
+  materialNames: string[];
+  materialUnits: string[];
 }
 
 const ProjectSchema: Schema = new Schema(
@@ -86,6 +90,11 @@ const ProjectSchema: Schema = new Schema(
       ],
       default: [],
     },
+
+    personnelRoles: { type: [String], default: [] },
+    equipmentTypes: { type: [String], default: [] },
+    materialNames: { type: [String], default: [] },
+    materialUnits: { type: [String], default: [] },
   },
   { timestamps: true }
 );

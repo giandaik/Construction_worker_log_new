@@ -11,6 +11,8 @@ interface ArrayFieldProps<T> {
   renderFields: (item: T, index: number) => React.ReactNode;
   addButtonText: string;
   className?: string;
+  addDisabled?: boolean;
+  disabledMessage?: string;
 }
 
 /**
@@ -25,6 +27,8 @@ export function ArrayField<T>({
   renderFields,
   addButtonText,
   className,
+  addDisabled,
+  disabledMessage,
 }: ArrayFieldProps<T>) {
   return (
     <div className={cn('space-y-4', className)}>
@@ -35,10 +39,15 @@ export function ArrayField<T>({
           variant="outline"
           size="sm"
           onClick={onAdd}
+          disabled={addDisabled}
         >
           {addButtonText}
         </Button>
       </div>
+
+      {addDisabled && disabledMessage && (
+        <p className="text-sm text-muted-foreground italic">{disabledMessage}</p>
+      )}
 
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">

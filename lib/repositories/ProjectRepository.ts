@@ -45,7 +45,17 @@ export interface Project {
   ownerUserId: string | ObjectId;
   contractorUserId: string | ObjectId;
   dwgFiles?: DwgFile[];
+  personnelRoles?: string[];
+  equipmentTypes?: string[];
+  materialNames?: string[];
+  materialUnits?: string[];
 }
+
+export type CatalogKind =
+  | 'personnelRoles'
+  | 'equipmentTypes'
+  | 'materialNames'
+  | 'materialUnits';
 
 /**
  * Project Repository
@@ -197,6 +207,29 @@ export class ProjectRepository extends BaseRepository<Project> {
       {
         $pull: { dwgFiles: { url } },
         $set: { updatedAt: new Date() },
+      },
+      { returnDocument: 'after' }
+    );
+
+    return result ? this.mapToEntity(result) : null;
+  }
+
+  /**
+   * Replace one of the project's catalog arrays (personnelRoles, equipmentTypes,
+   * materialNames, materialUnits) atomically. Returns the updated project.
+   */
+  async setCatalog(
+    projectId: string | ObjectId,
+    kind: CatalogKind,
+    values: string[]
+  ): Promise<Project | null> {
+    const objectId = ValidationUtils.normalizeObjectId(projectId);
+    const deduped = Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
+
+    const result = await this.collection.findOneAndUpdate(
+      { _id: objectId } as any,
+      {
+        $set: { [kind]: deduped, updatedAt: new Date() },
       },
       { returnDocument: 'after' }
     );
