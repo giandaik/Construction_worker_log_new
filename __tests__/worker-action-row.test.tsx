@@ -89,7 +89,7 @@ describe('WorkerActionRow', () => {
     await renderForUser(userId.toString());
 
     expect(screen.getByText("Start today's log").closest('a'))
-      .toHaveAttribute('href', '/forms/new');
+      .toHaveAttribute('href', '/logs/new');
   });
 
   it('links the recent card to the last submitted log detail', async () => {

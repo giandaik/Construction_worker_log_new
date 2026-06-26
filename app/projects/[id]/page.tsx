@@ -106,9 +106,9 @@ export default function ProjectDetailPage() {
               <History className="mr-2 h-4 w-4" /> History
             </Button>
           </Link>
-          <Link href={`/forms/new?project=${project._id}`}>
+          <Link href={`/logs/new?project=${project._id}`}>
             <Button size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> New Form
+              <PlusCircle className="mr-2 h-4 w-4" /> New log
             </Button>
           </Link>
         </div>

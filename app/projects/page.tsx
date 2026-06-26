@@ -268,9 +268,9 @@ export default function ProjectsPage() {
                     </Link>
                   </Button>
                   <Button size="sm" asChild>
-                    <Link href={`/forms/new?project=${project._id}`}>
+                    <Link href={`/logs/new?project=${project._id}`}>
                       <PlusCircle className="w-4 h-4 mr-2" />
-                      New Form
+                      New log
                     </Link>
                   </Button>
                 </div>

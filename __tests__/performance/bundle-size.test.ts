@@ -147,7 +147,7 @@ describe('Performance: Bundle Size Optimization', () => {
       // Check that different pages have separate bundles
       const routes = [
         join(pagesDir, 'page.js'), // Homepage
-        join(pagesDir, 'forms/new/page.js'), // New form
+        join(pagesDir, 'logs/new/page.js'), // New log
         join(pagesDir, 'worklogs/page.js'), // Worklogs list
         join(pagesDir, 'worklogs/[id]/page.js'), // Worklog detail
       ];

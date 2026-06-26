@@ -189,8 +189,8 @@ function WorkLogsPageContent() {
           )}
         </div>
         <Button asChild className="w-full sm:w-auto">
-          <Link href="/forms/new">
-            <Plus className="mr-2 h-4 w-4" /> Create New
+          <Link href="/logs/new">
+            <Plus className="mr-2 h-4 w-4" /> New log
           </Link>
         </Button>
       </div>
@@ -281,7 +281,7 @@ function WorkLogsPageContent() {
                 View All Work Logs
               </Button>
             )}
-            <Link href="/forms/new">
+            <Link href="/logs/new">
               <Button className="mt-4">Create Your First Work Log</Button>
             </Link>
           </CardContent>

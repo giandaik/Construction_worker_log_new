@@ -140,7 +140,7 @@ export default async function HomePage() {
               label="Quick start"
               value="New log"
               hint="Record today's work in minutes"
-              href="/forms/new"
+              href="/logs/new"
             />
           </section>
         )}
@@ -151,7 +151,7 @@ export default async function HomePage() {
               <h2 className="text-xl font-bold uppercase">Recent work logs</h2>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/worklogs">
-                  All forms <ArrowRight className="ml-1 h-4 w-4" />
+                  All logs <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -160,7 +160,7 @@ export default async function HomePage() {
                 <FileText className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
                 <p className="mt-3 text-muted-foreground">No work logs yet.</p>
                 <Button className="mt-4" asChild>
-                  <Link href="/forms/new">
+                  <Link href="/logs/new">
                     <Plus className="mr-2 h-4 w-4" /> Create the first one
                   </Link>
                 </Button>

@@ -47,7 +47,7 @@ describe("buildBreadcrumbTrail", () => {
     ])
   })
 
-  it("resolves nested admin and forms routes", () => {
+  it("resolves nested admin and logs routes", () => {
     expect(buildBreadcrumbTrail("/admin/users")).toEqual([
       { href: "/", label: "Home" },
       { href: "/admin", label: "Admin" },
@@ -59,10 +59,10 @@ describe("buildBreadcrumbTrail", () => {
       { href: "/admin/projects", label: "Projects" },
       { href: "/admin/projects/new", label: "New" },
     ])
-    expect(buildBreadcrumbTrail("/forms/new")).toEqual([
+    expect(buildBreadcrumbTrail("/logs/new")).toEqual([
       { href: "/", label: "Home" },
-      { href: "/forms", label: "Forms" },
-      { href: "/forms/new", label: "New" },
+      { href: "/logs", label: "Logs" },
+      { href: "/logs/new", label: "New" },
     ])
   })
 

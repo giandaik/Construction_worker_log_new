@@ -60,9 +60,9 @@ export function Navbar() {
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button asChild size="sm">
-            <Link href="/forms/new">
+            <Link href="/logs/new">
               <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">New Form</span>
+              <span className="hidden sm:inline">New log</span>
               <span className="sm:hidden">New</span>
             </Link>
           </Button>

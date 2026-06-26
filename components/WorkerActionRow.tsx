@@ -112,7 +112,7 @@ export async function WorkerActionRow({ userId }: { userId: string }) {
   ) : (
     <ActionCard
       key="new"
-      href="/forms/new"
+      href="/logs/new"
       icon={Plus}
       label="Start today's log"
       value="New work log"

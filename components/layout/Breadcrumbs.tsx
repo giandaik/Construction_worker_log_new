@@ -20,7 +20,7 @@ const STATIC_LABELS: Record<string, string> = {
   worklogs: "Work Logs",
   admin: "Admin",
   users: "Users",
-  forms: "Forms",
+  logs: "Logs",
   new: "New",
   calendar: "Calendar",
   edit: "Edit",

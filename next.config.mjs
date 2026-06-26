@@ -14,6 +14,12 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+  async redirects() {
+    return [
+      // /forms/new was renamed to /logs/new; keep old URLs (bookmarks, links) working.
+      { source: '/forms/new', destination: '/logs/new', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
