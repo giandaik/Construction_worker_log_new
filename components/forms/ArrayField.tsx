@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 
 interface ArrayFieldProps<T> {
   title: string;
+  /** Optional Greek subtitle shown under the (English) title. */
+  titleGr?: string;
   items: T[];
   onAdd: () => void;
   onRemove: (index: number) => void;
@@ -21,6 +23,7 @@ interface ArrayFieldProps<T> {
  */
 export function ArrayField<T>({
   title,
+  titleGr,
   items,
   onAdd,
   onRemove,
@@ -32,8 +35,11 @@ export function ArrayField<T>({
 }: ArrayFieldProps<T>) {
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{title}</h3>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">{title}</h3>
+          {titleGr && <p className="text-xs text-muted-foreground">{titleGr}</p>}
+        </div>
         <Button
           type="button"
           variant="outline"

@@ -19,6 +19,16 @@ import { TOAST_DURATION } from '@/lib/constants/constants';
 
 const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
 
+/**
+ * Prominent control styling for the load-bearing fields (date, project, work
+ * description): larger text + a generous 48px tap target so they read as the
+ * decisions that matter most — and stay tappable with gloves / in the field.
+ * Routine fields keep the compact `sm:text-sm` styling so the size gap carries
+ * meaning: big = the thing that has to be right.
+ */
+const PROMINENT_CONTROL_CLASS =
+  'mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring min-h-[48px] px-3 py-2.5 text-base';
+
 function PersonnelCountField({
   id,
   value,
@@ -121,7 +131,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     projectSelected &&
     catalog.materialNames.length === 0 &&
     catalog.materialUnits.length === 0;
-  const needsProjectMessage = 'Επιλέξτε πρώτα project.';
+  const needsProjectMessage = 'Επιλέξτε πρώτα έργο.';
   const emptyCatalogMessage = 'Ζητήστε από admin να προσθέσει επιλογές σε αυτό το project.';
 
   const { isOnline, submitWorkLog } = useOfflineSync();
@@ -326,25 +336,32 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       )}
 
       <FormSection step={1} title="Details" description="Date, project, conditions, and the day's work">
-      <FormField label="Date" htmlFor="date" required>
+      <FormField label="Date" labelGr="Ημερομηνία" htmlFor="date" required size="lg">
         <input
           type="date"
           id="date"
           name="date"
           value={formData.date}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
+          className={PROMINENT_CONTROL_CLASS}
           required
         />
       </FormField>
 
-      <FormField label="Project" htmlFor="project" required>
+      <FormField
+        label="Project"
+        labelGr="Έργο"
+        htmlFor="project"
+        required
+        size="lg"
+        hint="Pick this first — it unlocks personnel, equipment & materials. (Επιλέξτε πρώτα — ξεκλειδώνει προσωπικό, εξοπλισμό & υλικά.)"
+      >
         <select
           id="project"
           name="project"
           value={formData.project}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
+          className={PROMINENT_CONTROL_CLASS}
           required
           disabled={isLoadingProjects}
         >
@@ -355,14 +372,27 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         </select>
       </FormField>
 
-      <FormField label="Weather" htmlFor="weather">
+      <FormField label="Work Description" labelGr="Περιγραφή Εργασιών" htmlFor="workDescription" required size="lg">
+        <textarea
+          id="workDescription"
+          name="workDescription"
+          value={formData.workDescription}
+          onChange={handleChange}
+          rows={5}
+          placeholder="e.g. Poured concrete for the east foundation. — π.χ. Εχύθηκε σκυρόδεμα στα θεμέλια."
+          className={PROMINENT_CONTROL_CLASS}
+          required
+        />
+      </FormField>
+
+      <FormField label="Weather" labelGr="Καιρός" htmlFor="weather">
         <WeatherPicker
           value={formData.weather || ''}
           onChange={updateWeather}
         />
       </FormField>
 
-      <FormField label="Temperature (°C)" htmlFor="temperature">
+      <FormField label="Temperature (°C)" labelGr="Θερμοκρασία (°C)" htmlFor="temperature">
         <input
           type="number"
           id="temperature"
@@ -373,19 +403,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         />
       </FormField>
 
-      <FormField label="Work Description" htmlFor="workDescription" required>
-        <textarea
-          id="workDescription"
-          name="workDescription"
-          value={formData.workDescription}
-          onChange={handleChange}
-          rows={3}
-          className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
-          required
-        />
-      </FormField>
-
-      <FormField label="Notes" htmlFor="notes">
+      <FormField label="Notes" labelGr="Σημειώσεις" htmlFor="notes">
         <textarea
           id="notes"
           name="notes"
@@ -400,6 +418,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       <FormSection step={2} title="Resources" description="Personnel, equipment, and materials on site">
       <ArrayField
         title="Personnel"
+        titleGr="Προσωπικό"
         items={formData.personnel}
         onAdd={personnel.add}
         onRemove={personnel.remove}
@@ -408,7 +427,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-2 gap-4 pr-8">
-            <FormField label="Role" htmlFor={`personnel-role-${index}`}>
+            <FormField label="Role" labelGr="Ρόλος" htmlFor={`personnel-role-${index}`}>
               <CatalogSelect
                 id={`personnel-role-${index}`}
                 value={item.role}
@@ -417,7 +436,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 placeholder="Επιλέξτε ρόλο…"
               />
             </FormField>
-            <FormField label="Count" htmlFor={`personnel-count-${index}`}>
+            <FormField label="Count" labelGr="Αριθμός" htmlFor={`personnel-count-${index}`}>
               <PersonnelCountField
                 id={`personnel-count-${index}`}
                 value={item.count}
@@ -430,6 +449,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
 
       <ArrayField
         title="Equipment"
+        titleGr="Εξοπλισμός"
         items={formData.equipment}
         onAdd={equipment.add}
         onRemove={equipment.remove}
@@ -438,7 +458,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
-            <FormField label="Type" htmlFor={`equipment-type-${index}`}>
+            <FormField label="Type" labelGr="Τύπος" htmlFor={`equipment-type-${index}`}>
               <CatalogSelect
                 id={`equipment-type-${index}`}
                 value={item.type}
@@ -447,7 +467,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 placeholder="Επιλέξτε μηχάνημα…"
               />
             </FormField>
-            <FormField label="Count" htmlFor={`equipment-count-${index}`}>
+            <FormField label="Count" labelGr="Αριθμός" htmlFor={`equipment-count-${index}`}>
               <input
                 type="number"
                 id={`equipment-count-${index}`}
@@ -457,7 +477,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
               />
             </FormField>
-            <FormField label="Hours" htmlFor={`equipment-hours-${index}`}>
+            <FormField label="Hours" labelGr="Ώρες" htmlFor={`equipment-hours-${index}`}>
               <input
                 type="number"
                 id={`equipment-hours-${index}`}
@@ -474,6 +494,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
 
       <ArrayField
         title="Materials"
+        titleGr="Υλικά"
         items={formData.materials}
         onAdd={materials.add}
         onRemove={materials.remove}
@@ -482,7 +503,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
-            <FormField label="Name" htmlFor={`material-name-${index}`}>
+            <FormField label="Name" labelGr="Ονομασία" htmlFor={`material-name-${index}`}>
               <CatalogSelect
                 id={`material-name-${index}`}
                 value={item.name}
@@ -491,7 +512,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 placeholder="Επιλέξτε υλικό…"
               />
             </FormField>
-            <FormField label="Quantity" htmlFor={`material-quantity-${index}`}>
+            <FormField label="Quantity" labelGr="Ποσότητα" htmlFor={`material-quantity-${index}`}>
               <input
                 type="number"
                 id={`material-quantity-${index}`}
@@ -502,7 +523,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
                 className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm"
               />
             </FormField>
-            <FormField label="Unit" htmlFor={`material-unit-${index}`}>
+            <FormField label="Unit" labelGr="Μονάδα" htmlFor={`material-unit-${index}`}>
               <CatalogSelect
                 id={`material-unit-${index}`}
                 value={item.unit}
