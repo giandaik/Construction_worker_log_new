@@ -61,7 +61,7 @@ describe("buildBreadcrumbTrail", () => {
     ])
     expect(buildBreadcrumbTrail("/logs/new")).toEqual([
       { href: "/", label: "Home" },
-      { href: "/logs", label: "Logs" },
+      { href: "/worklogs", label: "Work Logs" },
       { href: "/logs/new", label: "New" },
     ])
   })

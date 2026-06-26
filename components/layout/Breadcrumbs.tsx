@@ -20,10 +20,19 @@ const STATIC_LABELS: Record<string, string> = {
   worklogs: "Work Logs",
   admin: "Admin",
   users: "Users",
-  logs: "Logs",
   new: "New",
   calendar: "Calendar",
   edit: "Edit",
+}
+
+/**
+ * Segments whose crumb should point at a canonical route that differs from the
+ * literal path. /logs/new is the create page for the Work Logs section, but
+ * /logs has no index route — point the section crumb at the real list page so
+ * it never links to a 404.
+ */
+const CRUMB_OVERRIDES: Record<string, { href: string; label: string }> = {
+  logs: { href: "/worklogs", label: "Work Logs" },
 }
 
 /** Parent segment that introduces a dynamic id. */
@@ -54,7 +63,11 @@ export function buildBreadcrumbTrail(pathname: string): Crumb[] {
     if (!(segment in STATIC_LABELS) && dynamicKind) {
       crumbs.push({ href, dynamic: { kind: dynamicKind, id: segment } })
     } else {
-      crumbs.push({ href, label: STATIC_LABELS[segment] ?? segment })
+      const override = CRUMB_OVERRIDES[segment]
+      crumbs.push({
+        href: override?.href ?? href,
+        label: override?.label ?? STATIC_LABELS[segment] ?? segment,
+      })
     }
   })
 
