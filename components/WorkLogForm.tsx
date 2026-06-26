@@ -14,6 +14,8 @@ import { PhotoUpload } from '@/components/forms/PhotoUpload';
 import { DwgPicker } from '@/components/forms/DwgPicker';
 import { CatalogSelect } from '@/components/forms/CatalogSelect';
 import { WeatherPicker } from '@/components/forms/WeatherPicker';
+import { ProjectPicker, StatusBadge } from '@/components/forms/ProjectPicker';
+import { Check, MapPin } from 'lucide-react';
 import { useProjectCatalog } from '@/hooks/useProjectCatalog';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 
@@ -114,6 +116,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     updateImages,
     updateDwgRefs,
     updateWeather,
+    setProject,
     seedFromPrevious,
     clearSeed,
     resetForm,
@@ -136,15 +139,6 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
 
   const { isOnline, submitWorkLog } = useOfflineSync();
   const { toast, showError } = useToast();
-
-  // Memoize project options to prevent unnecessary re-renders
-  const projectOptions = useMemo(() => {
-    return projects.map(project => (
-      <option key={project._id?.toString()} value={project._id?.toString()}>
-        {project.name}
-      </option>
-    ));
-  }, [projects]);
 
   const selectedProject = useMemo(() => {
     return projects.find(project => project._id?.toString() === formData.project);
@@ -299,18 +293,35 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  const topAlerts = (
+    <>
       {!isOnline && (
         <Alert variant="warning">
           You are currently offline. Submissions will be saved locally and synced later.
         </Alert>
       )}
-      {toast && (
-        <Alert variant={toast.type}>
-          {toast.message}
-        </Alert>
-      )}
+      {toast && <Alert variant={toast.type}>{toast.message}</Alert>}
+    </>
+  );
+
+  // Guided flow: no project chosen yet → show the picker instead of the form.
+  // Deep links (?project=…) pre-set the project via initialProject and skip this.
+  if (!projectSelected) {
+    return (
+      <div className="space-y-6">
+        {topAlerts}
+        <ProjectPicker
+          projects={projects}
+          isLoading={isLoadingProjects}
+          onSelect={setProject}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {topAlerts}
      
       {prefilledFrom && (
         <Alert variant="info">
@@ -335,6 +346,33 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         </Alert>
       )}
 
+      {selectedProject && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-300 bg-yellow-50 p-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Check className="h-4 w-4 shrink-0 text-yellow-600" />
+              <span className="text-base font-semibold text-foreground truncate">
+                {selectedProject.name}
+              </span>
+              <StatusBadge status={selectedProject.status} />
+            </div>
+            {selectedProject.location && (
+              <p className="mt-0.5 flex items-center gap-1 pl-6 text-sm text-muted-foreground truncate">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                {selectedProject.location}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setProject('')}
+            className="shrink-0 rounded-md border border-input px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            Change
+          </button>
+        </div>
+      )}
+
       <FormSection step={1} title="Details" description="Date, project, conditions, and the day's work">
       <FormField label="Date" labelGr="Ημερομηνία" htmlFor="date" required size="lg">
         <input
@@ -346,30 +384,6 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           className={PROMINENT_CONTROL_CLASS}
           required
         />
-      </FormField>
-
-      <FormField
-        label="Project"
-        labelGr="Έργο"
-        htmlFor="project"
-        required
-        size="lg"
-        hint="Pick this first — it unlocks personnel, equipment & materials. (Επιλέξτε πρώτα — ξεκλειδώνει προσωπικό, εξοπλισμό & υλικά.)"
-      >
-        <select
-          id="project"
-          name="project"
-          value={formData.project}
-          onChange={handleChange}
-          className={PROMINENT_CONTROL_CLASS}
-          required
-          disabled={isLoadingProjects}
-        >
-          <option value="">
-            {isLoadingProjects ? 'Loading projects...' : 'Select a project'}
-          </option>
-          {projectOptions}
-        </select>
       </FormField>
 
       <FormField label="Work Description" labelGr="Περιγραφή Εργασιών" htmlFor="workDescription" required size="lg">

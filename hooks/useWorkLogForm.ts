@@ -182,6 +182,14 @@ export function useWorkLogForm(initialProject = '') {
   }, []);
 
   /**
+   * Set (or clear) the selected project. Used by the guided project-picker
+   * flow: picking a card sets it; the "Change" button clears it back to ''.
+   */
+  const setProject = useCallback((project: string) => {
+    setFormData(prev => ({ ...prev, project }));
+  }, []);
+
+  /**
    * Seed the array fields + weather from a previous work log. Keeps the
    * current project + today's date + blank workDescription/notes.
    */
@@ -252,6 +260,7 @@ export function useWorkLogForm(initialProject = '') {
     updateImages,
     updateDwgRefs,
     updateWeather,
+    setProject,
     seedFromPrevious,
     clearSeed,
     resetForm,
