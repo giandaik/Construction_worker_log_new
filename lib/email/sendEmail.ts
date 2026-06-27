@@ -7,6 +7,7 @@ import {
   WorkLogCompletionPayload,
   buildWorkLogCompletionTemplate,
 } from '@/lib/email/templates/workLogCompletionTemplate';
+import { RejectWorkLogPayload, buildRejectWorkLogTemplate } from '@/lib/email/templates/rejectWorkLogTemplate';
 
 export type { SignatureNotificationPayload, WorkLogCompletionPayload };
 
@@ -135,5 +136,27 @@ export const sendWorkLogCompletedEmail = async (
     html: template.html,
     text: template.text,
     attachments,
+  });
+};
+
+export const sendRejectWorkLogEmail = async (
+  payload: RejectWorkLogPayload
+): Promise<boolean> => {
+  
+
+  console.log('[SMTP] Preparing rejection notification email for recipients:', payload.projectContractorEmail);
+  const template = buildRejectWorkLogTemplate(payload);
+
+  if (!payload.projectOwnerEmail) {
+    console.error('[SMTP] No project owner email provided');
+    return false;
+  }
+
+  return sendSmtpEmail({
+    from: getSenderEmail(),
+    to: payload.projectContractorEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text,
   });
 };

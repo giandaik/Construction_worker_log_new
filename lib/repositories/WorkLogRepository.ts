@@ -60,6 +60,7 @@ export interface WorkLog {
   signatures?: Signature[];
   images?: string[];
   dwgRefs?: string[];
+  rejectionComment?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
