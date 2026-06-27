@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME } from "./lib/constants/constants";
 import { validateJWTSecret } from "./utils/auth";
+import { stampFlagOverrides } from "./middleware-helpers";
 
 
 // Paths that don't require authentication
@@ -15,7 +16,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublicPath(pathname)) {
-    return NextResponse.next();
+    return stampFlagOverrides(request, NextResponse.next());
   }
 
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -23,27 +24,27 @@ export async function middleware(request: NextRequest) {
   if (!sessionCookie) {
     // For API routes, return 401 Unauthorized instead of redirecting
     if (pathname.startsWith("/api")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+      return stampFlagOverrides(
+        request,
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
       );
     }
 
     // For page routes, keep redirecting to login
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    return stampFlagOverrides(request, NextResponse.redirect(loginUrl));
   }
   try {
     const jwtSecret = validateJWTSecret();
-    const { payload } = await jwtVerify(
-      sessionCookie!,
-      new TextEncoder().encode(jwtSecret)
-    );
+    await jwtVerify(sessionCookie!, new TextEncoder().encode(jwtSecret));
 
-    return NextResponse.next();
+    return stampFlagOverrides(request, NextResponse.next());
   } catch (err) {
     console.error("JWT ERROR:", err);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return stampFlagOverrides(
+      request,
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
   }
 
 }

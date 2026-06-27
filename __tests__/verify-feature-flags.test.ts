@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { NextRequest, NextResponse } from 'next/server';
 import { renderHook } from '@testing-library/react';
 import { useFlag } from '../lib/features/useFlag';
 import {
@@ -12,6 +13,10 @@ import {
   type FlagKey,
 } from '../lib/features/flags';
 
+// NODE_ENV is read-only in this project's types; use vi.stubEnv to flip it.
+// The flag env var uses a dynamic key, so direct assign/delete is fine.
+const FLAG_ENV = FLAGS.riskSignal.env;
+
 describe('feature flag registry', () => {
   it('exposes the riskSignal flag with a NEXT_PUBLIC_ env name', () => {
     expect(FLAG_KEYS).toContain('riskSignal');
@@ -23,49 +28,46 @@ describe('feature flag registry', () => {
 
 describe('resolveFlag precedence (override > env > default)', () => {
   const key: FlagKey = 'riskSignal';
-  const saved = process.env[FLAGS.riskSignal.env];
 
   afterEach(() => {
-    if (saved === undefined) delete process.env[FLAGS.riskSignal.env];
-    else process.env[FLAGS.riskSignal.env] = saved;
+    delete process.env[FLAG_ENV];
   });
 
   it('returns the override when provided (true)', () => {
-    process.env[FLAGS.riskSignal.env] = undefined;
     expect(resolveFlag(key, { override: true })).toBe(true);
   });
 
   it('returns the override when provided (false), even if env is on', () => {
-    process.env[FLAGS.riskSignal.env] = 'true';
+    process.env[FLAG_ENV] = 'true';
     expect(resolveFlag(key, { override: false })).toBe(false);
   });
 
   it('parses truthy env values ("1","true","yes","on")', () => {
     for (const v of ['1', 'true', 'TRUE', 'yes', 'on']) {
-      process.env[FLAGS.riskSignal.env] = v;
+      process.env[FLAG_ENV] = v;
       expect(resolveFlag(key), `env=${v}`).toBe(true);
     }
   });
 
   it('parses falsy env values ("0","false","no","off")', () => {
     for (const v of ['0', 'false', 'no', 'off']) {
-      process.env[FLAGS.riskSignal.env] = v;
+      process.env[FLAG_ENV] = v;
       expect(resolveFlag(key), `env=${v}`).toBe(false);
     }
   });
 
   it('falls back to default when env is unset', () => {
-    process.env[FLAGS.riskSignal.env] = undefined;
+    delete process.env[FLAG_ENV];
     expect(resolveFlag(key)).toBe(false);
   });
 
   it('falls back to default when env is garbage', () => {
-    process.env[FLAGS.riskSignal.env] = 'maybe';
+    process.env[FLAG_ENV] = 'maybe';
     expect(resolveFlag(key)).toBe(false);
   });
 
   it('isEnabled() mirrors resolveFlag() without an override', () => {
-    process.env[FLAGS.riskSignal.env] = 'true';
+    process.env[FLAG_ENV] = 'true';
     expect(isEnabled(key)).toBe(true);
   });
 });
@@ -100,18 +102,14 @@ describe('flagOverridesFromQuery (middleware input)', () => {
 });
 
 describe('isEnabledForRequest', () => {
-  const savedNodeEnv = process.env.NODE_ENV;
-  const savedFlag = process.env[FLAGS.riskSignal.env];
-
   afterEach(() => {
-    process.env.NODE_ENV = savedNodeEnv;
-    if (savedFlag === undefined) delete process.env[FLAGS.riskSignal.env];
-    else process.env[FLAGS.riskSignal.env] = savedFlag;
+    vi.unstubAllEnvs();
+    delete process.env[FLAG_ENV];
   });
 
   it('honors the cookie override in non-production', () => {
-    process.env.NODE_ENV = 'test';
-    process.env[FLAGS.riskSignal.env] = undefined;
+    // NODE_ENV defaults to 'test' in vitest -> isDev() true
+    delete process.env[FLAG_ENV];
     const req = new Request('http://x/api', {
       headers: { cookie: 'ff_riskSignal=1' },
     });
@@ -119,8 +117,8 @@ describe('isEnabledForRequest', () => {
   });
 
   it('ignores the cookie override in production (falls back to env/default)', () => {
-    process.env.NODE_ENV = 'production';
-    process.env[FLAGS.riskSignal.env] = undefined;
+    vi.stubEnv('NODE_ENV', 'production');
+    delete process.env[FLAG_ENV];
     const req = new Request('http://x/api', {
       headers: { cookie: 'ff_riskSignal=1' },
     });
@@ -129,28 +127,47 @@ describe('isEnabledForRequest', () => {
 });
 
 describe('useFlag (client hook)', () => {
-  const savedNodeEnv = process.env.NODE_ENV;
-  const savedFlag = process.env[FLAGS.riskSignal.env];
-
   afterEach(() => {
-    process.env.NODE_ENV = savedNodeEnv;
-    if (savedFlag === undefined) delete process.env[FLAGS.riskSignal.env];
-    else process.env[FLAGS.riskSignal.env] = savedFlag;
+    delete process.env[FLAG_ENV];
     document.cookie = 'ff_riskSignal=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
   });
 
   it('returns false by default (flag off)', () => {
-    process.env.NODE_ENV = 'test';
-    process.env[FLAGS.riskSignal.env] = undefined;
+    delete process.env[FLAG_ENV];
     const { result } = renderHook(() => useFlag('riskSignal'));
     expect(result.current).toBe(false);
   });
 
   it('honors a dev cookie override', () => {
-    process.env.NODE_ENV = 'test';
-    process.env[FLAGS.riskSignal.env] = undefined;
+    delete process.env[FLAG_ENV];
     document.cookie = 'ff_riskSignal=1; path=/';
     const { result } = renderHook(() => useFlag('riskSignal'));
     expect(result.current).toBe(true);
+  });
+});
+
+describe('middleware flag cookie stamping (dev only)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stamps ff_<key> cookie from ?ff_<key>=1 in dev', async () => {
+    // NODE_ENV defaults to 'test' -> dev
+    const { stampFlagOverrides } = await import('../middleware-helpers');
+    const res = stampFlagOverrides(
+      new NextRequest('http://x/projects/1?ff_riskSignal=1'),
+      new NextResponse(),
+    );
+    expect(res.cookies.get('ff_riskSignal')?.value).toBe('1');
+  });
+
+  it('does nothing in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { stampFlagOverrides } = await import('../middleware-helpers');
+    const res = stampFlagOverrides(
+      new NextRequest('http://x/projects/1?ff_riskSignal=1'),
+      new NextResponse(),
+    );
+    expect(res.cookies.get('ff_riskSignal')).toBeUndefined();
   });
 });
