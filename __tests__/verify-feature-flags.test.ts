@@ -1,4 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useFlag } from '../lib/features/useFlag';
 import {
   FLAGS,
   FLAG_KEYS,
@@ -123,5 +125,32 @@ describe('isEnabledForRequest', () => {
       headers: { cookie: 'ff_riskSignal=1' },
     });
     expect(isEnabledForRequest('riskSignal', req)).toBe(false);
+  });
+});
+
+describe('useFlag (client hook)', () => {
+  const savedNodeEnv = process.env.NODE_ENV;
+  const savedFlag = process.env[FLAGS.riskSignal.env];
+
+  afterEach(() => {
+    process.env.NODE_ENV = savedNodeEnv;
+    if (savedFlag === undefined) delete process.env[FLAGS.riskSignal.env];
+    else process.env[FLAGS.riskSignal.env] = savedFlag;
+    document.cookie = 'ff_riskSignal=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  });
+
+  it('returns false by default (flag off)', () => {
+    process.env.NODE_ENV = 'test';
+    process.env[FLAGS.riskSignal.env] = undefined;
+    const { result } = renderHook(() => useFlag('riskSignal'));
+    expect(result.current).toBe(false);
+  });
+
+  it('honors a dev cookie override', () => {
+    process.env.NODE_ENV = 'test';
+    process.env[FLAGS.riskSignal.env] = undefined;
+    document.cookie = 'ff_riskSignal=1; path=/';
+    const { result } = renderHook(() => useFlag('riskSignal'));
+    expect(result.current).toBe(true);
   });
 });
