@@ -2,7 +2,7 @@
 import { ApiError } from '@/lib/api/errorHandling';
 import { DatabaseUtils } from '@/lib/api/database';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser, canModify } from '@/utils/auth';
+import { getAuthUser, canModify, isProjectOwner } from '@/utils/auth';
 import {
   sendSignatureNotificationEmail,
   sendWorkLogCompletedEmail,
@@ -10,8 +10,59 @@ import {
 import {
   getWorkLogStatusFromSignatures,
   validateSignatureWorkflowChange,
+  getSignatureRoleType,
 } from '@/lib/signatureUtils';
 import { createWorkLogPdfAttachment } from '@/app/worklogs/[id]/exportToPDF';
+import { FORM_STATUS } from '@/lib/constants/constantValues';
+
+async function fetchProjectContext(projectId: string | undefined) {
+  let projectName: string | undefined;
+  let projectOwnerName: string | undefined;
+  let projectContractorName: string | undefined;
+  let projectOwnerEmail: string | undefined;
+  let projectContractorEmail: string | undefined;
+  let projectOwnerUserId: string | undefined;
+  let projectContractorUserId: string | undefined;
+
+  if (!projectId) {
+    return {
+      projectName,
+      projectOwnerName,
+      projectContractorName,
+      projectOwnerEmail,
+      projectContractorEmail,
+      projectOwnerUserId,
+      projectContractorUserId,
+    };
+  }
+
+  try {
+    await DatabaseUtils.withConnection(async (db) => {
+      const projectsCollection = db.collection('projects');
+      const { ObjectId } = await import('mongodb');
+      const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
+      projectName = project?.name;
+      projectOwnerName = project?.ownerName;
+      projectContractorName = project?.contractorName;
+      projectOwnerEmail = project?.ownerEmail;
+      projectContractorEmail = project?.contractorEmail;
+      projectOwnerUserId = project?.ownerUserId?.toString();
+      projectContractorUserId = project?.contractorUserId?.toString();
+    });
+  } catch (error) {
+    console.error('Error fetching project details:', error);
+  }
+
+  return {
+    projectName,
+    projectOwnerName,
+    projectContractorName,
+    projectOwnerEmail,
+    projectContractorEmail,
+    projectOwnerUserId,
+    projectContractorUserId,
+  };
+}
 
 export async function GET(
   request: Request,
@@ -47,7 +98,7 @@ export async function PUT(
       return ApiError.unauthorized();
     }
 
-    const data = await request.json();
+    const requestData = await request.json();
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       // First, get the existing work log to check ownership
@@ -57,44 +108,57 @@ export async function PUT(
         return ApiError.notFound('Work log');
       }
 
+      let updateData = { ...requestData };
+
       // Check if user can modify (admin/manager or author)
-      if (!canModify(user, existingWorkLog.author?.toString() || '')) {
+      const projectId =
+        typeof existingWorkLog.project === 'string'
+          ? existingWorkLog.project
+          : existingWorkLog.project?.toString();
+      const projectContext = await fetchProjectContext(projectId);
+      const {
+        projectName,
+        projectOwnerName,
+        projectContractorName,
+        projectOwnerEmail,
+        projectContractorEmail,
+        projectOwnerUserId,
+      } = projectContext;
+
+      const isAuthorOrAdmin = canModify(user, existingWorkLog.author?.toString() || '');
+      const isOwnerApproval =
+        isProjectOwner(user, projectOwnerUserId) &&
+        existingWorkLog.status === FORM_STATUS.SIGNED;
+
+      if (!isAuthorOrAdmin && !isOwnerApproval) {
         return ApiError.forbidden('You do not have permission to update this work log');
       }
 
       const existingSignatureCount = existingWorkLog.signatures?.length ?? 0;
       const existingSignatures = existingWorkLog.signatures ?? [];
-      const updatedSignatures = Array.isArray(data.signatures)
-        ? data.signatures
+      const updatedSignatures = Array.isArray(updateData.signatures)
+        ? updateData.signatures
         : existingSignatures;
       const hasNewSignature = updatedSignatures.length > existingSignatureCount;
 
-      let projectName: string | undefined;
-      let projectOwnerName: string | undefined;
-      let projectContractorName: string | undefined;
-      let projectOwnerEmail: string | undefined;
-      let projectContractorEmail: string | undefined;
-
-      try {
-        await DatabaseUtils.withConnection(async (db) => {
-          const projectsCollection = db.collection('projects');
-          const projectId = typeof existingWorkLog.project === 'string' ? existingWorkLog.project : existingWorkLog.project?.toString();
-          if (projectId) {
-            const { ObjectId } = await import('mongodb');
-            const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
-            projectName = project?.name;
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
-            projectOwnerEmail = project?.ownerEmail;
-            projectContractorEmail = project?.contractorEmail;
-          }
-        });
-      } catch (error) {
-        console.error('Error fetching project details:', error);
-      }
-
       if (existingWorkLog.status === 'completed') {
         return ApiError.badRequest('This work log is completed and locked.');
+      }
+
+      if (isOwnerApproval && !isAuthorOrAdmin) {
+        if (!hasNewSignature) {
+          return ApiError.badRequest('Please add your signature to approve this work log.');
+        }
+
+        const addedSignature = updatedSignatures[updatedSignatures.length - 1];
+        if (addedSignature.projectRole !== 'owner') {
+          return ApiError.badRequest('Only the project owner can approve this work log.');
+        }
+
+        updateData = {
+          ...existingWorkLog,
+          signatures: updatedSignatures,
+        };
       }
 
       const signatureWorkflowError = validateSignatureWorkflowChange(
@@ -107,10 +171,24 @@ export async function PUT(
         return ApiError.badRequest(signatureWorkflowError);
       }
 
-      data.status = getWorkLogStatusFromSignatures(updatedSignatures, projectOwnerName, projectContractorName);
+      updateData.status = getWorkLogStatusFromSignatures(
+        updatedSignatures,
+        projectOwnerName,
+        projectContractorName
+      );
+
+      if (hasNewSignature) {
+        const latestSignature = updatedSignatures[updatedSignatures.length - 1];
+        if (
+          getSignatureRoleType(latestSignature, projectOwnerName, projectContractorName) ===
+          'contractor'
+        ) {
+          updateData.rejectionComment = undefined;
+        }
+      }
 
       // Update the work log using repository
-      const workLog = await workLogRepo.update(id, data);
+      const workLog = await workLogRepo.update(id, updateData);
 
       if (!workLog) {
         return ApiError.notFound('Work log');

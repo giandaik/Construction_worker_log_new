@@ -91,3 +91,11 @@ export function canModify(user: AuthUser | null, resourceUserId: string): boolea
   if (!user) return false;
   return isAdmin(user) || user.userId === resourceUserId;
 }
+
+/**
+ * Checks if the user is the assigned project owner.
+ */
+export function isProjectOwner(user: AuthUser | null, projectOwnerUserId?: string): boolean {
+  if (!user || !projectOwnerUserId) return false;
+  return user.userId === projectOwnerUserId;
+}

@@ -202,6 +202,32 @@ export const validateSignatureWorkflowChange = (
   return validateSignatureOrder(updatedSignatures, projectOwnerName, projectContractorName);
 };
 
+export const validateOwnerRejection = (
+  existingSignatures: Signature[],
+  workLogStatus: string,
+  projectOwnerName?: string,
+  projectContractorName?: string
+): string | null => {
+  if (workLogStatus === FORM_STATUS.COMPLETED) {
+    return 'This work log is completed and locked.';
+  }
+
+  if (workLogStatus !== FORM_STATUS.SIGNED) {
+    return 'Only work logs awaiting owner signature can be rejected.';
+  }
+
+  const hasContractorSignature = existingSignatures.some(
+    (signature) =>
+      getSignatureRoleType(signature, projectOwnerName, projectContractorName) === 'contractor'
+  );
+
+  if (!hasContractorSignature) {
+    return 'This work log has no contractor signature to reject.';
+  }
+
+  return null;
+};
+
 export const validateDraftSignatures = (
   signatures: Signature[],
   projectOwnerName?: string,

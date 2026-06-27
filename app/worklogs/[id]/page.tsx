@@ -7,14 +7,29 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {FileDown, Pencil, Trash, FileText, FileType2} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {FileDown, Pencil, Trash, FileText, FileType2, CheckCircle, XCircle} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
+import { SignatureSection } from "@/components/SignatureSection";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useProjectRole } from "@/hooks/useProjectRole";
+import { getWorkLogStatusFromSignatures } from "@/lib/signatureUtils";
+import type { Signature } from "@/types/shared";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/toaster";
 
 const WEATHER_LABEL_MAP: Record<string, { label: string; Icon: typeof WEATHER_OPTIONS[number]['icon'] }> =
   Object.fromEntries(WEATHER_OPTIONS.map(({ key, label, icon }) => [key, { label, Icon: icon }]));
 
-// Define a comprehensive WorkLog interface
 interface Personnel {
   role: string;
   count: number;
@@ -33,11 +48,11 @@ interface Material {
   unit: string;
 }
 
-interface Signature {
-  data: string;
-  signedBy: string;
-  signedAt: string;
-  projectRole?: string;
+interface ProjectInfo {
+  ownerUserId?: string;
+  contractorUserId?: string;
+  ownerName?: string;
+  contractorName?: string;
 }
 
 interface WorkLog {
@@ -59,6 +74,7 @@ interface WorkLog {
   signatures?: Signature[];
   images?: string[];
   dwgRefs?: string[];
+  rejectionComment?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -76,11 +92,23 @@ export default function WorkLogDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { id } = params;
+  const { user } = useCurrentUser();
 
   const [workLog, setWorkLog] = useState<WorkLog | null>(null);
+  const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
   const [projectDwgFiles, setProjectDwgFiles] = useState<ProjectDwgFile[]>([]);
+  const [signatures, setSignatures] = useState<Signature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionComment, setRejectionComment] = useState('');
+
+  const projectRole = useProjectRole(
+    user?.userId,
+    projectInfo?.ownerUserId,
+    projectInfo?.contractorUserId
+  );
 
   useEffect(() => {
     const fetchWorkLog = async () => {
@@ -97,16 +125,25 @@ export default function WorkLogDetailPage() {
         
         const data = await response.json();
         setWorkLog(data);
+        setSignatures(data.signatures ?? []);
 
-        if (Array.isArray(data.dwgRefs) && data.dwgRefs.length > 0 && data.project) {
+        if (data.project) {
           try {
             const projectRes = await fetch(`/api/projects/${data.project}`);
             if (projectRes.ok) {
               const project = await projectRes.json();
-              setProjectDwgFiles(project.dwgFiles ?? []);
+              setProjectInfo({
+                ownerUserId: project.ownerUserId?.toString(),
+                contractorUserId: project.contractorUserId?.toString(),
+                ownerName: project.ownerName,
+                contractorName: project.contractorName,
+              });
+              if (Array.isArray(data.dwgRefs) && data.dwgRefs.length > 0) {
+                setProjectDwgFiles(project.dwgFiles ?? []);
+              }
             }
           } catch (e) {
-            console.error('Failed to fetch project DWGs:', e);
+            console.error('Failed to fetch project:', e);
           }
         }
 
@@ -154,6 +191,83 @@ export default function WorkLogDetailPage() {
     }
   };
 
+  const hasOwnerSignature = signatures.some((signature) => signature.projectRole === 'owner');
+
+  const handleApproveAndSign = async () => {
+    if (!workLog) return;
+
+    if (!hasOwnerSignature) {
+      toast.error('Please add your signature before approving.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const status = getWorkLogStatusFromSignatures(
+        signatures,
+        projectInfo?.ownerName,
+        projectInfo?.contractorName
+      );
+
+      const response = await fetch(`/api/worklogs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signatures,
+          status,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve work log');
+      }
+
+      const updated = await response.json();
+      setWorkLog(updated);
+      setSignatures(updated.signatures ?? []);
+      toast.success('Work log approved and signed successfully');
+    } catch (error) {
+      console.error('Error approving work log:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to approve work log');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionComment.trim()) {
+      toast.error('Please provide a rejection comment.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/worklogs/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectionComment: rejectionComment.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject work log');
+      }
+
+      const updated = await response.json();
+      setWorkLog(updated);
+      setSignatures([]);
+      setShowRejectDialog(false);
+      setRejectionComment('');
+      toast.success('Work log rejected and returned to draft');
+    } catch (error) {
+      console.error('Error rejecting work log:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reject work log');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -188,28 +302,83 @@ export default function WorkLogDetailPage() {
   }
 
   const isCompleted = workLog.status === FORM_STATUS.COMPLETED;
+  const isOwnerReviewMode =
+    workLog.status === FORM_STATUS.SIGNED && projectRole === 'owner';
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
         <div className="flex flex-wrap gap-2">
-          {!isCompleted && (
-            <Button variant="outline" asChild>
-              <Link href={`/worklogs/${id}/edit`}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </Link>
-            </Button>
+          {isOwnerReviewMode ? (
+            <>
+              <Button
+                onClick={handleApproveAndSign}
+                disabled={isSubmitting || !hasOwnerSignature}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve and Sign
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setShowRejectDialog(true)}
+                disabled={isSubmitting}
+              >
+                <XCircle className="mr-2 h-4 w-4" /> Reject
+              </Button>
+            </>
+          ) : (
+            <>
+              {!isCompleted && (
+                <Button variant="outline" asChild>
+                  <Link href={`/worklogs/${id}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                  </Link>
+                </Button>
+              )}
+              {!isCompleted && (
+                <Button variant="destructive" onClick={handleDelete}>
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              )}
+            </>
           )}
           <Button variant="outline" onClick={handleExportPDF}>
               <FileDown className="mr-2 h-4 w-4" /> Export
           </Button>
-          {!isCompleted && (
-            <Button variant="destructive" onClick={handleDelete}>
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          )}
         </div>
       </div>
+
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Work Log</DialogTitle>
+            <DialogDescription>
+              Provide a comment explaining why this work log is being rejected. It will be returned to draft status for the contractor to revise.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectionComment}
+            onChange={(e) => setRejectionComment(e.target.value)}
+            placeholder="Rejection comment..."
+            rows={4}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRejectDialog(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isSubmitting || !rejectionComment.trim()}
+            >
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -457,8 +626,32 @@ export default function WorkLogDetailPage() {
             </div>
           )}
 
+          {/* Rejection comment */}
+          {workLog.rejectionComment && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 border-b pb-2 text-destructive">
+                Rejection Comment
+              </h3>
+              <p className="whitespace-pre-wrap rounded-md border border-destructive/30 bg-destructive/5 p-4">
+                {workLog.rejectionComment}
+              </p>
+            </div>
+          )}
+
           {/* Signatures */}
-          {workLog.signatures && workLog.signatures.length > 0 && (
+          {isOwnerReviewMode ? (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 border-b pb-2">Signatures</h3>
+              <SignatureSection
+                signatures={signatures}
+                onChange={setSignatures}
+                projectOwnerUserId={projectInfo?.ownerUserId}
+                projectContractorUserId={projectInfo?.contractorUserId}
+                allowDraftSignatureRemoval={false}
+              />
+            </div>
+          ) : (
+            workLog.signatures && workLog.signatures.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-4 border-b pb-2">Signatures</h3>
               <div className="grid gap-6">
@@ -494,9 +687,11 @@ export default function WorkLogDetailPage() {
                 ))}
               </div>
             </div>
+            )
           )}
         </CardContent>
       </Card>
+      <Toaster />
     </div>
   );
 }
