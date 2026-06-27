@@ -147,8 +147,8 @@ export const sendRejectWorkLogEmail = async (
   console.log('[SMTP] Preparing rejection notification email for recipients:', payload.projectContractorEmail);
   const template = buildRejectWorkLogTemplate(payload);
 
-  if (!payload.projectOwnerEmail) {
-    console.error('[SMTP] No project owner email provided');
+  if (!payload.projectContractorEmail) {
+    console.error('[SMTP] No project contractor email provided');
     return false;
   }
 
