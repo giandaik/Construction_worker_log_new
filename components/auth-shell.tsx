@@ -1,4 +1,4 @@
-import { HardHat } from "lucide-react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AuthShellProps {
@@ -11,13 +11,15 @@ export function AuthShell({ title, children }: AuthShellProps) {
     <div className="blueprint-grid relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="hazard-stripe absolute inset-x-0 top-0 h-2" />
       <div className="animate-fade-up w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
-            <HardHat className="h-8 w-8" aria-hidden />
-          </span>
-          <p className="font-display text-2xl font-bold uppercase tracking-widest">
-            Construction Log
-          </p>
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <Image
+            src="/sitely-logo.jpg"
+            alt="sitely — Construction Log"
+            width={112}
+            height={112}
+            priority
+            className="h-28 w-28 rounded-2xl"
+          />
           <p className="text-sm text-muted-foreground">
             Daily site records — signed, synced, on file
           </p>

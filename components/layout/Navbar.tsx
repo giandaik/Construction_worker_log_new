@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { HardHat, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -31,10 +32,13 @@ export function Navbar() {
             className="flex items-center gap-2"
             aria-label="Construction Worker Log home"
           >
-            <HardHat className="h-6 w-6 text-primary" aria-hidden />
-            <span className="hidden text-lg font-bold uppercase tracking-tight md:inline">
-              ΗΜΕΡΟΛΟΓΙΟ ΕΡΓΑΣΙΩΝ
-            </span>
+            <Image
+              src="/sitely-logo.jpg"
+              alt="sitely — Construction Log"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 rounded-md"
+            />
           </Link>
 
           <nav className="flex flex-wrap items-center gap-1" aria-label="Primary">
