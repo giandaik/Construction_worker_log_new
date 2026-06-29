@@ -49,7 +49,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip auth middleware for Next internals, the favicon, and static
+  // assets served from /public (e.g. the brand logo). Without this, the
+  // next/image optimizer's internal fetch of a public image gets
+  // redirected to /login and returns "not a valid image".
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|webp|svg|ico|bmp|avif)).*)",
+  ],
 };
 
 
