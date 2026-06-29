@@ -13,7 +13,7 @@ export function AuthShell({ title, children }: AuthShellProps) {
       <div className="animate-fade-up w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Image
-            src="/sitely-logo.jpg"
+            src="/sitely-logo.png"
             alt="sitely — Construction Log"
             width={112}
             height={112}
