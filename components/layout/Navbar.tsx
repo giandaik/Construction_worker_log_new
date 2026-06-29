@@ -33,7 +33,7 @@ export function Navbar() {
             aria-label="Construction Worker Log home"
           >
             <Image
-              src="/sitely-logo.jpg"
+              src="/sitely-logo.png"
               alt="sitely — Construction Log"
               width={36}
               height={36}
