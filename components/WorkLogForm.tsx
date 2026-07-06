@@ -117,6 +117,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     updateDwgRefs,
     updateWeather,
     setProject,
+    clearProject,
     seedFromPrevious,
     clearSeed,
     resetForm,
@@ -128,14 +129,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
 
   const { catalog } = useProjectCatalog(formData.project);
   const projectSelected = !!formData.project;
-  const personnelEmpty = projectSelected && catalog.personnelRoles.length === 0;
-  const equipmentEmpty = projectSelected && catalog.equipmentTypes.length === 0;
-  const materialsEmpty =
-    projectSelected &&
-    catalog.materialNames.length === 0 &&
-    catalog.materialUnits.length === 0;
   const needsProjectMessage = 'Επιλέξτε πρώτα έργο.';
-  const emptyCatalogMessage = 'Ζητήστε από admin να προσθέσει επιλογές σε αυτό το project.';
 
   const { isOnline, submitWorkLog } = useOfflineSync();
   const { toast, showError } = useToast();
@@ -365,7 +359,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
           </div>
           <button
             type="button"
-            onClick={() => setProject('')}
+            onClick={clearProject}
             className="shrink-0 rounded-md border border-input px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             Change
@@ -437,8 +431,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={personnel.add}
         onRemove={personnel.remove}
         addButtonText="Add Personnel"
-        addDisabled={!projectSelected || personnelEmpty}
-        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
+        addDisabled={!projectSelected}
+        disabledMessage={needsProjectMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-2 gap-4 pr-8">
             <FormField label="Role" labelGr="Ρόλος" htmlFor={`personnel-role-${index}`}>
@@ -468,8 +462,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={equipment.add}
         onRemove={equipment.remove}
         addButtonText="Add Equipment"
-        addDisabled={!projectSelected || equipmentEmpty}
-        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
+        addDisabled={!projectSelected}
+        disabledMessage={needsProjectMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Type" labelGr="Τύπος" htmlFor={`equipment-type-${index}`}>
@@ -513,8 +507,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         onAdd={materials.add}
         onRemove={materials.remove}
         addButtonText="Add Material"
-        addDisabled={!projectSelected || materialsEmpty}
-        disabledMessage={!projectSelected ? needsProjectMessage : emptyCatalogMessage}
+        addDisabled={!projectSelected}
+        disabledMessage={needsProjectMessage}
         renderFields={(item, index) => (
           <div className="grid grid-cols-3 gap-4 pr-8">
             <FormField label="Name" labelGr="Ονομασία" htmlFor={`material-name-${index}`}>

@@ -16,6 +16,10 @@ interface CatalogSelectProps {
  * in the catalog (e.g. a legacy worklog edited after the catalog was tightened),
  * it is appended as an "(εκτός καταλόγου)" option so the value is not silently
  * lost on save.
+ *
+ * With no options at all (catalog not yet populated, or the fetch failed —
+ * e.g. offline in the field), falls back to a free-text input so the worker
+ * is never locked out of recording the day's resources.
  */
 export function CatalogSelect({
   id,
@@ -29,6 +33,20 @@ export function CatalogSelect({
 
   const selectClass =
     'mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-ring focus:ring-ring sm:text-sm';
+
+  if (options.length === 0) {
+    return (
+      <input
+        type="text"
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={selectClass}
+      />
+    );
+  }
 
   const renderedOptions = useMemo(() => {
     return options.map((opt) => (
