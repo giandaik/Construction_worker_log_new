@@ -182,11 +182,25 @@ export function useWorkLogForm(initialProject = '') {
   }, []);
 
   /**
-   * Set (or clear) the selected project. Used by the guided project-picker
-   * flow: picking a card sets it; the "Change" button clears it back to ''.
+   * Set the selected project. Used by the guided project-picker flow.
    */
   const setProject = useCallback((project: string) => {
     setFormData(prev => ({ ...prev, project }));
+  }, []);
+
+  /**
+   * Clear the selected project ("Change" button) along with the
+   * catalog-derived rows — personnel, equipment, and materials are only
+   * valid for the project whose catalog they were picked from.
+   */
+  const clearProject = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      project: '',
+      personnel: [],
+      equipment: [],
+      materials: [],
+    }));
   }, []);
 
   /**
@@ -261,6 +275,7 @@ export function useWorkLogForm(initialProject = '') {
     updateDwgRefs,
     updateWeather,
     setProject,
+    clearProject,
     seedFromPrevious,
     clearSeed,
     resetForm,
