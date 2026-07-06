@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectMap } from "./ProjectMap";
@@ -27,12 +27,21 @@ export function LocationPicker({
 }: LocationPickerProps) {
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const geocodeSeq = useRef(0);
 
   const hasCoords = latitude != null && longitude != null;
 
-  async function applyCoordinates(lat: number, lng: number) {
-    const address = await reverseGeocode(lat, lng);
-    onCoordinates({ latitude: lat, longitude: lng, address });
+  function applyCoordinates(lat: number, lng: number) {
+    // Store the coordinates immediately — the pin must never wait on the
+    // external geocoder. The address back-fills when (and if) it resolves,
+    // unless a newer pin has been placed in the meantime.
+    onCoordinates({ latitude: lat, longitude: lng });
+    const seq = ++geocodeSeq.current;
+    void reverseGeocode(lat, lng).then((address) => {
+      if (address && seq === geocodeSeq.current) {
+        onCoordinates({ latitude: lat, longitude: lng, address });
+      }
+    });
   }
 
   function useMyLocation() {
@@ -46,7 +55,7 @@ export function LocationPicker({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocating(false);
-        void applyCoordinates(position.coords.latitude, position.coords.longitude);
+        applyCoordinates(position.coords.latitude, position.coords.longitude);
       },
       (error) => {
         setLocating(false);
