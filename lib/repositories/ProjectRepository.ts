@@ -2,6 +2,8 @@ import type { Collection, ObjectId } from 'mongodb';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
 import { ValidationUtils } from '@/lib/api/validation';
+import { CATALOG_KINDS, type CatalogKind } from '@/lib/schemas/projectSchema';
+import { mergeCatalogValues } from '@/lib/catalog/mergeCatalog';
 
 /**
  * Project status enum
@@ -51,11 +53,7 @@ export interface Project {
   materialUnits?: string[];
 }
 
-export type CatalogKind =
-  | 'personnelRoles'
-  | 'equipmentTypes'
-  | 'materialNames'
-  | 'materialUnits';
+export type { CatalogKind };
 
 /**
  * Project Repository
@@ -250,19 +248,10 @@ export class ProjectRepository extends BaseRepository<Project> {
     const existing = await this.collection.findOne({ _id: objectId } as any);
     if (!existing) return null;
 
-    const kinds: CatalogKind[] = [
-      'personnelRoles',
-      'equipmentTypes',
-      'materialNames',
-      'materialUnits',
-    ];
     const merged: Partial<Record<CatalogKind, string[]>> = {};
-    for (const kind of kinds) {
+    for (const kind of CATALOG_KINDS) {
       const base = Array.isArray(existing[kind]) ? (existing[kind] as string[]) : [];
-      const incoming = source[kind] ?? [];
-      merged[kind] = Array.from(
-        new Set([...base, ...incoming].map((v) => v.trim()).filter(Boolean))
-      );
+      merged[kind] = mergeCatalogValues(base, source[kind] ?? []);
     }
 
     const result = await this.collection.findOneAndUpdate(
