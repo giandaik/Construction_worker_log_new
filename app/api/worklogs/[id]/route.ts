@@ -1,6 +1,5 @@
 // GET a single work log by ID
 import { ApiError } from '@/lib/api/errorHandling';
-import { DatabaseUtils } from '@/lib/api/database';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify, isProjectOwner } from '@/utils/auth';
 import {
@@ -14,55 +13,7 @@ import {
 } from '@/lib/signatureUtils';
 import { createWorkLogPdfAttachment } from '@/app/worklogs/[id]/exportToPDF';
 import { FORM_STATUS } from '@/lib/constants/constantValues';
-
-async function fetchProjectContext(projectId: string | undefined) {
-  let projectName: string | undefined;
-  let projectOwnerName: string | undefined;
-  let projectContractorName: string | undefined;
-  let projectOwnerEmail: string | undefined;
-  let projectContractorEmail: string | undefined;
-  let projectOwnerUserId: string | undefined;
-  let projectContractorUserId: string | undefined;
-
-  if (!projectId) {
-    return {
-      projectName,
-      projectOwnerName,
-      projectContractorName,
-      projectOwnerEmail,
-      projectContractorEmail,
-      projectOwnerUserId,
-      projectContractorUserId,
-    };
-  }
-
-  try {
-    await DatabaseUtils.withConnection(async (db) => {
-      const projectsCollection = db.collection('projects');
-      const { ObjectId } = await import('mongodb');
-      const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
-      projectName = project?.name;
-      projectOwnerName = project?.ownerName;
-      projectContractorName = project?.contractorName;
-      projectOwnerEmail = project?.ownerEmail;
-      projectContractorEmail = project?.contractorEmail;
-      projectOwnerUserId = project?.ownerUserId?.toString();
-      projectContractorUserId = project?.contractorUserId?.toString();
-    });
-  } catch (error) {
-    console.error('Error fetching project details:', error);
-  }
-
-  return {
-    projectName,
-    projectOwnerName,
-    projectContractorName,
-    projectOwnerEmail,
-    projectContractorEmail,
-    projectOwnerUserId,
-    projectContractorUserId,
-  };
-}
+import { fetchProjectContext } from '@/lib/api/projectContext';
 
 export async function GET(
   request: Request,
@@ -110,12 +61,18 @@ export async function PUT(
 
       let updateData = { ...requestData };
 
-      // Check if user can modify (admin/manager or author)
+      const isAuthorOrAdmin = canModify(user, existingWorkLog.author?.toString() || '');
+
+      // Owner approval only applies to signed logs, so anyone else editing
+      // a non-signed log can be rejected before the project lookup.
+      if (!isAuthorOrAdmin && existingWorkLog.status !== FORM_STATUS.SIGNED) {
+        return ApiError.forbidden('You do not have permission to update this work log');
+      }
+
       const projectId =
         typeof existingWorkLog.project === 'string'
           ? existingWorkLog.project
           : existingWorkLog.project?.toString();
-      const projectContext = await fetchProjectContext(projectId);
       const {
         projectName,
         projectOwnerName,
@@ -123,9 +80,8 @@ export async function PUT(
         projectOwnerEmail,
         projectContractorEmail,
         projectOwnerUserId,
-      } = projectContext;
+      } = await fetchProjectContext(projectId);
 
-      const isAuthorOrAdmin = canModify(user, existingWorkLog.author?.toString() || '');
       const isOwnerApproval =
         isProjectOwner(user, projectOwnerUserId) &&
         existingWorkLog.status === FORM_STATUS.SIGNED;
@@ -155,8 +111,10 @@ export async function PUT(
           return ApiError.badRequest('Only the project owner can approve this work log.');
         }
 
+        // Owner approval may only add the signature — ignore any other
+        // client-sent fields. Never spread the mapped entity here: its
+        // string _id/date would be written back into the $set payload.
         updateData = {
-          ...existingWorkLog,
           signatures: updatedSignatures,
         };
       }
