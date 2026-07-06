@@ -1,23 +1,16 @@
 import { useEffect, useState } from 'react';
+import {
+  EMPTY_CATALOG,
+  toProjectCatalog,
+  type ProjectCatalog,
+} from '@/lib/catalog/mergeCatalog';
 
-export interface ProjectCatalog {
-  personnelRoles: string[];
-  equipmentTypes: string[];
-  materialNames: string[];
-  materialUnits: string[];
-}
-
-const EMPTY_CATALOG: ProjectCatalog = {
-  personnelRoles: [],
-  equipmentTypes: [],
-  materialNames: [],
-  materialUnits: [],
-};
+export type { ProjectCatalog };
 
 /**
  * Fetches the strict-select catalog (personnel roles, equipment types, material
  * names, material units) for a project. Empty arrays when no project is selected
- * or the fetch fails.
+ * or the fetch fails — consumers fall back to free-text entry in that case.
  */
 export function useProjectCatalog(projectId: string | undefined | null) {
   const [catalog, setCatalog] = useState<ProjectCatalog>(EMPTY_CATALOG);
@@ -37,12 +30,7 @@ export function useProjectCatalog(projectId: string | undefined | null) {
         if (!res.ok) throw new Error('Failed to fetch project catalog');
         const data = await res.json();
         if (cancelled) return;
-        setCatalog({
-          personnelRoles: data.personnelRoles ?? [],
-          equipmentTypes: data.equipmentTypes ?? [],
-          materialNames: data.materialNames ?? [],
-          materialUnits: data.materialUnits ?? [],
-        });
+        setCatalog(toProjectCatalog(data));
       } catch (err) {
         console.error('useProjectCatalog:', err);
         if (!cancelled) setCatalog(EMPTY_CATALOG);
