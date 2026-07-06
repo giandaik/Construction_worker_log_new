@@ -3,7 +3,7 @@ import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isProjectOwner } from '@/utils/auth';
 import { validateOwnerRejection } from '@/lib/signatureUtils';
 import { FORM_STATUS } from '@/lib/constants/constantValues';
-import { DatabaseUtils } from '@/lib/api/database';
+import { fetchProjectContext } from '@/lib/api/projectContext';
 import { sendRejectWorkLogEmail } from '@/lib/email/sendEmail';
 
 
@@ -19,7 +19,8 @@ export async function POST(
       return ApiError.unauthorized();
     }
 
-    const body = await request.json();
+    // A missing or malformed body is a client error, not a 500.
+    const body = await request.json().catch(() => ({}));
     const rejectionComment =
       typeof body.rejectionComment === 'string' ? body.rejectionComment.trim() : '';
 
@@ -39,31 +40,14 @@ export async function POST(
           ? existingWorkLog.project
           : existingWorkLog.project?.toString();
 
-      let projectOwnerName: string | undefined;
-      let projectContractorName: string | undefined;
-      let projectOwnerUserId: string | undefined;
-      let projectName: string | undefined;
-      let projectOwnerEmail: string | undefined;
-      let projectContractorEmail: string | undefined;
-
-      if (projectId) {
-        try {
-          await DatabaseUtils.withConnection(async (db) => {
-            const { ObjectId } = await import('mongodb');
-            const project = await db
-              .collection('projects')
-              .findOne({ _id: new ObjectId(projectId) });
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
-            projectOwnerUserId = project?.ownerUserId?.toString();
-            projectOwnerEmail = project?.ownerEmail;
-            projectContractorEmail = project?.contractorEmail;
-            projectName = project?.name;
-          });
-        } catch (error) {
-          console.error('Error fetching project details:', error);
-        }
-      }
+      const {
+        projectName,
+        projectOwnerName,
+        projectContractorName,
+        projectOwnerEmail,
+        projectContractorEmail,
+        projectOwnerUserId,
+      } = await fetchProjectContext(projectId);
 
       if (!isProjectOwner(user, projectOwnerUserId)) {
         return ApiError.forbidden('Only the project owner can reject this work log.');
