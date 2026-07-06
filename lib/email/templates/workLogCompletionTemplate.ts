@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/email/escapeHtml';
+
 export interface WorkLogCompletionPayload {
   signerName: string;
   signerRole?: string;
@@ -46,12 +48,12 @@ export const buildWorkLogCompletionTemplate = (
               <tr>
                 <td style="padding:40px 30px;color:#374151;font-size:16px;line-height:1.6;">
                   <p style="margin:0 0 24px;">The work log has been signed by both required parties and is now complete.</p>
-                  ${payload.projectName ? `<p style="margin:0 0 24px;">Project: <strong>${payload.projectName}</strong></p>` : ''}
+                  ${payload.projectName ? `<p style="margin:0 0 24px;">Project: <strong>${escapeHtml(payload.projectName)}</strong></p>` : ''}
                   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background-color:#ecfdf5;border-left:4px solid #10b981;border-radius:6px;">
                     <tr>
                       <td style="padding:12px 16px;color:#065f46;font-size:15px;">
-                        <strong>${payload.signerName ?? 'The team'}</strong>
-                        ${payload.projectName ? ' has completed the signed work log.' : ' has completed the signed work log.'}
+                        <strong>${escapeHtml(payload.signerName ?? 'The team')}</strong>
+                        has completed the signed work log.
                       </td>
                     </tr>
                   </table>

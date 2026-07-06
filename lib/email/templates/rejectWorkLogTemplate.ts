@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/email/escapeHtml';
+
 export interface RejectWorkLogPayload {
   projectName?: string;
   workLogUrl?: string;
@@ -57,7 +59,7 @@ const html = `
               ${
                 payload.projectName
                   ? `<p style="margin:0 0 24px;">
-                      Project: <strong>${payload.projectName}</strong>
+                      Project: <strong>${escapeHtml(payload.projectName)}</strong>
                     </p>`
                   : ""
               }
@@ -69,7 +71,7 @@ const html = `
                       Rejection comments
                     </p>
                     <p style="margin:0;color:#7f1d1d;white-space:pre-line;">
-                      ${payload.rejectionComment}
+                      ${escapeHtml(payload.rejectionComment)}
                     </p>
                   </td>
                 </tr>

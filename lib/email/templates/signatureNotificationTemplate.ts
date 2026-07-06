@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/email/escapeHtml';
+
 export interface SignatureNotificationPayload {
   signerName: string;
   signerRole?: string;
@@ -58,20 +60,20 @@ export const buildSignatureNotificationTemplate = (
                   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
                     <tr>
                       <td style="padding: 12px 16px; color: #92400e; font-size: 15px;">
-                        <strong>${payload.signerName}</strong>
+                        <strong>${escapeHtml(payload.signerName)}</strong>
                       </td>
                     </tr>
                     ${payload.signerRole ? `
                     <tr>
                       <td style="padding: 8px 16px; color: #92400e; font-size: 14px; border-top: 1px solid #fde68a;">
-                        Role: ${payload.signerRole}
+                        Role: ${escapeHtml(payload.signerRole)}
                       </td>
                     </tr>
                     ` : ''}
                     ${payload.projectName ? `
                     <tr>
                       <td style="padding: 8px 16px; color: #92400e; font-size: 14px; border-top: 1px solid #fde68a;">
-                        Project: ${payload.projectName}
+                        Project: ${escapeHtml(payload.projectName)}
                       </td>
                     </tr>
                     ` : ''}
