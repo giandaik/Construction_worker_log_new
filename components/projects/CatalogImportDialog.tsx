@@ -130,7 +130,7 @@ export function CatalogImportDialog({
         });
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          throw new Error(body?.message ?? 'Η αντιγραφή απέτυχε');
+          throw new Error(body?.error ?? 'Η αντιγραφή απέτυχε');
         }
         onApplied?.(await res.json());
       } else {
