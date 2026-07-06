@@ -50,12 +50,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Skip auth middleware for Next internals, the favicon, and static
-  // assets served from /public (e.g. the brand logo). Without this, the
-  // next/image optimizer's internal fetch of a public image gets
-  // redirected to /login and returns "not a valid image".
+  // Skip auth middleware for Next internals, the favicon, and the named
+  // /public assets below. Without this, the next/image optimizer's
+  // internal fetch of a public image gets redirected to /login and
+  // returns "not a valid image". List assets explicitly — a blanket
+  // image-extension exclusion would also bypass auth on dynamic routes
+  // like /worklogs/x.png. Add new /public assets to this list.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|webp|svg|ico|bmp|avif)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitely-logo.png).*)",
   ],
 };
 
