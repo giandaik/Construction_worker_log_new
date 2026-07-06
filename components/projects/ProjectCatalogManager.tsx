@@ -37,7 +37,7 @@ export function ProjectCatalogManager({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.message ?? 'Save failed');
+        throw new Error(body?.error ?? 'Save failed');
       }
       showSuccess('Αποθηκεύτηκε');
     } catch (e) {
