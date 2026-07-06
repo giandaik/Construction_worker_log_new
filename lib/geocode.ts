@@ -17,7 +17,11 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
   const url = `${NOMINATIM_REVERSE_URL}?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=0`;
 
   try {
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      // Never hang the caller on a slow/blocked Nominatim.
+      signal: AbortSignal.timeout(8000),
+    });
     if (!response.ok) return null;
 
     const data = (await response.json()) as { display_name?: unknown };
