@@ -119,7 +119,7 @@ describe('Performance: API Payload Optimization', () => {
 
   describe('WorkLogs API - Payload Size', () => {
     it('should only return essential fields for list view', async () => {
-      const response = await getWorkLogs();
+      const response = await getWorkLogs(new Request('http://localhost/api/worklogs'));
       const data = await response.json();
 
       expect(data).toBeInstanceOf(Array);
@@ -145,7 +145,7 @@ describe('Performance: API Payload Optimization', () => {
     });
 
     it('should have reduced payload compared to full document', async () => {
-      const response = await getWorkLogs();
+      const response = await getWorkLogs(new Request('http://localhost/api/worklogs'));
       const data = await response.json();
       const jsonString = JSON.stringify(data);
 

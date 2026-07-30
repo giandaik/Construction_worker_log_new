@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME } from "./lib/constants/constants";
-import { validateJWTSecret } from "./utils/auth";
+import { getTokenFromRequest, validateJWTSecret } from "./utils/auth";
 import { stampFlagOverrides } from "./middleware-helpers";
 import { applyCorsHeaders, preflightResponse } from "./lib/cors";
 
@@ -34,9 +34,13 @@ export async function middleware(request: NextRequest) {
     return withCors(stampFlagOverrides(request, NextResponse.next()));
   }
 
+  // The Capacitor WebView is a different origin from the API, so it never sends
+  // the session cookie; it authenticates with a bearer token instead. Cookie
+  // first keeps web behaviour identical.
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const token = sessionCookie ?? getTokenFromRequest(request);
 
-  if (!sessionCookie) {
+  if (!token) {
     // For API routes, return 401 Unauthorized instead of redirecting
     if (isApiRoute) {
       return withCors(
@@ -53,7 +57,7 @@ export async function middleware(request: NextRequest) {
   }
   try {
     const jwtSecret = validateJWTSecret();
-    await jwtVerify(sessionCookie!, new TextEncoder().encode(jwtSecret));
+    await jwtVerify(token, new TextEncoder().encode(jwtSecret));
 
     return withCors(stampFlagOverrides(request, NextResponse.next()));
   } catch (err) {

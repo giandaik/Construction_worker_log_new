@@ -115,7 +115,7 @@ describe('Performance: Integration Tests', () => {
 
       const [projectsResponse, worklogsResponse] = await Promise.all([
         projectsModule.GET(),
-        worklogsModule.GET(),
+        worklogsModule.GET(new Request('http://localhost/api/worklogs')),
       ]);
 
       const duration = Date.now() - startTime;
@@ -168,7 +168,7 @@ describe('Performance: Integration Tests', () => {
 
       const apiWorkLogsStart = Date.now();
       const { GET: getWorkLogs } = await import('@/app/api/worklogs/route');
-      await getWorkLogs();
+      await getWorkLogs(new Request('http://localhost/api/worklogs'));
       metrics.apiWorkLogs = Date.now() - apiWorkLogsStart;
 
       console.log(`

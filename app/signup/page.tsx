@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
 import { apiFetch } from "@/lib/apiClient";
+import { setMobileToken } from "@/lib/mobile-auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -40,10 +41,15 @@ export default function SignupPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data.error || "Sign up failed");
       } else {
+        // Signup logs the user in; on mobile the token is the session. No-op on web.
+        if (data.token) {
+          await setMobileToken(data.token);
+        }
         router.push("/");
       }
     } catch (err) {

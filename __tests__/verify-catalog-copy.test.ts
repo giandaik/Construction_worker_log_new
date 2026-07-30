@@ -227,14 +227,14 @@ describe('POST /api/projects/[id]/catalog/import', () => {
 describe('GET /api/projects/catalog-sources', () => {
   it('rejects non-admin/manager users', async () => {
     mockedGetAuthUser.mockResolvedValue({ role: 'user' } as any);
-    const res = await getCatalogSources();
+    const res = await getCatalogSources(new Request('http://localhost/api/projects/catalog-sources'));
     expect(res.status).toBe(403);
   });
 
   it('returns per-project catalog totals for admins', async () => {
     mockedGetAuthUser.mockResolvedValue({ role: 'admin' } as any);
     await makeProject({ personnelRoles: ['A', 'B'] });
-    const res = await getCatalogSources();
+    const res = await getCatalogSources(new Request('http://localhost/api/projects/catalog-sources'));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);

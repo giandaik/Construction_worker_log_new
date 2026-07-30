@@ -13,6 +13,8 @@
  * mobile target is chosen by `scripts/build-mobile.mjs` rather than at runtime.
  */
 
+import { getMobileToken } from './mobile-auth';
+
 /** Trailing slash stripped so joining never produces a double slash. */
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
 
@@ -37,15 +39,26 @@ export function apiUrl(path: string): string {
 }
 
 /**
- * `fetch` with the API base URL applied.
+ * `fetch` with the API base URL applied, plus the bearer token on mobile.
  *
- * When the API is cross-origin, credentials are included so the session cookie
- * is sent — the browser's default (`same-origin`) would drop it. Phase 3
- * replaces cookie auth on mobile with a bearer token; until then this is what
- * keeps an authenticated call authenticated. Same-origin web calls are left on
- * the default, so web behaviour is byte-for-byte unchanged.
+ * Same-origin web calls go straight to `fetch` with `init` forwarded verbatim,
+ * so web behaviour is byte-for-byte unchanged and still cookie-authenticated.
+ *
+ * When the API is cross-origin (a mobile build) the stored JWT is attached as
+ * `Authorization: Bearer` — the WebView origin never receives the session
+ * cookie, so this is what authenticates the call. `credentials: 'include'` is
+ * kept as well: it costs nothing and lets a cookie work if one is ever
+ * available. An `Authorization` header already set by the caller wins.
  */
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   if (!isCrossOriginApi()) return fetch(path, init);
-  return fetch(apiUrl(path), { credentials: 'include', ...init });
+
+  const headers = new Headers(init?.headers);
+
+  if (!headers.has('Authorization')) {
+    const token = await getMobileToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return fetch(apiUrl(path), { credentials: 'include', ...init, headers });
 }

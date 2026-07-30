@@ -19,7 +19,7 @@ const ALLOWED_TYPES = new Set([
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins or supervisors can upload DWG files');
 

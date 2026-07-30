@@ -1,9 +1,9 @@
 import { getAuthUser } from '@/utils/auth';
 import { ApiError } from '@/lib/api/errorHandling';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await getAuthUser(request);
     if (!authUser) return ApiError.unauthorized();
     return ApiError.success(authUser);
   } catch (error) {

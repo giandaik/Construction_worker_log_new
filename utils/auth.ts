@@ -48,33 +48,86 @@ export interface AuthUser {
 }
 
 /**
- * Gets the authenticated user from the request
- * @returns The authenticated user or null if not authenticated
+ * Extracts the JWT from an `Authorization: Bearer <token>` header.
+ *
+ * This is how the Capacitor WebView authenticates: its document origin
+ * (`capacitor://localhost`) is not the API origin, so the session cookie is
+ * never sent. The token is stored on the device instead (see
+ * `lib/mobile-auth.ts`) and attached by `apiFetch`.
+ *
+ * @returns The bearer token, or null if the header is absent or malformed
  */
-export async function getAuthUser(): Promise<AuthUser | null> {
+export function getTokenFromRequest(request: Request): string | null {
+  const header = request.headers.get("authorization");
+  if (!header) return null;
+
+  const match = /^Bearer[ \t]+(.+)$/i.exec(header.trim());
+  if (!match) return null;
+
+  return match[1].trim() || null;
+}
+
+/**
+ * Reads the session cookie, tolerating being called outside a request scope.
+ *
+ * `cookies()` throws when there is no request context (a route handler invoked
+ * directly from a unit test, for instance). That must not shadow the bearer
+ * token path, so a throw is treated the same as "no cookie".
+ */
+async function getSessionCookieToken(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (!sessionCookie) {
-      return null;
-    }
-
-    const jwtSecret = validateJWTSecret();
-    const { payload } = await jwtVerify(
-      sessionCookie,
-      new TextEncoder().encode(jwtSecret)
-    );
-
-    return {
-      userId: payload.userId as string,
-      name: payload.name as string,
-      role: payload.role as string,
-    };
-  } catch (error) {
-    console.error("Error verifying auth token:", error);
+    return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+  } catch {
     return null;
   }
+}
+
+/**
+ * Gets the authenticated user from the request.
+ *
+ * The cookie is tried first, so web behaviour is unchanged. When `request` is
+ * supplied, an `Authorization: Bearer` header is used as a fallback — and also
+ * as a second attempt if the cookie is present but no longer verifies, so a
+ * stale web cookie can't lock out a mobile client that sent a valid token.
+ *
+ * Callers with no access to a `Request` (server components) may keep calling
+ * this with no arguments; they get the cookie-only behaviour they had before.
+ *
+ * @returns The authenticated user or null if not authenticated
+ */
+export async function getAuthUser(request?: Request): Promise<AuthUser | null> {
+  const cookieToken = await getSessionCookieToken();
+  const bearerToken = request ? getTokenFromRequest(request) : null;
+
+  const candidates = [cookieToken, bearerToken].filter(
+    (token, index, all): token is string =>
+      Boolean(token) && all.indexOf(token) === index
+  );
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  for (const token of candidates) {
+    try {
+      const jwtSecret = validateJWTSecret();
+      const { payload } = await jwtVerify(
+        token,
+        new TextEncoder().encode(jwtSecret)
+      );
+
+      return {
+        userId: payload.userId as string,
+        name: payload.name as string,
+        role: payload.role as string,
+      };
+    } catch (error) {
+      console.error("Error verifying auth token:", error);
+    }
+  }
+
+  return null;
 }
 
 /**

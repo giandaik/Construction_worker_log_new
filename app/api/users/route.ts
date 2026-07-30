@@ -4,9 +4,9 @@ import { RepositoryFactory } from "@/lib/repositories";
 import { getAuthUser, isAdmin } from "@/utils/auth";
 import { hash } from "bcryptjs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await getAuthUser(request);
     if (!authUser) {
       return ApiError.unauthorized();
     }
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await getAuthUser(request);
 
     // Only admins/managers can create users
     if (!authUser || !isAdmin(authUser)) {

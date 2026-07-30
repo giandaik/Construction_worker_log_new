@@ -4,7 +4,7 @@ import { getAuthUser } from '@/utils/auth';
 
 export async function GET(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
 
     const { searchParams } = new URL(request.url);

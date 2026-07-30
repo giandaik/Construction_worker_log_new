@@ -7,7 +7,7 @@ const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {

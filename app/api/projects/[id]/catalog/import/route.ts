@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) {
       return ApiError.forbidden('Only admins or supervisors can manage the project catalog');

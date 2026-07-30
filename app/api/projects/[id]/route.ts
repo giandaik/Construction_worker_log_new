@@ -24,7 +24,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     // Only admins/managers can edit projects
     if (!user || !isAdmin(user)) {
