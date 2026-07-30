@@ -358,4 +358,54 @@ This project is indexed by GitNexus as **Construction_worker_log_new** (2399 sym
 
 <!-- gitnexus:end -->
 
+## Capacitor Mobile App
+
+Phase 1 (foundation) is installed. Capacitor 8 wraps the app in iOS and Android
+WebViews; `capacitor.config.ts` sets `appId: com.constructionlog.app` and
+`webDir: 'out'`.
+
+### Commands
+
+| Command | Does |
+|---|---|
+| `npm run build:mobile` | Static export → `out/`, then `npx cap sync` into `ios/` and `android/` |
+| `npx cap open ios` | Opens `ios/App/App.xcodeproj` in Xcode (Capacitor 8 uses SPM, so there is no Pods workspace) |
+| `npx cap open android` | Opens `android/` in Android Studio |
+
+`npm run build` (web) is unaffected — it still builds API routes, middleware,
+and server-rendered pages exactly as before.
+
+### How the mobile build works
+
+`next build` has no `--config` flag, so `scripts/build-mobile.mjs` stages a
+mobile-shaped tree, runs the build, and restores the working tree afterwards —
+on success, on failure, and on Ctrl-C. Staging:
+
+1. Swaps `next.config.mobile.mjs` in as `next.config.mjs` (adds `output: 'export'`
+   and `images.unoptimized`; drops the `redirects()` a static export can't serve).
+2. Moves `app/api/` and `middleware.ts` aside — neither can exist in a static export.
+3. Overlays `mobile/app-overrides/` onto `app/`, replacing pages that need a
+   server request. See `mobile/README.md` for the per-file table.
+4. Moves `.next/` aside so the web build cache survives. (`distDir` can't be used
+   for this — under `output: 'export'` it relocates the export itself, away from `out/`.)
+
+### What does not work on mobile yet
+
+- **API routes are not in the static export.** The mobile app will call the
+  deployed Vercel backend — Phase 2 wires up the base URL. Until then, every
+  `fetch('/api/...')` resolves against the WebView origin and fails.
+- **Middleware does not run in a static export.** Route protection is
+  client-side only on mobile; Phase 3 adds bearer-token auth. The API routes
+  still enforce auth server-side, so this is a UX gap, not a security hole.
+- **Deep links to `/worklogs/[id]` and `/projects/[id]`** export as a single
+  `shell` page each, since real ids only exist at runtime. In-app navigation
+  works (`useParams()` reads the id); a cold load straight to a real id has no
+  file to serve. Phase 2/3 routing work.
+
+### Native platforms
+
+`ios/` and `android/` are committed. Capacitor's own nested `.gitignore` files
+exclude copied web assets and build output; the root `.gitignore` repeats the
+main entries as a safety net.
+
 @FP_CLAUDE.md
