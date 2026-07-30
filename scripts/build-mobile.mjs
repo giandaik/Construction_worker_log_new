@@ -17,6 +17,10 @@
  *   4. Moves `.next/` aside so the static-export build does not clobber the web
  *      build/dev cache (`distDir` cannot be used for this — under
  *      `output: 'export'` it relocates the export itself, away from `out/`).
+ *
+ * It also resolves `NEXT_PUBLIC_API_BASE_URL` (see `resolveApiBaseUrl`), which
+ * tells the bundled `lib/apiClient.ts` which backend to call. That value is
+ * inlined at build time, so it has to be settled before `next build` starts.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -64,6 +68,43 @@ function addTemporaryFile(relativePath, contents) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.writeFileSync(destination, contents);
   undoStack.push(() => fs.rmSync(destination, { force: true }));
+}
+
+/** Minimal `KEY=VALUE` parser — enough for the one var these files carry. */
+function readEnvFile(relativePath) {
+  const filePath = abs(relativePath);
+  if (!fs.existsSync(filePath)) return {};
+
+  const values = {};
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/i);
+    if (!match || line.trimStart().startsWith('#')) continue;
+    values[match[1]] = match[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
+  return values;
+}
+
+/**
+ * Decides which backend the mobile bundle talks to, most explicit first:
+ *
+ *   1. `NEXT_PUBLIC_API_BASE_URL` already in the environment (one-off override:
+ *      `NEXT_PUBLIC_API_BASE_URL=https://staging.example.com npm run build:mobile`)
+ *   2. `.env.mobile` — the normal place to configure it (gitignored; copy
+ *      `.env.mobile.example`)
+ *   3. `.env.local` — reuse the web dev config rather than duplicating it
+ *
+ * An empty result is a hard error: the WebView origin has no server behind it,
+ * so a bundle built with no base URL cannot reach the API at all.
+ */
+function resolveApiBaseUrl() {
+  const fromEnvironment = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (fromEnvironment) return { value: fromEnvironment, source: 'environment' };
+
+  for (const file of ['.env.mobile', '.env.local']) {
+    const value = readEnvFile(file).NEXT_PUBLIC_API_BASE_URL;
+    if (value) return { value, source: file };
+  }
+  return { value: '', source: null };
 }
 
 function listFilesRecursively(root) {
@@ -125,14 +166,35 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 }
 process.on('exit', restoreOnce);
 
-console.log('Staging mobile build tree...');
+const apiBaseUrl = resolveApiBaseUrl();
+
+if (!apiBaseUrl.value) {
+  console.error(
+    'NEXT_PUBLIC_API_BASE_URL is not set.\n\n' +
+      'The mobile bundle is served from the WebView origin (capacitor://localhost\n' +
+      'on iOS, http://localhost on Android), which has no API behind it, so every\n' +
+      'API call needs an absolute URL to the deployed backend.\n\n' +
+      'Fix: cp .env.mobile.example .env.mobile and set the URL there.',
+  );
+  process.exit(1);
+}
+
+console.log(`API base URL: ${apiBaseUrl.value}  (from ${apiBaseUrl.source})`);
+
+console.log('\nStaging mobile build tree...');
 stage();
 
 console.log('\nBuilding static export...');
 const build = spawnSync('npx', ['next', 'build'], {
   cwd: projectRoot,
   stdio: 'inherit',
-  env: { ...process.env, NEXT_PUBLIC_MOBILE_BUILD: 'true' },
+  env: {
+    ...process.env,
+    NEXT_PUBLIC_MOBILE_BUILD: 'true',
+    // Wins over `.env.local`: `@next/env` never overwrites an existing
+    // process.env entry.
+    NEXT_PUBLIC_API_BASE_URL: apiBaseUrl.value,
+  },
 });
 
 restoreOnce();

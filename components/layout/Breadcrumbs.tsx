@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronRight } from "lucide-react"
+import { apiFetch } from "@/lib/apiClient"
 
 export type DynamicKind = "project" | "worklog"
 
@@ -79,7 +80,7 @@ const labelCache = new Map<string, string>()
 
 async function resolveDynamicLabel(kind: DynamicKind, id: string): Promise<string> {
   const url = kind === "project" ? `/api/projects/${id}` : `/api/worklogs/${id}`
-  const res = await fetch(url)
+  const res = await apiFetch(url)
   if (!res.ok) throw new Error(`fetch ${kind} ${id} failed: ${res.status}`)
   const data = (await res.json()) as { name?: string; date?: string }
   if (kind === "project") return data.name || "Project"

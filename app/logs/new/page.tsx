@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Toaster } from '@/components/ui/toaster'
 import { WorkLogForm } from '@/components/WorkLogForm'
 import { getWorkLogStatusFromSignatures } from '@/lib/signatureUtils'
+import { apiFetch } from '@/lib/apiClient'
 
 function NewWorkLogFormContent() {
   const router = useRouter()
@@ -17,7 +18,7 @@ function NewWorkLogFormContent() {
       Array.isArray(data.signatures) ? data.signatures : []
     )
 
-    const response = await fetch('/api/worklogs', {
+    const response = await apiFetch('/api/worklogs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, status }),

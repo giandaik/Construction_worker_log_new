@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { Alert } from '@/components/ui/alert';
 import { toProjectCatalog, type ProjectCatalog } from '@/lib/catalog/mergeCatalog';
 import type { CatalogKind } from '@/lib/schemas/projectSchema';
+import { apiFetch } from '@/lib/apiClient';
 
 export type { ProjectCatalog };
 
@@ -30,7 +31,7 @@ export function ProjectCatalogManager({
     setCatalog((prev) => ({ ...prev, [kind]: values }));
     setSavingKind(kind);
     try {
-      const res = await fetch(`/api/projects/${projectId}/catalog`, {
+      const res = await apiFetch(`/api/projects/${projectId}/catalog`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind, values }),

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
+import { apiFetch } from "@/lib/apiClient";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/signup", {
+      const res = await apiFetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

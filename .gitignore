@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# mobile build config (per-machine backend URL); .env.mobile.example is tracked
+.env.mobile
+
 # vercel
 .vercel
 

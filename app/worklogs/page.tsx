@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, Plus } from "lucide-react";
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
+import { apiFetch } from "@/lib/apiClient";
 
 const ALL_PROJECTS = "all";
 
@@ -56,8 +57,8 @@ function WorkLogsPageContent() {
         setIsLoading(true);
         const url = filterProjectId ? `/api/worklogs?project=${filterProjectId}` : '/api/worklogs';
         const [workLogsResponse, projectsResponse] = await Promise.all([
-          fetch(url),
-          fetch('/api/projects')
+          apiFetch(url),
+          apiFetch('/api/projects')
         ]);
 
         if (!workLogsResponse.ok) {

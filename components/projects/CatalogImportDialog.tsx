@@ -27,6 +27,7 @@ import {
   EMPTY_CATALOG,
   type ProjectCatalog,
 } from '@/lib/catalog/mergeCatalog';
+import { apiFetch } from '@/lib/apiClient';
 
 interface CatalogSource {
   _id: string;
@@ -77,7 +78,7 @@ export function CatalogImportDialog({
       setLoadingSources(true);
       setError(null);
       try {
-        const res = await fetch('/api/projects/catalog-sources');
+        const res = await apiFetch('/api/projects/catalog-sources');
         if (!res.ok) throw new Error('Αποτυχία φόρτωσης project');
         const data: CatalogSource[] = await res.json();
         if (cancelled) return;
@@ -99,7 +100,7 @@ export function CatalogImportDialog({
     setError(null);
     setLoadingPreview(true);
     try {
-      const res = await fetch(`/api/projects/${id}`);
+      const res = await apiFetch(`/api/projects/${id}`);
       if (!res.ok) throw new Error('Αποτυχία φόρτωσης καταλόγου');
       const data = await res.json();
       setSourceCatalog(toProjectCatalog(data));
@@ -123,7 +124,7 @@ export function CatalogImportDialog({
     try {
       if (mode === 'apply') {
         if (!currentProjectId) throw new Error('Λείπει το project');
-        const res = await fetch(`/api/projects/${currentProjectId}/catalog/import`, {
+        const res = await apiFetch(`/api/projects/${currentProjectId}/catalog/import`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sourceProjectId: sourceId }),

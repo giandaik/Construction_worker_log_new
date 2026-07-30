@@ -3,6 +3,7 @@ import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME } from "./lib/constants/constants";
 import { validateJWTSecret } from "./utils/auth";
 import { stampFlagOverrides } from "./middleware-helpers";
+import { applyCorsHeaders, preflightResponse } from "./lib/cors";
 
 
 // Paths that don't require authentication
@@ -14,19 +15,35 @@ function isPublicPath(pathname: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isApiRoute = pathname.startsWith("/api");
+  const origin = request.headers.get("origin");
+
+  // Preflight carries no cookies, so it must be answered before the auth check
+  // below — otherwise the browser sees a 401 with no CORS headers and never
+  // sends the real request.
+  if (isApiRoute && request.method === "OPTIONS") {
+    return preflightResponse(origin);
+  }
+
+  // Every API response needs CORS headers, including the 401s: a WebView that
+  // cannot read the error body has no way to know it should log in again.
+  const withCors = <T extends NextResponse>(response: T): T =>
+    isApiRoute ? applyCorsHeaders(response, origin) : response;
 
   if (isPublicPath(pathname)) {
-    return stampFlagOverrides(request, NextResponse.next());
+    return withCors(stampFlagOverrides(request, NextResponse.next()));
   }
 
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionCookie) {
     // For API routes, return 401 Unauthorized instead of redirecting
-    if (pathname.startsWith("/api")) {
-      return stampFlagOverrides(
-        request,
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    if (isApiRoute) {
+      return withCors(
+        stampFlagOverrides(
+          request,
+          NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        ),
       );
     }
 
@@ -38,12 +55,14 @@ export async function middleware(request: NextRequest) {
     const jwtSecret = validateJWTSecret();
     await jwtVerify(sessionCookie!, new TextEncoder().encode(jwtSecret));
 
-    return stampFlagOverrides(request, NextResponse.next());
+    return withCors(stampFlagOverrides(request, NextResponse.next()));
   } catch (err) {
     console.error("JWT ERROR:", err);
-    return stampFlagOverrides(
-      request,
-      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    return withCors(
+      stampFlagOverrides(
+        request,
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      ),
     );
   }
 

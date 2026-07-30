@@ -26,6 +26,7 @@ import { getWorkLogStatusFromSignatures } from "@/lib/signatureUtils";
 import type { Signature } from "@/types/shared";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
+import { apiFetch } from "@/lib/apiClient";
 
 const WEATHER_LABEL_MAP: Record<string, { label: string; Icon: typeof WEATHER_OPTIONS[number]['icon'] }> =
   Object.fromEntries(WEATHER_OPTIONS.map(({ key, label, icon }) => [key, { label, Icon: icon }]));
@@ -114,7 +115,7 @@ export default function WorkLogDetailPage() {
     const fetchWorkLog = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/worklogs/${id}`);
+        const response = await apiFetch(`/api/worklogs/${id}`);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -129,7 +130,7 @@ export default function WorkLogDetailPage() {
 
         if (data.project) {
           try {
-            const projectRes = await fetch(`/api/projects/${data.project}`);
+            const projectRes = await apiFetch(`/api/projects/${data.project}`);
             if (projectRes.ok) {
               const project = await projectRes.json();
               setProjectInfo({
@@ -176,7 +177,7 @@ export default function WorkLogDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/worklogs/${id}`, {
+      const response = await apiFetch(`/api/worklogs/${id}`, {
         method: 'DELETE',
       });
 
@@ -209,7 +210,7 @@ export default function WorkLogDetailPage() {
         projectInfo?.contractorName
       );
 
-      const response = await fetch(`/api/worklogs/${id}`, {
+      const response = await apiFetch(`/api/worklogs/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -243,7 +244,7 @@ export default function WorkLogDetailPage() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`/api/worklogs/${id}/reject`, {
+      const response = await apiFetch(`/api/worklogs/${id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rejectionComment: rejectionComment.trim() }),

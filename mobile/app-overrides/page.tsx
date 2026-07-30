@@ -20,6 +20,7 @@ import { PendingSubmissions } from "@/components/PendingSubmissions"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { FORM_STATUS_CLASSES, FORM_STATUS_LABELS } from "@/lib/constants/constantValues"
 import type { Project, WorkLog } from "@/types/shared"
+import { apiFetch } from "@/lib/apiClient"
 
 const RECENT_LOGS_SHOWN = 6
 
@@ -68,8 +69,8 @@ export default function MobileHomePage() {
     async function loadDashboard() {
       try {
         const [projectsRes, workLogsRes] = await Promise.all([
-          fetch("/api/projects"),
-          fetch("/api/worklogs"),
+          apiFetch("/api/projects"),
+          apiFetch("/api/worklogs"),
         ])
 
         if (!isActive) return

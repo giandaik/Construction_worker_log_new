@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/apiClient';
 
 type SuggestionField =
   | 'personnel.role'
@@ -16,7 +17,7 @@ export function useSuggestions(field: SuggestionField, projectId?: string) {
     const params = new URLSearchParams({ field });
     if (projectId) params.set('project', projectId);
 
-    fetch(`/api/suggestions?${params.toString()}`, { signal: controller.signal })
+    apiFetch(`/api/suggestions?${params.toString()}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : { suggestions: [] }))
       .then((data) => setSuggestions(data.suggestions ?? []))
       .catch(() => {

@@ -1,3 +1,5 @@
+import { apiFetch } from './apiClient';
+
 // Type definitions for API responses
 export interface ProjectWithId {
   _id: string;
@@ -33,7 +35,7 @@ export interface UserWithId {
  */
 export async function fetchProjects(): Promise<ProjectWithId[]> {
   try {
-    const response = await fetch('/api/projects');
+    const response = await apiFetch('/api/projects');
     if (!response.ok) {
       throw new Error('Failed to fetch projects');
     }
@@ -49,7 +51,7 @@ export async function fetchProjects(): Promise<ProjectWithId[]> {
  */
 export async function fetchUsers(): Promise<UserWithId[]> {
   try {
-    const response = await fetch('/api/users');
+    const response = await apiFetch('/api/users');
     if (!response.ok) {
       throw new Error('Failed to fetch users');
     }
@@ -71,7 +73,7 @@ export async function createProject(projectData: {
   contractorEmail: string;
 }): Promise<ProjectWithId | null> {
   try {
-    const response = await fetch('/api/projects', {
+    const response = await apiFetch('/api/projects', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,7 +100,7 @@ export async function createUser(userData: {
   email: string;
 }): Promise<UserWithId | null> {
   try {
-    const response = await fetch('/api/users', {
+    const response = await apiFetch('/api/users', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface AuthUser {
   userId: string;
@@ -22,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    fetch('/api/me')
+    apiFetch('/api/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         setUser(data);
