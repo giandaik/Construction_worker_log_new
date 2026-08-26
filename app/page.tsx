@@ -35,6 +35,10 @@ const copy = {
     heroCta: "Start free",
     heroSecondary: "See how it works",
     trust: ["Works offline", "Signed approvals", "PDF reports"],
+    productBadge: "The two-minute end-of-shift log",
+    productTitle: "One screen. The whole shift.",
+    productSub:
+      "Photos, weather, crew, materials and the work done — captured at the site in a single record, ready to sign.",
     featuresTitle: "Everything the end of shift needs",
     featuresSub: "One record per day. Complete, verifiable, on file.",
     f1t: "Offline-first",
@@ -101,6 +105,10 @@ const copy = {
     heroCta: "Δωρεάν εκκίνηση",
     heroSecondary: "Πώς λειτουργεί",
     trust: ["Χωρίς σύνδεση", "Υπογεγραμμένες εγκρίσεις", "Αναφορές PDF"],
+    productBadge: "Το δελτίο τέλους βάρδιας σε δύο λεπτά",
+    productTitle: "Μία οθόνη. Όλη η βάρδια.",
+    productSub:
+      "Φωτογραφίες, καιρός, συνεργείο, υλικά και εργασίες — καταγράφονται επιτόπου σε ένα ενιαίο δελτίο, έτοιμο για υπογραφή.",
     featuresTitle: "Ό,τι χρειάζεται το τέλος της βάρδιας",
     featuresSub: "Ένα δελτίο την ημέρα. Πλήρες, ελέγξιμο, αρχειοθετημένο.",
     f1t: "Λειτουργία χωρίς σύνδεση",
@@ -273,14 +281,25 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="blueprint-grid absolute inset-0" aria-hidden />
+      {/* Hero — full-bleed photo, headline over the sky */}
+      <section className="relative min-h-[560px] overflow-hidden border-b border-border">
+        <Image
+          src="/hero-construction.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        {/* Readability + brand gradients */}
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-background/10" aria-hidden />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" aria-hidden />
+        <div className="blueprint-grid absolute inset-0 opacity-40" aria-hidden />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-        <div className="container relative grid items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24 lg:gap-16">
+        <div className="container relative flex min-h-[560px] items-center px-4 py-24">
           <div className="max-w-xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary/50 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground backdrop-blur">
               <WifiOff className="h-3.5 w-3.5" aria-hidden />
               {t.heroBadge}
             </p>
@@ -308,8 +327,32 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
+        </div>
+        <div className="hazard-stripe absolute inset-x-0 bottom-0 h-1.5" />
+      </section>
 
-          {/* Product mockup — the actual app, in the app's own design language */}
+      {/* Product showcase — the actual app, in the app's own design language */}
+      <section id="product" className="container scroll-mt-24 px-4 py-16 md:py-24">
+        <div className="grid items-center gap-12 md:grid-cols-2 lg:gap-16">
+          <div className="max-w-xl">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
+              {t.productBadge}
+            </p>
+            <h2 className="mt-5 font-display text-3xl font-bold uppercase leading-tight tracking-wide sm:text-4xl">
+              {t.productTitle}
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">{t.productSub}</p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button size="lg" asChild>
+                <Link href={authed ? "/app" : "/signup"}>
+                  {authed ? t.openDashboard : t.heroCta}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Phone mockup */}
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute -inset-6 rounded-full bg-primary/10 blur-3xl" aria-hidden />
             <div className="relative rounded-[2.2rem] border border-border bg-card p-2.5 shadow-2xl">
