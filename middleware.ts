@@ -84,7 +84,7 @@ export const config = {
   // image-extension exclusion would also bypass auth on dynamic routes
   // like /worklogs/x.png. Add new /public assets to this list.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sitely-logo.png|hero-construction.jpg).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitely-logo.png|hero-construction.jpg|screenshots/).*)",
   ],
 };
 

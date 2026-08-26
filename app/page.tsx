@@ -11,6 +11,7 @@ import {
   FileDown,
   HardHat,
   Languages,
+  Mail,
   MapPin,
   ShieldCheck,
   Users,
@@ -59,16 +60,22 @@ const copy = {
     f6t: "PDF reports",
     f6d:
       "Daily logs export to clean PDFs — for the file, the owner, or the client.",
+    f7t: "Email notifications",
+    f7d:
+      "The office gets an email the moment a log is signed, rejected, or completed — final reports land in the inbox with the PDF attached.",
     howTitle: "From site to signed in three steps",
     s1t: "Log it at the site",
     s1d:
       "Two minutes at the end of shift: what was done, who was there, photos, weather.",
+    s1img: "/screenshots/13-new-log.jpg",
     s2t: "It syncs itself",
     s2d:
       "No signal? No problem. Logs queue offline and sync the moment you're back online.",
+    s2img: "/screenshots/10-dashboard.jpg",
     s3t: "Signed and filed",
     s3d:
       "The supervisor reviews and signs. The report is on file — exportable, traceable.",
+    s3img: "/screenshots/14-signatures.jpg",
     rolesTitle: "Built for every hand on site",
     r1t: "Worker",
     r1d:
@@ -129,16 +136,22 @@ const copy = {
     f6t: "Αναφορές PDF",
     f6d:
       "Τα ημερήσια δελτία εξάγονται σε καθαρά PDF — για το αρχείο, τον ιδιοκτήτη ή τον πελάτη.",
+    f7t: "Ειδοποιήσεις email",
+    f7d:
+      "Το γραφείο λαμβάνει email μόλις ένα δελτίο υπογραφεί, απορριφθεί ή ολοκληρωθεί — με το PDF συνημμένο.",
     howTitle: "Από το εργοτάξιο στην υπογραφή σε τρία βήματα",
     s1t: "Το καταγράφεις στο εργοτάξιο",
     s1d:
       "Δύο λεπτά στο τέλος της βάρδιας: τι έγινε, ποιοι ήταν εκεί, φωτογραφίες, καιρός.",
+    s1img: "/screenshots/13-new-log.jpg",
     s2t: "Συγχρονίζεται μόνο του",
     s2d:
       "Χωρίς σήμα; Κανένα πρόβλημα. Τα δελτία περιμένουν σε ουρά και συγχρονίζονται μόλις βρεις δίκτυο.",
+    s2img: "/screenshots/10-dashboard.jpg",
     s3t: "Υπογραφή και αρχειοθέτηση",
     s3d:
       "Ο επιβλέπων ελέγχει και υπογράφει. Το δελτίο μένει αρχειοθετημένο — εξαγώγιμο, ιχνηλάσιμο.",
+    s3img: "/screenshots/14-signatures.jpg",
     rolesTitle: "Φτιαγμένο για κάθε χέρι στο εργοτάξιο",
     r1t: "Εργαζόμενος",
     r1d:
@@ -199,12 +212,13 @@ export default function LandingPage() {
     { icon: CloudSun, title: t.f4t, desc: t.f4d },
     { icon: Users, title: t.f5t, desc: t.f5d },
     { icon: FileDown, title: t.f6t, desc: t.f6d },
+    { icon: Mail, title: t.f7t, desc: t.f7d },
   ]
 
   const steps = [
-    { n: "01", title: t.s1t, desc: t.s1d },
-    { n: "02", title: t.s2t, desc: t.s2d },
-    { n: "03", title: t.s3t, desc: t.s3d },
+    { n: "01", title: t.s1t, desc: t.s1d, img: t.s1img },
+    { n: "02", title: t.s2t, desc: t.s2d, img: t.s2img },
+    { n: "03", title: t.s3t, desc: t.s3d, img: t.s3img },
   ]
 
   const roles = [
@@ -465,7 +479,7 @@ export default function LandingPage() {
                     aria-hidden
                   />
                 )}
-                <div className="rounded-md border bg-card p-6">
+                <div className="flex h-full flex-col rounded-md border bg-card p-6">
                   <p className="font-display text-4xl font-bold text-primary/70">{step.n}</p>
                   <h3 className="mt-3 font-display text-lg font-semibold uppercase tracking-wide">
                     {step.title}
@@ -473,6 +487,15 @@ export default function LandingPage() {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {step.desc}
                   </p>
+                  <div className="mt-4 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={step.img}
+                      alt={step.title}
+                      loading="lazy"
+                      className="h-auto w-full object-cover"
+                    />
+                  </div>
                 </div>
               </li>
             ))}

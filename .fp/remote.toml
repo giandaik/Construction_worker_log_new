@@ -1,0 +1,8 @@
+# FP remote identity — managed by `fp project remote stamp`.
+# Committed so sandboxes and CI resolve this project in REST mode.
+# Contains no secrets: auth still comes from FP_TOKEN or credentials.toml.
+
+project_id = "QH2kU0XPoksVV7keKEBjq"
+workspace_slug = "mstath1s-UQgE"
+server_url = "https://app.fp.dev"
+prefix = "CWL"

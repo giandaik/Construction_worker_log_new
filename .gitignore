@@ -51,7 +51,9 @@ android/local.properties
 next-env.d.ts
 
 # Fiberplane local issue tracking
-.fp/
+.fp/*
+!.fp/remote.toml
 
 # private planning docs
 docs/commercialization-plan.md
+
