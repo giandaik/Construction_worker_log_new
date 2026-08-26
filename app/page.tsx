@@ -296,7 +296,8 @@ export default function LandingPage() {
       </header>
 
       {/* Hero — full-bleed photo, headline over the sky */}
-      <section className="relative min-h-[560px] overflow-hidden border-b border-border">
+      <main id="main" className="scroll-smooth">
+        <section className="relative min-h-[560px] overflow-hidden border-b border-border">
         <Image
           src="/hero-construction.jpg"
           alt=""
@@ -480,7 +481,7 @@ export default function LandingPage() {
                   />
                 )}
                 <div className="flex h-full flex-col rounded-md border bg-card p-6">
-                  <p className="font-display text-4xl font-bold text-primary/70">{step.n}</p>
+                  <p className="font-display text-4xl font-bold text-[hsl(45_90%_35%)]">{step.n}</p>
                   <h3 className="mt-3 font-display text-lg font-semibold uppercase tracking-wide">
                     {step.title}
                   </h3>
@@ -576,6 +577,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border bg-muted/40">
@@ -605,7 +607,7 @@ export default function LandingPage() {
               EN · ΕΛ
             </span>
           </div>
-          <p className="text-xs text-muted-foreground/70">
+          <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} {t.footerRights}
           </p>
         </div>
