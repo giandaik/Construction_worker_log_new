@@ -14,6 +14,10 @@ describe("buildBreadcrumbTrail", () => {
     expect(buildBreadcrumbTrail("/")).toEqual([{ href: "/", label: "Home" }])
   })
 
+  it("returns a single Home crumb for the app home route", () => {
+    expect(buildBreadcrumbTrail("/app")).toEqual([{ href: "/app", label: "Home" }])
+  })
+
   it("maps static sections to labelled crumbs", () => {
     expect(buildBreadcrumbTrail("/projects")).toEqual([
       { href: "/", label: "Home" },
@@ -108,10 +112,15 @@ describe("isPublicPath", () => {
   })
 
   it("is false for authenticated routes", () => {
-    expect(isPublicPath("/")).toBe(false)
+    expect(isPublicPath("/app")).toBe(false)
     expect(isPublicPath("/dashboard")).toBe(false)
     expect(isPublicPath("/projects")).toBe(false)
     expect(isPublicPath("/admin/users")).toBe(false)
+  })
+
+  it("is true for the public landing page", () => {
+    expect(isPublicPath("/")).toBe(true)
+    expect(isPublicPath("/login")).toBe(true)
   })
 
   it("does not match routes that merely start with the public names", () => {

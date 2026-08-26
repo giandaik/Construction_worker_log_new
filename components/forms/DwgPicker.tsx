@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import type { DwgFile } from '@/components/forms/DwgUpload';
+import { apiFetch } from '@/lib/apiClient';
 
 interface DwgPickerProps {
   projectId: string;
@@ -31,7 +32,7 @@ export function DwgPicker({ projectId, value, onChange }: DwgPickerProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/projects/${projectId}`);
+        const res = await apiFetch(`/api/projects/${projectId}`);
         if (!res.ok) throw new Error(`Failed (${res.status})`);
         const project = await res.json();
         if (!cancelled) setDwgFiles(project.dwgFiles ?? []);

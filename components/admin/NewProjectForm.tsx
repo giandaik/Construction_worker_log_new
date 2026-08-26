@@ -22,6 +22,7 @@ import {
   type ProjectCatalog,
 } from "@/lib/catalog/mergeCatalog";
 import type { CatalogKind } from "@/lib/schemas/projectSchema";
+import { apiFetch } from "@/lib/apiClient";
 
 type ProjectStatus = "planned" | "in-progress" | "completed" | "on-hold";
 
@@ -79,7 +80,7 @@ export function NewProjectForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/projects", {
+      const res = await apiFetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -43,7 +43,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     if (!user) {
       return ApiError.unauthorized();
@@ -201,7 +201,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     if (!user) {
       return ApiError.unauthorized();

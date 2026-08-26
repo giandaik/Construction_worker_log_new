@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronRight } from "lucide-react"
+import { apiFetch } from "@/lib/apiClient"
 
 export type DynamicKind = "project" | "worklog"
 
@@ -16,6 +17,7 @@ export interface Crumb {
 
 const STATIC_LABELS: Record<string, string> = {
   "": "Home",
+  app: "Home",
   projects: "Projects",
   worklogs: "Work Logs",
   admin: "Admin",
@@ -47,8 +49,8 @@ const DYNAMIC_PARENTS: Record<string, DynamicKind> = {
  * by the component via fetch). Exported for unit testing.
  */
 export function buildBreadcrumbTrail(pathname: string): Crumb[] {
-  if (!pathname || pathname === "/") {
-    return [{ href: "/", label: STATIC_LABELS[""] }]
+  if (!pathname || pathname === "/" || pathname === "/app") {
+    return [{ href: pathname === "/app" ? "/app" : "/", label: STATIC_LABELS[""] }]
   }
 
   const segments = pathname.split("/").filter(Boolean)
@@ -79,7 +81,7 @@ const labelCache = new Map<string, string>()
 
 async function resolveDynamicLabel(kind: DynamicKind, id: string): Promise<string> {
   const url = kind === "project" ? `/api/projects/${id}` : `/api/worklogs/${id}`
-  const res = await fetch(url)
+  const res = await apiFetch(url)
   if (!res.ok) throw new Error(`fetch ${kind} ${id} failed: ${res.status}`)
   const data = (await res.json()) as { name?: string; date?: string }
   if (kind === "project") return data.name || "Project"

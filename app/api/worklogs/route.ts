@@ -16,7 +16,7 @@ import { DatabaseUtils } from '@/lib/api/database';
 
 export async function GET(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await getAuthUser(request);
     if (!authUser) {
       return ApiError.unauthorized();
     }
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const startTime = Date.now();
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     if (!user) {
       return ApiError.unauthorized();

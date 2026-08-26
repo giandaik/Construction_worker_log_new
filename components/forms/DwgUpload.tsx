@@ -3,6 +3,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, FileType2, Trash2 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 export interface DwgFile {
   url: string;
@@ -80,7 +81,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
       dwgForm.append('file', dwgFile);
       dwgForm.append('projectId', projectId);
 
-      const dwgPromise = fetch('/api/upload/dwg', { method: 'POST', body: dwgForm }).then(
+      const dwgPromise = apiFetch('/api/upload/dwg', { method: 'POST', body: dwgForm }).then(
         async (res) => {
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
@@ -95,7 +96,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
             const pdfForm = new FormData();
             pdfForm.append('file', pdfFile);
             pdfForm.append('projectId', projectId);
-            return fetch('/api/upload/pdf', { method: 'POST', body: pdfForm }).then(async (res) => {
+            return apiFetch('/api/upload/pdf', { method: 'POST', body: pdfForm }).then(async (res) => {
               if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 throw new Error(body.error || `PDF upload failed (${res.status})`);
@@ -119,7 +120,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
         attachBody.pdfSize = pdfBlob.size;
       }
 
-      const attachRes = await fetch(`/api/projects/${projectId}/dwgs`, {
+      const attachRes = await apiFetch(`/api/projects/${projectId}/dwgs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(attachBody),
@@ -144,7 +145,7 @@ export function DwgUpload({ projectId, value, onChange, readOnly = false }: DwgU
       setError(null);
       setBusy(true);
       try {
-        const res = await fetch(`/api/projects/${projectId}/dwgs`, {
+        const res = await apiFetch(`/api/projects/${projectId}/dwgs`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),

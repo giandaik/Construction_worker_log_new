@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationPicker } from "@/components/projects/LocationPicker";
+import { apiFetch } from "@/lib/apiClient";
 
 type ProjectStatus = "planned" | "in-progress" | "completed" | "on-hold";
 
@@ -72,7 +73,7 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
     let active = true;
     async function loadProject() {
       try {
-        const res = await fetch(`/api/projects/${projectId}`);
+        const res = await apiFetch(`/api/projects/${projectId}`);
         if (!res.ok) throw new Error("Failed to load project");
         const project = await res.json();
         if (!active) return;
@@ -105,7 +106,7 @@ export function EditProjectForm({ projectId }: { projectId: string }) {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

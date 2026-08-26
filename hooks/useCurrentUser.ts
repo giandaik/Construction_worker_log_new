@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/apiClient';
 
 export interface CurrentUser {
   userId: string;
@@ -18,7 +19,7 @@ export const useCurrentUser = () => {
     const fetchCurrentUser = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/auth/me');
+        const response = await apiFetch('/api/auth/me');
 
         if (!response.ok) {
           throw new Error(`Failed to fetch current user: ${response.statusText}`);

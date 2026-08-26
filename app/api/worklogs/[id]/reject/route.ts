@@ -13,7 +13,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     if (!user) {
       return ApiError.unauthorized();

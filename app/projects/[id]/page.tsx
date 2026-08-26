@@ -11,6 +11,7 @@ import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
 import { ProjectMap } from '@/components/projects/ProjectMap';
 import { ProjectCatalogManager } from '@/components/projects/ProjectCatalogManager';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { apiFetch } from '@/lib/apiClient';
 
 interface Project {
   _id: string;
@@ -45,7 +46,7 @@ export default function ProjectDetailPage() {
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/projects/${id}`);
+        const response = await apiFetch(`/api/projects/${id}`);
         if (!response.ok) throw new Error('Failed to fetch project');
         setProject(await response.json());
       } catch (e) {

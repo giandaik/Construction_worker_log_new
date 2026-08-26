@@ -1,3 +1,5 @@
+import { apiFetch } from './apiClient';
+
 const MAX_DIMENSION = 2000;
 const JPEG_QUALITY = 0.85;
 
@@ -40,7 +42,7 @@ export async function uploadImageBlob(blob: Blob): Promise<string> {
   const fd = new FormData();
   fd.append('file', blob, `photo-${Date.now()}.jpg`);
 
-  const res = await fetch('/api/upload', { method: 'POST', body: fd });
+  const res = await apiFetch('/api/upload', { method: 'POST', body: fd });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Upload failed (${res.status}): ${text}`);

@@ -5,6 +5,7 @@ import {
   PendingWorkLogData,
 } from './indexedDBHelper';
 import { dataUrlToBlob, isDataUrl, uploadImageBlob } from './imageResize';
+import { apiFetch } from './apiClient';
 
 async function uploadPendingDataUrls(images: string[] | undefined): Promise<string[] | undefined> {
   if (!images || images.length === 0) return images;
@@ -60,7 +61,7 @@ export const syncPendingWorkLogs = async (): Promise<{ successful: number; faile
         const apiPayload = transformPendingDataToApiPayload(log);
         apiPayload.images = await uploadPendingDataUrls(apiPayload.images);
 
-        const response = await fetch('/api/worklogs', {
+        const response = await apiFetch('/api/worklogs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(apiPayload),

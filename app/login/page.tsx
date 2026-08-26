@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
+import { apiFetch } from "@/lib/apiClient";
+import { setMobileToken } from "@/lib/mobile-auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,17 +23,24 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await apiFetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data.error || "Login failed");
       } else {
-        router.push("/");
+        // On mobile the session cookie never reaches the WebView origin, so the
+        // token from the response body is what keeps the session alive. No-op
+        // on web, where the cookie already did the work.
+        if (data.token) {
+          await setMobileToken(data.token);
+        }
+        router.push("/app");
       }
     } catch (err) {
       console.error(err);

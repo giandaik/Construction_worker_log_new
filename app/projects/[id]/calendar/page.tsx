@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
 
 interface ProjectSummary {
   _id: string;
@@ -66,7 +67,7 @@ export default function ProjectCalendarPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch("/api/projects");
+        const response = await apiFetch("/api/projects");
         if (!response.ok) throw new Error("Failed to fetch projects");
         setProjects(await response.json());
       } catch (e) {
@@ -82,7 +83,7 @@ export default function ProjectCalendarPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/projects/${projectId}/worklog-counts?month=${month}`
         );
         if (!response.ok) throw new Error("Failed to fetch worklog counts");

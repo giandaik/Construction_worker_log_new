@@ -317,7 +317,7 @@ None. The feature adds no environment variables and uses no API keys.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Construction_worker_log_new** (2399 symbols, 4540 relationships, 202 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Construction_worker_log_new** (16248 symbols, 35195 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -357,5 +357,107 @@ This project is indexed by GitNexus as **Construction_worker_log_new** (2399 sym
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Capacitor Mobile App
+
+Phases 1 (foundation) and 2 (API base URL) are installed. Capacitor 8 wraps the
+app in iOS and Android WebViews; `capacitor.config.ts` sets
+`appId: com.constructionlog.app` and `webDir: 'out'`.
+
+### Commands
+
+| Command | Does |
+|---|---|
+| `npm run build:mobile` | Static export → `out/`, then `npx cap sync` into `ios/` and `android/` |
+| `npx cap open ios` | Opens `ios/App/App.xcodeproj` in Xcode (Capacitor 8 uses SPM, so there is no Pods workspace) |
+| `npx cap open android` | Opens `android/` in Android Studio |
+
+`npm run build` (web) is unaffected — it still builds API routes, middleware,
+and server-rendered pages exactly as before.
+
+### API base URL (Phase 2)
+
+**Every browser call to this app's own API goes through `lib/apiClient.ts`.** Do
+not call `fetch('/api/...')` directly in new code — use `apiFetch('/api/...')`,
+which is a drop-in replacement.
+
+`apiFetch` resolves the path against `NEXT_PUBLIC_API_BASE_URL`:
+
+| Value | Behaviour |
+|---|---|
+| unset / empty (web) | Path is passed to `fetch` untouched, `init` forwarded verbatim — byte-for-byte identical to a bare `fetch`. |
+| a URL (mobile) | Call is rewritten to `<base>/api/...` and gets `credentials: 'include'`, since the browser drops cookies on cross-origin requests by default. |
+
+`apiUrl(path)` exposes the same resolution for non-fetch uses. Absolute
+(`https://`) and `data:` URLs pass through unchanged, so Vercel Blob URLs are
+safe to hand to either helper.
+
+`NEXT_PUBLIC_*` is inlined at build time, so the target is chosen when the
+bundle is built, not at runtime. `scripts/build-mobile.mjs` resolves it, most
+explicit first:
+
+1. `NEXT_PUBLIC_API_BASE_URL` already in the environment — one-off override
+2. `.env.mobile` — the normal place to set it (gitignored; copy `.env.mobile.example`)
+3. `.env.local` — reuse the web dev config rather than duplicating it
+
+If all three are empty the mobile build **fails fast** rather than shipping a
+bundle that cannot reach any backend. The web build never reads `.env.mobile`
+and is unaffected.
+
+### CORS (Phase 2)
+
+The WebView document origin is `capacitor://localhost` (iOS) or
+`http://localhost` (Android), so every API call from the app is cross-origin.
+`lib/cors.ts` holds the policy and `middleware.ts` applies it to `/api/*`:
+
+- `OPTIONS` preflight is answered with 204 **before** the auth check — preflight
+  carries no cookies, so a 401 there would stop the real request from ever being sent.
+- CORS headers go on every API response including the 401s, so the app can read
+  the error and know to re-authenticate.
+- The request's origin is **echoed** rather than `*`. Requests are credentialed,
+  and browsers reject `Allow-Origin: *` on a credentialed request. An
+  unrecognised origin gets no CORS headers at all and the browser blocks it.
+- Allowed: the three WebView origins, anything in `CORS_ALLOWED_ORIGINS`
+  (comma-separated), the Vercel deployment's own URL, `NEXT_PUBLIC_APP_URL`, and
+  any `localhost` port outside production.
+- Page routes are untouched — no CORS headers, still redirect to `/login`.
+
+`applyCorsHeaders()` / `preflightResponse()` are exported for route handlers that
+need to answer a preflight themselves; the middleware covers the normal case.
+
+### How the mobile build works
+
+`next build` has no `--config` flag, so `scripts/build-mobile.mjs` stages a
+mobile-shaped tree, runs the build, and restores the working tree afterwards —
+on success, on failure, and on Ctrl-C. Staging:
+
+1. Swaps `next.config.mobile.mjs` in as `next.config.mjs` (adds `output: 'export'`
+   and `images.unoptimized`; drops the `redirects()` a static export can't serve).
+2. Moves `app/api/` and `middleware.ts` aside — neither can exist in a static export.
+3. Overlays `mobile/app-overrides/` onto `app/`, replacing pages that need a
+   server request. See `mobile/README.md` for the per-file table.
+4. Moves `.next/` aside so the web build cache survives. (`distDir` can't be used
+   for this — under `output: 'export'` it relocates the export itself, away from `out/`.)
+
+### What does not work on mobile yet
+
+- **Cross-origin session cookies.** `apiFetch` sends `credentials: 'include'`,
+  but the browser only stores a cross-site cookie if it is set
+  `SameSite=None; Secure`. The login route does not do that yet, so login from
+  the WebView will not persist a session. Phase 3 replaces cookie auth on mobile
+  with a bearer token, which sidesteps this entirely.
+- **Middleware does not run in a static export.** Route protection is
+  client-side only on mobile; Phase 3 adds bearer-token auth. The API routes
+  still enforce auth server-side, so this is a UX gap, not a security hole.
+- **Deep links to `/worklogs/[id]` and `/projects/[id]`** export as a single
+  `shell` page each, since real ids only exist at runtime. In-app navigation
+  works (`useParams()` reads the id); a cold load straight to a real id has no
+  file to serve. Phase 3 routing work.
+
+### Native platforms
+
+`ios/` and `android/` are committed. Capacitor's own nested `.gitignore` files
+exclude copied web assets and build output; the root `.gitignore` repeats the
+main entries as a safety net.
 
 @FP_CLAUDE.md

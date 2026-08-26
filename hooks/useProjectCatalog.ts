@@ -4,6 +4,7 @@ import {
   toProjectCatalog,
   type ProjectCatalog,
 } from '@/lib/catalog/mergeCatalog';
+import { apiFetch } from '@/lib/apiClient';
 
 export type { ProjectCatalog };
 
@@ -26,7 +27,7 @@ export function useProjectCatalog(projectId: string | undefined | null) {
     setIsLoading(true);
     (async () => {
       try {
-        const res = await fetch(`/api/projects/${projectId}`);
+        const res = await apiFetch(`/api/projects/${projectId}`);
         if (!res.ok) throw new Error('Failed to fetch project catalog');
         const data = await res.json();
         if (cancelled) return;

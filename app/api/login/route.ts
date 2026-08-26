@@ -52,6 +52,10 @@ export async function POST(request: Request) {
         email: user.email,
         role: user.role,
       },
+      // The mobile app stores this and sends it as `Authorization: Bearer`,
+      // because the WebView origin never receives the cookie set below. Web
+      // clients ignore it and keep using the cookie.
+      token,
     });
 
     setSessionCookie(response, token);

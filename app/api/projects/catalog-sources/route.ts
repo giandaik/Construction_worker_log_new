@@ -6,9 +6,9 @@ import { getAuthUser, isAdmin } from '@/utils/auth';
  * Lightweight list of projects (id, name, total catalog size) to drive the
  * "copy options from another project" source picker. Admins/managers only.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) {
       return ApiError.forbidden('Only admins or supervisors can manage the project catalog');

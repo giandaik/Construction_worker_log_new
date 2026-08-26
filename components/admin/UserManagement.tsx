@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { apiFetch } from "@/lib/apiClient";
 
 type Role = "admin" | "manager" | "user";
 
@@ -53,7 +54,7 @@ export function UserManagement() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch("/api/users");
+      const res = await apiFetch("/api/users");
       if (!res.ok) throw new Error(`Failed to load users (${res.status})`);
       const data = (await res.json()) as UserRow[];
       setUsers(data);
@@ -80,7 +81,7 @@ export function UserManagement() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/users", {
+      const res = await apiFetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, role }),

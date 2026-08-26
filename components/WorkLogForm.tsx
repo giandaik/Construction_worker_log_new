@@ -18,6 +18,7 @@ import { ProjectPicker, StatusBadge } from '@/components/forms/ProjectPicker';
 import { Check, MapPin } from 'lucide-react';
 import { useProjectCatalog } from '@/hooks/useProjectCatalog';
 import { TOAST_DURATION } from '@/lib/constants/constants';
+import { apiFetch } from '@/lib/apiClient';
 
 const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
 
@@ -143,7 +144,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     const fetchProjects = async () => {
       try {
         setIsLoadingProjects(true);
-        const response = await fetch('/api/projects');
+        const response = await apiFetch('/api/projects');
 
         if (!response.ok) {
           throw new Error('Failed to fetch projects');
@@ -192,7 +193,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/worklogs/last?project=${encodeURIComponent(projectId)}`);
+        const res = await apiFetch(`/api/worklogs/last?project=${encodeURIComponent(projectId)}`);
         if (!res.ok) return;
         const last = await res.json();
         if (cancelled || !last) return;
@@ -240,7 +241,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       date: formData.date,
     });
 
-    const response = await fetch(`/api/worklogs?${params.toString()}`, {
+    const response = await apiFetch(`/api/worklogs?${params.toString()}`, {
       cache: 'no-store',
     });
 

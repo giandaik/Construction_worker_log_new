@@ -51,6 +51,9 @@ export async function POST(request: Request) {
             email: user.email,
             role: user.role,
           },
+          // Signup logs the user straight in. Mobile stores this token because
+          // the cookie below never reaches the WebView origin.
+          token,
         },
         { status: 201 }
       );

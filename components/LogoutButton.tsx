@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
+import { clearMobileToken } from "@/lib/mobile-auth";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -12,12 +14,16 @@ export function LogoutButton() {
   async function handleLogout() {
     setLoading(true);
     try {
-      await fetch("/api/logout", { method: "POST" });
-      router.push("/login");
+      await apiFetch("/api/logout", { method: "POST" });
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
+      // Always drop the stored token, even if the request failed: the server
+      // clearing the cookie is not what ends a mobile session, the device
+      // forgetting the token is. No-op on web.
+      await clearMobileToken();
       setLoading(false);
+      router.push("/login");
     }
   }
 

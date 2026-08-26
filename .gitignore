@@ -28,8 +28,23 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# mobile build config (per-machine backend URL); .env.mobile.example is tracked
+.env.mobile
+
 # vercel
 .vercel
+
+# capacitor native builds — the ios/ and android/ projects themselves are
+# committed; these are per-machine build output and dependency caches.
+# (Capacitor also writes nested .gitignore files covering the same paths.)
+ios/App/Pods/
+ios/App/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# scratch space used by scripts/build-mobile.mjs; only survives a hard crash
+.mobile-build-backup/
 
 # typescript
 *.tsbuildinfo

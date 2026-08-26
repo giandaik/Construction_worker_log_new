@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation"
 import { Navbar } from "./Navbar"
 import { Breadcrumbs } from "./Breadcrumbs"
 
-const PUBLIC_PATHS = ["/login", "/signup"]
+const PUBLIC_PATHS = ["/login", "/signup", "/"]
 
-/** True for routes that should render with no app chrome (sign-in / sign-up). */
+/** True for routes that should render with no app chrome (landing, sign-in / sign-up). */
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
 }

@@ -24,6 +24,7 @@ import type { Signature } from '@/types/shared'
 import { Skeleton } from "@/components/ui/skeleton"
 import { workLogSchema, WorkLogFormData, DEFAULT_PERSONNEL, DEFAULT_EQUIPMENT, DEFAULT_MATERIAL } from '@/lib/schemas/workLogSchema'
 import { dataUrlToBlob, isDataUrl, uploadImageBlob } from '@/lib/imageResize'
+import { apiFetch } from '@/lib/apiClient'
 
 export default function EditWorkLogForm() {
   const params = useParams()
@@ -71,7 +72,7 @@ export default function EditWorkLogForm() {
         const [projectsData, usersData, workLogResponse] = await Promise.all([
           fetchProjects(),
           fetchUsers(),
-          fetch(`/api/worklogs/${id}`)
+          apiFetch(`/api/worklogs/${id}`)
         ])
 
         if (!workLogResponse.ok) {
@@ -157,7 +158,7 @@ export default function EditWorkLogForm() {
         }
       }
 
-      const response = await fetch(`/api/worklogs/${id}`, {
+      const response = await apiFetch(`/api/worklogs/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

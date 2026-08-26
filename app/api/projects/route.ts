@@ -34,7 +34,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
 
     // Only admins/managers can create projects
     if (!user || !isAdmin(user)) {

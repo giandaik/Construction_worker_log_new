@@ -14,7 +14,7 @@ type FieldKey = keyof typeof ALLOWED_FIELDS;
 
 export async function GET(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) {
       return ApiError.unauthorized();
     }

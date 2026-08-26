@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
 import { toGreekUpperCase } from "@/lib/utils";
+import { apiFetch } from "@/lib/apiClient";
 
 interface Project {
   _id: string;
@@ -68,7 +69,7 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/projects');
+        const response = await apiFetch('/api/projects');
 
         if (!response.ok) {
           throw new Error('Failed to fetch projects');

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { isMobileApp } from '@/lib/mobile-auth';
 import {
   resizeImage,
   uploadImageBlob,
@@ -10,10 +11,83 @@ import {
   isDataUrl,
 } from '@/lib/imageResize';
 
+/**
+ * Camera JPEG quality. `resizeImage` re-encodes afterwards anyway, so this only
+ * needs to be high enough not to lose detail before that second pass.
+ */
+const CAPTURE_QUALITY = 80;
+
 interface PhotoUploadProps {
   value: string[];
   onChange: (urls: string[]) => void;
   maxPhotos?: number;
+}
+
+/**
+ * Turns a native capture result into a `File` so it can go through the same
+ * resize/upload pipeline as a web file input. `webPath` is a WebView-readable
+ * URL for the on-device file, so `fetch` is the supported way to get its bytes.
+ */
+async function fileFromWebPath(webPath: string | undefined, index: number): Promise<File> {
+  if (!webPath) throw new Error('The camera returned a photo with no readable path');
+
+  const response = await fetch(webPath);
+  if (!response.ok) throw new Error(`Could not read the captured photo (${response.status})`);
+
+  const blob = await response.blob();
+  return new File([blob], `capture-${Date.now()}-${index}.jpg`, {
+    type: blob.type || 'image/jpeg',
+  });
+}
+
+/**
+ * Runs a native picker and returns the captured photos as `File`s, or null if
+ * the user backed out.
+ *
+ * `source: 'camera'` opens the device camera for a single shot; `'gallery'`
+ * opens the multi-select picker, capped at `limit`. Capacitor 8.2 replaced the
+ * old single `getPhoto` + `CameraSource.Prompt` with these two calls and expects
+ * the app to supply the source UI — hence two buttons rather than a native
+ * prompt.
+ *
+ * The plugin is behind a dynamic import so the web bundle never loads it.
+ */
+async function captureNativePhotos(
+  source: 'camera' | 'gallery',
+  limit: number,
+): Promise<File[] | null> {
+  const { Camera, CameraErrorCode } = await import('@capacitor/camera');
+
+  let captured;
+  try {
+    captured =
+      source === 'camera'
+        ? [await Camera.takePhoto({ quality: CAPTURE_QUALITY, saveToGallery: false })]
+        : (
+            await Camera.chooseFromGallery({
+              allowMultipleSelection: true,
+              limit,
+              quality: CAPTURE_QUALITY,
+            })
+          ).results;
+  } catch (caught) {
+    const { code } = caught as { code?: string };
+
+    // Backing out of the camera or the picker is a normal outcome, not a failure
+    // worth putting on screen. Permission denials carry their own codes and are
+    // deliberately not swallowed here.
+    if (
+      code === CameraErrorCode.TakePhotoCancelled ||
+      code === CameraErrorCode.ChooseMediaCancelled
+    ) {
+      return null;
+    }
+    throw caught;
+  }
+
+  return Promise.all(
+    captured.slice(0, limit).map((result, index) => fileFromWebPath(result.webPath, index)),
+  );
 }
 
 export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProps) {
@@ -21,20 +95,33 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
   const isOnline = useOnlineStatus();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Picks the camera UI. Starts false so the server render and the first client
+  // render agree; only the native shell flips it, after mount.
+  const [isNative, setIsNative] = useState(false);
 
-  const handleFiles = useCallback(
-    async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
-      setError(null);
+  useEffect(() => {
+    let cancelled = false;
+    isMobileApp().then((native) => {
+      if (!cancelled) setIsNative(native);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-      const remaining = maxPhotos - value.length;
-      const toProcess = Array.from(files).slice(0, remaining);
+  const remaining = maxPhotos - value.length;
+
+  /**
+   * Shared resize → upload-or-stash pipeline. Callers own `busy` and clearing
+   * `error`, since on native the picker runs before any file exists.
+   */
+  const processFiles = useCallback(
+    async (files: File[]) => {
+      const toProcess = files.slice(0, maxPhotos - value.length);
       if (toProcess.length === 0) {
         setError(`Maximum ${maxPhotos} photos`);
         return;
       }
-
-      setBusy(true);
 
       const results = await Promise.allSettled(
         toProcess.map(async (file) => {
@@ -54,11 +141,47 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
       }
 
       if (added.length > 0) onChange([...value, ...added]);
-      setBusy(false);
-
-      if (inputRef.current) inputRef.current.value = '';
     },
     [value, onChange, isOnline, maxPhotos],
+  );
+
+  const handleFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+
+      setError(null);
+      setBusy(true);
+      try {
+        await processFiles(Array.from(files));
+      } finally {
+        setBusy(false);
+        if (inputRef.current) inputRef.current.value = '';
+      }
+    },
+    [processFiles],
+  );
+
+  const addFromNative = useCallback(
+    async (source: 'camera' | 'gallery') => {
+      setError(null);
+
+      if (remaining <= 0) {
+        setError(`Maximum ${maxPhotos} photos`);
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const files = await captureNativePhotos(source, remaining);
+        if (files) await processFiles(files);
+      } catch (caught) {
+        console.error('Native photo capture failed:', caught);
+        setError(caught instanceof Error ? caught.message : 'Could not add the photo');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [processFiles, remaining, maxPhotos],
   );
 
   const removeAt = useCallback(
@@ -68,6 +191,8 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
     [value, onChange],
   );
 
+  const addDisabled = busy || remaining <= 0;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -76,16 +201,43 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
           <span className="ml-2 text-xs text-muted-foreground">
             {value.length}/{maxPhotos}
           </span>
+          {isNative && busy && (
+            <span className="ml-2 text-xs text-muted-foreground">Processing…</span>
+          )}
         </label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy || value.length >= maxPhotos}
-        >
-          {busy ? 'Processing…' : 'Add Photos'}
-        </Button>
+
+        {isNative ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addFromNative('camera')}
+              disabled={addDisabled}
+            >
+              Take Photo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addFromNative('gallery')}
+              disabled={addDisabled}
+            >
+              Gallery
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={addDisabled}
+          >
+            {busy ? 'Processing…' : 'Add Photos'}
+          </Button>
+        )}
       </div>
 
       <input
