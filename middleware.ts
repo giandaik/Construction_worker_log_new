@@ -6,10 +6,14 @@ import { stampFlagOverrides } from "./middleware-helpers";
 import { applyCorsHeaders, preflightResponse } from "./lib/cors";
 
 
-// Paths that don't require authentication
+// Paths that don't require authentication. "/" is the public marketing
+// landing page — handled by exact match below, NOT listed here, because a
+// "/" prefix entry would make every route public under startsWith semantics.
 const PUBLIC_PATHS = ["/login", "/signup", "/api/login", "/api/signup", "/api/logout", "/_next", "/favicon.ico"];
 
 function isPublicPath(pathname: string) {
+  // "/" is the marketing landing page — exact match only.
+  if (pathname === "/") return true;
   return PUBLIC_PATHS.some((publicPath) => pathname.startsWith(publicPath));
 }
 

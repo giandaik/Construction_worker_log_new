@@ -24,7 +24,8 @@ for the duration of the build.
 
 | Override | Replaces | Why |
 |---|---|---|
-| `page.tsx` | `app/page.tsx` | Web dashboard queries MongoDB directly and reads the session cookie; the mobile one fetches `/api/projects` + `/api/worklogs`. |
+| `page.tsx` | `app/page.tsx` | Web landing is a marketing page; mobile bounces straight to `/app` (no server-side redirects in a static export). |
+| `app/page.tsx` | `app/app/page.tsx` | Web dashboard queries MongoDB directly and reads the session cookie; the mobile one fetches `/api/projects` + `/api/worklogs`. |
 | `admin/users/page.tsx` | same path in `app/` | Server `getAuthUser()` + `isAdmin()` gate → `<MobileAdminGate>`. |
 | `admin/projects/new/page.tsx` | same path in `app/` | Same gate swap. |
 | `projects/[id]/edit/page.tsx` | same path in `app/` | Same gate swap, plus `useParams()` instead of the server `params` promise. |

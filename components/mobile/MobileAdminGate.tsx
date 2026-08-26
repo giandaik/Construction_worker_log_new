@@ -30,7 +30,7 @@ export function MobileAdminGate({ children }: { children: React.ReactNode }) {
     }
 
     if (!isAuthorised) {
-      router.replace("/");
+      router.replace("/app");
     }
   }, [isLoading, user, isAuthorised, router]);
 

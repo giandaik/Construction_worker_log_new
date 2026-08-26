@@ -50,7 +50,7 @@ export default function SignupPage() {
         if (data.token) {
           await setMobileToken(data.token);
         }
-        router.push("/");
+        router.push("/app");
       }
     } catch (err) {
       console.error(err);

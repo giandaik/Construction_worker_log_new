@@ -15,7 +15,7 @@ export interface NavLink {
 }
 
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/app", label: "Home", icon: LayoutDashboard },
   { href: "/worklogs", label: "Work Logs", icon: FileText },
   { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/admin/users", label: "Admin", icon: ShieldCheck, adminOnly: true },

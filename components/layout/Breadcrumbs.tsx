@@ -17,6 +17,7 @@ export interface Crumb {
 
 const STATIC_LABELS: Record<string, string> = {
   "": "Home",
+  app: "Home",
   projects: "Projects",
   worklogs: "Work Logs",
   admin: "Admin",
@@ -48,8 +49,8 @@ const DYNAMIC_PARENTS: Record<string, DynamicKind> = {
  * by the component via fetch). Exported for unit testing.
  */
 export function buildBreadcrumbTrail(pathname: string): Crumb[] {
-  if (!pathname || pathname === "/") {
-    return [{ href: "/", label: STATIC_LABELS[""] }]
+  if (!pathname || pathname === "/" || pathname === "/app") {
+    return [{ href: pathname === "/app" ? "/app" : "/", label: STATIC_LABELS[""] }]
   }
 
   const segments = pathname.split("/").filter(Boolean)

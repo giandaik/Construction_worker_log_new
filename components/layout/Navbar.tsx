@@ -11,9 +11,9 @@ import { LogoutButton } from "@/components/LogoutButton"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { NAV_LINKS, isNavLinkVisible } from "./navConfig"
 
-/** Home is active only on exact "/"; section links are prefix-active. */
+/** Home is active only on exact "/app"; section links are prefix-active. */
 export function isPathActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/"
+  if (href === "/app") return pathname === "/app"
   return pathname === href || pathname.startsWith(href + "/")
 }
 
@@ -28,7 +28,7 @@ export function Navbar() {
       <div className="container flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link
-            href="/"
+            href="/app"
             className="flex items-center gap-2"
             aria-label="Construction Worker Log home"
           >
