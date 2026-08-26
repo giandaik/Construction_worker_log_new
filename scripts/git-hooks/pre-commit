@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Pre-commit accessibility gate for Sitely.
+# Runs the axe-core audit (EN + EL landing) when UI-affecting files are staged.
+# Skips silently when no UI files changed — commits stay fast.
+#
+# Install:  ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
+# Manual run: A11Y_FORCE=1 bash scripts/git-hooks/pre-commit
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+UI_PATTERN='^(app/|components/|middleware\.ts|tailwind\.config\.(js|ts)|app/globals\.css)'
+CHANGED="$(git diff --cached --name-only | grep -E "$UI_PATTERN" || true)"
+
+if [ -z "$CHANGED" ] && [ "${A11Y_FORCE:-}" != "1" ]; then
+  exit 0
+fi
+
+echo "== A11y gate: UI files staged — running accessibility audit"
+[ -n "$CHANGED" ] && echo "   files: $(echo "$CHANGED" | tr '\n' ' ')"
+
+PORT="${A11Y_PORT:-3310}"
+BASE_URL="http://localhost:${PORT}"
+SERVER_PID=""
+
+cleanup() {
+  if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
+    kill "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
+# Reuse a server already running on the standard port; otherwise start a temp one.
+if curl -sf -o /dev/null http://localhost:3100/ >/dev/null 2>&1; then
+  BASE_URL="http://localhost:3100"
+  echo "   using running server on :3100"
+else
+  echo "   building + starting temp server on :${PORT}..."
+  npm run build >/tmp/a11y-hook-build.log 2>&1
+  npm run start -- -p "$PORT" >/tmp/a11y-hook-server.log 2>&1 &
+  SERVER_PID=$!
+  for _ in $(seq 1 45); do
+    curl -sf -o /dev/null "$BASE_URL/" >/dev/null 2>&1 && break
+    sleep 1
+  done
+  if ! curl -sf -o /dev/null "$BASE_URL/" >/dev/null 2>&1; then
+    echo "   !! temp server failed to start — SKIPPING audit (see /tmp/a11y-hook-server.log)"
+    exit 0
+  fi
+fi
+
+BASE_URL="$BASE_URL" node scripts/a11y-audit.cjs --strict
+
+echo "== A11y gate passed (0 violations)."

@@ -12,7 +12,9 @@
     "test:perf:watch": "vitest __tests__/performance",
     "test:perf:ui": "vitest --ui __tests__/performance",
     "test:all": "vitest run && npm run build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "a11y": "node scripts/a11y-audit.cjs --strict",
+    "a11y:install-hook": "ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit && echo 'pre-commit hook installed'"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
