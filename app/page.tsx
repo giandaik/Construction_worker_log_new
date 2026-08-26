@@ -321,7 +321,7 @@ export default function LandingPage() {
             <h1 className="mt-5 font-display text-4xl font-bold uppercase leading-tight tracking-wide sm:text-5xl">
               {t.heroTitle}
             </h1>
-            <p className="mt-5 max-w-lg text-lg text-muted-foreground">{t.heroSub}</p>
+            <p className="mt-5 max-w-lg text-lg font-medium text-foreground">{t.heroSub}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button size="lg" asChild>
                 <Link href={authed ? "/app" : "/signup"}>
