@@ -8,12 +8,17 @@ import {
   Camera,
   ClipboardCheck,
   CloudSun,
+  Database,
   FileDown,
   HardHat,
   Languages,
+  Lock,
   Mail,
   MapPin,
   ShieldCheck,
+  Signature,
+  Smartphone,
+  Timer,
   Users,
   WifiOff,
 } from "lucide-react"
@@ -25,7 +30,7 @@ type Lang = "en" | "el"
 const copy = {
   en: {
     brand: "Sitely — Construction Log",
-    nav: { features: "Features", how: "How it works", roles: "Roles" },
+    nav: { features: "Features", how: "How it works", roles: "Roles", trust: "Trust" },
     signIn: "Sign in",
     getStarted: "Get started",
     openDashboard: "Open dashboard",
@@ -35,6 +40,7 @@ const copy = {
       "Sitely turns end-of-shift reporting into a two-minute job. Photos, weather, crews and materials — captured at the site, synced to the office, even without signal.",
     heroCta: "Start free",
     heroSecondary: "See how it works",
+    sampleLog: "View a sample log",
     trust: ["Works offline", "Signed approvals", "PDF reports"],
     productBadge: "The two-minute end-of-shift log",
     productTitle: "One screen. The whole shift.",
@@ -94,6 +100,29 @@ const copy = {
       "Photos queue with the log",
       "Auto-sync on reconnect",
     ],
+    trustBadge: "Records you can stand behind",
+    trustTitle: "Built for the record, not just the shift",
+    trustSub:
+      "A signed site log is a legal record. Here is what we do to keep yours trustworthy.",
+    trust1t: "Signed, then locked",
+    trust1d:
+      "A completed log with both signatures is locked — nothing can be edited or removed after the fact. The signature trail stays attached to the record.",
+    trust2t: "Your data stays yours",
+    trust2d:
+      "Every record can be exported or deleted on request. Your site data is never sold and never shared with third parties.",
+    trust3t: "Protected in transit and at rest",
+    trust3d:
+      "Passwords are hashed with bcrypt and access is role-based — workers, supervisors and the office each see only what their role allows.",
+    trust4t: "Built to survive dead zones",
+    trust4d:
+      "Logs and photos queue on the device and sync when signal returns — records survive even where the network does not.",
+    statsTitle: "Built to be used on site",
+    stats1v: "~2 min",
+    stats1l: "per end-of-shift log",
+    stats2v: "3",
+    stats2l: "platforms — iOS, Android, web",
+    stats3v: "24/7",
+    stats3l: "offline capture, auto-sync",
     ctaTitle: "Give your end-of-shift back.",
     ctaSub: "Start free in two minutes. No credit card. Works on any phone.",
     footerTagline: "Daily site records — signed, synced, on file.",
@@ -101,7 +130,7 @@ const copy = {
   },
   el: {
     brand: "Sitely — Ημερολόγιο Εργοταξίου",
-    nav: { features: "Δυνατότητες", how: "Πώς λειτουργεί", roles: "Ρόλοι" },
+    nav: { features: "Δυνατότητες", how: "Πώς λειτουργεί", roles: "Ρόλοι", trust: "Αξιοπιστία" },
     signIn: "Είσοδος",
     getStarted: "Ξεκινήστε",
     openDashboard: "Άνοιγμα πίνακα",
@@ -111,6 +140,7 @@ const copy = {
       "Το Sitely κάνει την αναφορά τέλους βάρδιας δουλειά δύο λεπτών. Φωτογραφίες, καιρός, συνεργεία και υλικά — καταγράφονται στο εργοτάξιο, συγχρονίζονται στο γραφείο, ακόμα και χωρίς σήμα.",
     heroCta: "Δωρεάν εκκίνηση",
     heroSecondary: "Πώς λειτουργεί",
+    sampleLog: "Δείτε ένα δείγμα δελτίου",
     trust: ["Χωρίς σύνδεση", "Υπογεγραμμένες εγκρίσεις", "Αναφορές PDF"],
     productBadge: "Το δελτίο τέλους βάρδιας σε δύο λεπτά",
     productTitle: "Μία οθόνη. Όλη η βάρδια.",
@@ -170,6 +200,29 @@ const copy = {
       "Οι φωτογραφίες συνοδεύουν το δελτίο στην ουρά",
       "Αυτόματος συγχρονισμός μόλις επανέλθει το δίκτυο",
     ],
+    trustBadge: "Αρχείο στο οποίο μπορείς να στηριχθείς",
+    trustTitle: "Φτιαγμένο για το αρχείο, όχι μόνο για τη βάρδια",
+    trustSub:
+      "Ένα υπογεγραμμένο δελτίο εργασίας είναι νομικό αρχείο. Να τι κάνουμε για να παραμένει αξιόπιστο.",
+    trust1t: "Υπογραφή, μετά κλείδωμα",
+    trust1d:
+      "Ένα ολοκληρωμένο δελτίο με δύο υπογραφές κλειδώνει — τίποτα δεν μπορεί να αλλάξει ή να διαγραφεί εκ των υστέρων. Η αλυσίδα υπογραφών παραμένει προσαρτημένη στο αρχείο.",
+    trust2t: "Τα δεδομένα σου ανήκουν",
+    trust2d:
+      "Κάθε αρχείο μπορεί να εξαχθεί ή να διαγραφεί κατόπιν αιτήματος. Τα δεδομένα του έργου σου δεν πωλούνται και δεν κοινοποιούνται σε τρίτους.",
+    trust3t: "Προστασία σε μεταφορά και αποθήκευση",
+    trust3d:
+      "Οι κωδικοί κρυπτογραφούνται με bcrypt και η πρόσβαση βασίζεται σε ρόλους — εργαζόμενοι, επιβλέποντες και γραφείο βλέπουν μόνο ό,τι επιτρέπει ο ρόλος τους.",
+    trust4t: "Φτιαγμένο για νεκρές ζώνες",
+    trust4d:
+      "Τα δελτία και οι φωτογραφίες μένουν σε ουρά στη συσκευή και συγχρονίζονται μόλις επιστρέψει το σήμα — τα αρχεία επιβιώνουν ακόμα κι όπου το δίκτυο δεν φτάνει.",
+    statsTitle: "Φτιαγμένο για χρήση στο εργοτάξιο",
+    stats1v: "~2 λεπτά",
+    stats1l: "ανά δελτίο τέλους βάρδιας",
+    stats2v: "3",
+    stats2l: "πλατφόρμες — iOS, Android, web",
+    stats3v: "24/7",
+    stats3l: "καταγραφή χωρίς σύνδεση, αυτόματος συγχρονισμός",
     ctaTitle: "Πάρε πίσω το τέλος της βάρδιας σου.",
     ctaSub: "Ξεκινήστε δωρεάν σε δύο λεπτά. Χωρίς πιστωτική κάρτα. Δουλεύει σε κάθε κινητό.",
     footerTagline: "Ημερήσια αρχεία έργου — υπογεγραμμένα, συγχρονισμένα, καταχωρημένα.",
@@ -212,7 +265,7 @@ export default function LandingPage() {
     { icon: CloudSun, title: t.f4t, desc: t.f4d },
     { icon: Users, title: t.f5t, desc: t.f5d },
     { icon: FileDown, title: t.f6t, desc: t.f6d },
-    { icon: Mail, title: t.f7t, desc: t.f7d },
+    { icon: Mail, title: t.f7t, desc: t.f7d, isNew: true },
   ]
 
   const steps = [
@@ -222,9 +275,27 @@ export default function LandingPage() {
   ]
 
   const roles = [
-    { icon: HardHat, title: t.r1t, desc: t.r1d },
-    { icon: ShieldCheck, title: t.r2t, desc: t.r2d },
-    { icon: MapPin, title: t.r3t, desc: t.r3d },
+    {
+      icon: HardHat,
+      title: t.r1t,
+      desc: t.r1d,
+      img: "/screenshots/13-new-log.png",
+      imgAlt: "Worker view: the two-minute end-of-shift log",
+    },
+    {
+      icon: ShieldCheck,
+      title: t.r2t,
+      desc: t.r2d,
+      img: "/screenshots/10-dashboard.png",
+      imgAlt: "Supervisor view: what needs action, who has signed",
+    },
+    {
+      icon: MapPin,
+      title: t.r3t,
+      desc: t.r3d,
+      img: "/screenshots/11-worklogs.png",
+      imgAlt: "Office view: the full worklog history with filters",
+    },
   ]
 
   return (
@@ -253,6 +324,7 @@ export default function LandingPage() {
                 ["#features", t.nav.features],
                 ["#how", t.nav.how],
                 ["#roles", t.nav.roles],
+                ["#trust", t.nav.trust],
               ] as const
             ).map(([href, label]) => (
               <Button key={href} variant="ghost" size="sm" asChild>
@@ -341,6 +413,13 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
+            <Link
+              href="/sample-log"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              <FileDown className="h-4 w-4" aria-hidden />
+              {t.sampleLog}
+            </Link>
           </div>
         </div>
         <div className="hazard-stripe absolute inset-x-0 bottom-0 h-1.5" />
@@ -448,13 +527,20 @@ export default function LandingPage() {
           <p className="mt-3 text-muted-foreground">{t.featuresSub}</p>
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, desc }) => (
+          {features.map(({ icon: Icon, title, desc, isNew }) => (
             <div
               key={title}
               className="group rounded-md border bg-card p-6 transition-shadow hover:shadow-md"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/15 text-primary ring-1 ring-primary/30">
-                <Icon className="h-5 w-5" aria-hidden />
+              <div className="flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/15 text-primary ring-1 ring-primary/30">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </div>
+                {isNew && (
+                  <span className="rounded-sm bg-primary px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
+                    New
+                  </span>
+                )}
               </div>
               <h3 className="mt-4 font-display text-lg font-semibold uppercase tracking-wide">
                 {title}
@@ -510,7 +596,7 @@ export default function LandingPage() {
           {t.rolesTitle}
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {roles.map(({ icon: Icon, title, desc }) => (
+          {roles.map(({ icon: Icon, title, desc, img, imgAlt }) => (
             <div
               key={title}
               className="rounded-md border-t-4 border-t-primary bg-card p-6 shadow-sm"
@@ -520,6 +606,52 @@ export default function LandingPage() {
                 {title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc}</p>
+              <div className="mt-4 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img}
+                  alt={imgAlt}
+                  loading="lazy"
+                  className="h-auto w-full object-cover"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Trust — the record is the product */}
+      <section id="trust" className="container scroll-mt-24 px-4 py-16 md:py-24">
+        <div className="max-w-2xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            {t.trustBadge}
+          </p>
+          <h2 className="mt-5 font-display text-3xl font-bold uppercase leading-tight tracking-wide sm:text-4xl">
+            {t.trustTitle}
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">{t.trustSub}</p>
+        </div>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Lock, title: t.trust1t, desc: t.trust1d },
+            { icon: Database, title: t.trust2t, desc: t.trust2d },
+            { icon: ShieldCheck, title: t.trust3t, desc: t.trust3d },
+            { icon: WifiOff, title: t.trust4t, desc: t.trust4d },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="rounded-md border bg-card p-6 shadow-sm"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/15 text-primary ring-1 ring-primary/30">
+                <Icon className="h-5 w-5" aria-hidden />
+              </div>
+              <h3 className="mt-4 font-display text-base font-semibold uppercase tracking-wide">
+                {title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {desc}
+              </p>
             </div>
           ))}
         </div>
@@ -553,6 +685,36 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* Stats band — honest numbers */}
+      <section
+        aria-label={t.statsTitle}
+        className="border-b border-border bg-muted/40"
+      >
+        <div className="container px-4 py-12 md:py-16">
+          <h2 className="sr-only">{t.statsTitle}</h2>
+          <dl className="grid gap-8 text-center sm:grid-cols-3">
+            {[
+              { v: t.stats1v, l: t.stats1l, icon: Timer },
+              { v: t.stats2v, l: t.stats2l, icon: Smartphone },
+              { v: t.stats3v, l: t.stats3l, icon: WifiOff },
+            ].map(({ v, l, icon: Icon }) => (
+              <div key={l}>
+                <Icon
+                  className="mx-auto h-5 w-5 text-primary"
+                  aria-hidden
+                />
+                <dd className="mt-3 font-display text-4xl font-bold uppercase tracking-wide">
+                  {v}
+                </dd>
+                <dt className="mt-1 text-sm font-medium text-muted-foreground">
+                  {l}
+                </dt>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
