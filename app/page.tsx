@@ -526,7 +526,7 @@ export default function LandingPage() {
       </section>
 
       {/* Offline highlight */}
-      <section className="border-y border-border bg-foreground text-background dark:bg-card dark:border-border">
+      <section className="border-y border-border bg-foreground text-background">
         <div className="blueprint-grid container px-4 py-16 md:py-24">
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
