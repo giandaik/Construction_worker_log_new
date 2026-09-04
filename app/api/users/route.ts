@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api/errorHandling";
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
-import { getAuthUser, isAdmin } from "@/utils/auth";
+import { getAuthUser, isAdmin, requireTenantId } from "@/utils/auth";
 import { hash } from "bcryptjs";
 
 export async function GET(request: Request) {
@@ -11,14 +11,20 @@ export async function GET(request: Request) {
       return ApiError.unauthorized();
     }
 
-    return await RepositoryFactory.withUserRepository(async (userRepo) => {
-      await userRepo.ensureDefaultUser();
+    const tenantId = requireTenantId(authUser);
+    const memberships = await RepositoryFactory.getMembershipRepository().findByTenant(tenantId);
+    const userRepo = RepositoryFactory.getUserRepository();
+    const users = await Promise.all(
+      memberships
+        .filter((membership) => membership.isActive)
+        .map((membership) => userRepo.findById(membership.userId.toString())),
+    );
 
-      // Return user summary (lightweight for dropdowns)
-      const users = await userRepo.findSummary();
-
-      return ApiError.success(users);
-    });
+    return ApiError.success(
+      users
+        .filter((user): user is NonNullable<typeof user> => Boolean(user))
+        .map(({ _id, name, email, role }) => ({ _id, name, email, role })),
+    );
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -53,9 +59,23 @@ export async function POST(request: Request) {
 
       const user = await userRepo.create(newUser as any);
 
+      // Automatically add the new user to the creating admin's tenant
+      if (authUser.tenantId) {
+        const roleMap: Record<string, 'admin' | 'manager' | 'worker'> = {
+          admin: 'admin',
+          manager: 'manager',
+          user: 'worker',
+        };
+        await RepositoryFactory.getMembershipRepository().upsertMembership(
+          user._id!.toString(),
+          authUser.tenantId,
+          roleMap[rest.role ?? 'user'] ?? 'worker'
+        );
+      }
+
       return ApiError.success(user, 201);
     });
   } catch (error) {
     return ApiError.handle(error);
   }
-} 
+}

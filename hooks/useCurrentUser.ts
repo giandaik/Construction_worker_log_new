@@ -8,6 +8,9 @@ export interface CurrentUser {
   name: string;
   email: string;
   role: string;
+  tenantId?: string;
+  platformRole?: string;
+  impersonatedBy?: string;
 }
 
 export const useCurrentUser = () => {

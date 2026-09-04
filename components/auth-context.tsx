@@ -9,6 +9,9 @@ import { clearMobileToken } from '@/lib/mobile-auth';
 interface AuthUser {
   userId: string;
   role: string;
+  tenantId?: string;
+  platformRole?: string;
+  impersonatedBy?: string;
 }
 
 interface AuthContextValue {

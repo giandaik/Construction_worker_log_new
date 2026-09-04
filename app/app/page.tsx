@@ -2,11 +2,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FileText, Plus, FolderOpen, ArrowRight } from "lucide-react"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
-import { dbConnect } from "@/lib/dbConnect"
-import mongoose from "mongoose"
+import { RepositoryFactory } from "@/lib/repositories"
 import type { Project, WorkLog } from "@/types/shared"
 import { WorkerActionRow } from "@/components/WorkerActionRow"
-import { getAuthUser } from "@/utils/auth"
+import { getAuthUser, resolveRepositoryContext } from "@/utils/auth"
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
 
 const RECENT_LOGS_SHOWN = 6
@@ -21,42 +20,30 @@ interface DashboardProject extends Omit<Project, '_id'> {
   _id: string
 }
 
-async function getInitialData() {
+async function getInitialData(tenantId: ReturnType<typeof resolveRepositoryContext>) {
   try {
-    await dbConnect();
-    const db = mongoose.connection;
+    const data = await RepositoryFactory.withRepositories(
+      async ({ projects: projectRepo, workLogs: workLogRepo }) => {
+        const [projects, workLogs, totalLogs] = await Promise.all([
+          projectRepo.findSummary(),
+          workLogRepo.findRecent(50),
+          workLogRepo.count(),
+        ]);
 
-    const [projects, workLogs, totalLogs] = await Promise.all([
-      db.collection('projects').find({}, {
-        projection: { _id: 1, name: 1, description: 1 }
-      }).toArray(),
-      db.collection('worklogs').find({}, {
-        projection: {
-          _id: 1,
-          date: 1,
-          project: 1,
-          author: 1,
-          workDescription: 1,
-          status: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      })
-        .sort({ date: -1 })
-        .limit(50)
-        .toArray(),
-      db.collection('worklogs').countDocuments(),
-    ]);
+        return { projects, workLogs, totalLogs };
+      },
+      tenantId,
+    );
 
-    const typedProjects: DashboardProject[] = projects.map(project => ({
-      _id: project._id.toString(),
+    const typedProjects: DashboardProject[] = data.projects.map(project => ({
+      _id: String(project._id),
       name: project.name,
       description: project.description
     }));
 
-    const typedWorkLogs: DashboardWorkLog[] = workLogs.map(log => ({
-      _id: log._id.toString(),
-      date: log.date,
+    const typedWorkLogs: DashboardWorkLog[] = data.workLogs.map(log => ({
+      _id: String(log._id),
+      date: new Date(log.date),
       project: log.project?.toString() || '',
       author: log.author?.toString() || '',
       workDescription: log.workDescription || '',
@@ -74,7 +61,7 @@ async function getInitialData() {
     return {
       projects: typedProjects,
       workLogs: typedWorkLogs,
-      totalLogs,
+      totalLogs: data.totalLogs,
     };
   } catch (error) {
     console.error("Error fetching initial data:", error);
@@ -114,10 +101,8 @@ function StatCard({ label, value, hint, href }: { label: string; value: string; 
 }
 
 export default async function HomePage() {
-  const [initialData, authUser] = await Promise.all([
-    getInitialData(),
-    getAuthUser(),
-  ]);
+  const authUser = await getAuthUser();
+  const initialData = await getInitialData(resolveRepositoryContext(authUser));
   const isWorker = authUser?.role === 'user';
 
   const { projects, workLogs, totalLogs } = initialData;
@@ -131,7 +116,7 @@ export default async function HomePage() {
     <div className="flex flex-col min-h-screen">
       <main className="container flex-1 px-4 py-8 md:px-6">
         {isWorker && authUser ? (
-          <WorkerActionRow userId={authUser.userId} />
+          <WorkerActionRow userId={authUser.userId} tenantId={authUser.tenantId!} />
         ) : (
           <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
             <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} href="/worklogs" />

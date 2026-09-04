@@ -1,6 +1,6 @@
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser, isProjectOwner } from '@/utils/auth';
+import { getAuthUser, isProjectOwner, resolveRepositoryContext } from '@/utils/auth';
 import { validateOwnerRejection } from '@/lib/signatureUtils';
 import { FORM_STATUS } from '@/lib/constants/constantValues';
 import { fetchProjectContext } from '@/lib/api/projectContext';
@@ -18,6 +18,8 @@ export async function POST(
     if (!user) {
       return ApiError.unauthorized();
     }
+
+    const context = resolveRepositoryContext(user);
 
     // A missing or malformed body is a client error, not a 500.
     const body = await request.json().catch(() => ({}));
@@ -47,7 +49,7 @@ export async function POST(
         projectOwnerEmail,
         projectContractorEmail,
         projectOwnerUserId,
-      } = await fetchProjectContext(projectId);
+      } = await fetchProjectContext(projectId, context);
 
       if (!isProjectOwner(user, projectOwnerUserId)) {
         return ApiError.forbidden('Only the project owner can reject this work log.');
@@ -91,7 +93,7 @@ export async function POST(
 
 
       return ApiError.success(workLog);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

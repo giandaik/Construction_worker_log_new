@@ -3,11 +3,14 @@ import { ObjectId } from 'mongodb';
 import { hash } from 'bcryptjs';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
+import { PLATFORM_CONTEXT } from './base/RepositoryContext';
+import { PLATFORM_ROLES, isSuperAdminRole } from '@/lib/constants/roles';
 
 /**
  * User role enum
  */
 export type UserRole = 'admin' | 'user' | 'manager';
+export type PlatformRole = 'SUPER_ADMIN';
 
 /**
  * User entity interface
@@ -18,6 +21,7 @@ export interface User {
   email: string;
   password?: string;
   role?: UserRole;
+  platformRole?: PlatformRole;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -27,8 +31,9 @@ export interface User {
  * Handles all database operations for users
  */
 export class UserRepository extends BaseRepository<User> {
+  // Users are platform-level, not tenant-owned — always constructed in platform scope
   constructor(collection: any) {
-    super(collection);
+    super(collection, PLATFORM_CONTEXT);
   }
 
   /**
@@ -67,13 +72,16 @@ export class UserRepository extends BaseRepository<User> {
     );
   }
 
+  async findPlatformSuperAdmins(): Promise<User[]> {
+    return this.findAll({ platformRole: { $in: [PLATFORM_ROLES.SUPER_ADMIN, 'super_admin'] } } as any, { sort: { name: 1 } });
+  }
+
   /**
    * Get users summary (lightweight for dropdowns)
    */
-  async findSummary(): Promise<Pick<User, '_id' | 'name' | 'email' | 'role'>[]> {
-    const documents = await this.collection
-      .find({})
-      .project({ _id: 1, name: 1, email: 1, role: 1 })
+  async findSummary(): Promise<Pick<User, '_id' | 'name' | 'email' | 'role' | 'platformRole'>[]> {
+    const documents = await this.scopedFindCursor({})
+      .project({ _id: 1, name: 1, email: 1, role: 1, platformRole: 1 })
       .sort({ name: 1 })
       .toArray();
 
@@ -84,8 +92,7 @@ export class UserRepository extends BaseRepository<User> {
    * Search users by name or email
    */
   async search(searchTerm: string, options: FindOptions = {}): Promise<User[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         $or: [
           { name: { $regex: searchTerm, $options: 'i' } },
           { email: { $regex: searchTerm, $options: 'i' } },

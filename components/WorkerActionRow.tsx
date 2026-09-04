@@ -1,8 +1,8 @@
 import Link from "next/link"
 import { ArrowRight, FileText, Pencil, Plus } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import mongoose from "mongoose"
-import { dbConnect } from "@/lib/dbConnect"
+import { RepositoryFactory } from "@/lib/repositories"
+import { tenantContext } from "@/lib/repositories/base/RepositoryContext"
 
 interface DraftSummary {
   _id: string
@@ -16,45 +16,50 @@ interface RecentLogSummary {
   date: Date
 }
 
-async function getWorkerActionData(userId: string): Promise<{
+async function getWorkerActionData(userId: string, tenantId: string): Promise<{
   draft: DraftSummary | null
   recent: RecentLogSummary | null
 }> {
   try {
-    await dbConnect()
-    const db = mongoose.connection
-    const authorId = new mongoose.Types.ObjectId(userId)
+    const context = tenantContext(tenantId)
+    const workLogRepo = RepositoryFactory.getWorkLogRepository(context)
+    const projectRepo = RepositoryFactory.getProjectRepository(context)
+    const author = userId
 
     const [draftDoc, recentDoc] = await Promise.all([
-      db.collection('worklogs').findOne(
-        { author: authorId, status: 'pending' },
-        { sort: { updatedAt: -1 }, projection: { _id: 1, project: 1, updatedAt: 1 } }
-      ),
-      db.collection('worklogs').findOne(
-        { author: authorId, status: { $ne: 'pending' } },
-        { sort: { date: -1 }, projection: { _id: 1, project: 1, date: 1 } }
-      ),
+      workLogRepo.findAll({ author, status: 'pending' } as any, {
+        sort: { updatedAt: -1 },
+        limit: 1,
+        projection: { _id: 1, project: 1, updatedAt: 1 },
+      }),
+      workLogRepo.findAll({ author, status: { $ne: 'pending' } } as any, {
+        sort: { date: -1 },
+        limit: 1,
+        projection: { _id: 1, project: 1, date: 1 },
+      }),
     ])
 
-    const projectIds = [draftDoc?.project, recentDoc?.project].filter(Boolean) as mongoose.Types.ObjectId[]
-    const projects = projectIds.length
-      ? await db.collection('projects').find(
-          { _id: { $in: projectIds } },
-          { projection: { _id: 1, name: 1 } }
-        ).toArray()
-      : []
-    const projectNames = new Map(projects.map(p => [p._id.toString(), p.name as string]))
+    const draft = draftDoc[0]
+    const recent = recentDoc[0]
+    const projects = await Promise.all(
+      [draft?.project, recent?.project]
+        .filter(Boolean)
+        .map((projectId) => projectRepo.findById(projectId!.toString())),
+    )
+    const projectNames = new Map(
+      projects.filter(Boolean).map((project) => [project!._id!.toString(), project!.name]),
+    )
 
     return {
-      draft: draftDoc ? {
-        _id: draftDoc._id.toString(),
-        projectName: projectNames.get(draftDoc.project.toString()) ?? 'Unknown project',
-        updatedAt: draftDoc.updatedAt,
+      draft: draft ? {
+        _id: draft._id!.toString(),
+        projectName: projectNames.get(draft.project.toString()) ?? 'Unknown project',
+        updatedAt: draft.updatedAt!,
       } : null,
-      recent: recentDoc ? {
-        _id: recentDoc._id.toString(),
-        projectName: projectNames.get(recentDoc.project.toString()) ?? 'Unknown project',
-        date: recentDoc.date,
+      recent: recent ? {
+        _id: recent._id!.toString(),
+        projectName: projectNames.get(recent.project.toString()) ?? 'Unknown project',
+        date: recent.date,
       } : null,
     }
   } catch (error) {
@@ -97,8 +102,8 @@ function ActionCard({ href, icon: Icon, label, value, hint }: {
   )
 }
 
-export async function WorkerActionRow({ userId }: { userId: string }) {
-  const { draft, recent } = await getWorkerActionData(userId)
+export async function WorkerActionRow({ userId, tenantId }: { userId: string; tenantId: string }) {
+  const { draft, recent } = await getWorkerActionData(userId, tenantId)
 
   const primary = draft ? (
     <ActionCard

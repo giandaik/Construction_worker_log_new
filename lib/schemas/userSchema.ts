@@ -11,6 +11,16 @@ export const userSchema = z.object({
   role: z.enum(['admin', 'user', 'manager']).optional(),
 })
 
+export const platformSuperAdminSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Valid email is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(1, 'Password confirmation is required'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+})
+
 /**
  * TypeScript type inferred from the schema
  */

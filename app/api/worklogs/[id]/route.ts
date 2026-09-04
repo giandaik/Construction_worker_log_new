@@ -1,7 +1,7 @@
 // GET a single work log by ID
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser, canModify, isProjectOwner } from '@/utils/auth';
+import { getAuthUser, canModify, isProjectOwner, resolveRepositoryContext } from '@/utils/auth';
 import {
   sendSignatureNotificationEmail,
   sendWorkLogCompletedEmail,
@@ -20,6 +20,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request);
+    if (!authUser) return ApiError.unauthorized();
+    const context = resolveRepositoryContext(authUser);
     const { id } = await params;
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
@@ -30,7 +33,7 @@ export async function GET(
       }
 
       return ApiError.success(workLog);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -49,6 +52,7 @@ export async function PUT(
       return ApiError.unauthorized();
     }
 
+    const context = resolveRepositoryContext(user);
     const requestData = await request.json();
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
@@ -59,20 +63,18 @@ export async function PUT(
         return ApiError.notFound('Work log');
       }
 
+      // Re-bind as non-null so TypeScript keeps the narrowing through awaited calls below
+      const log = existingWorkLog;
       let updateData = { ...requestData };
 
-      const isAuthorOrAdmin = canModify(user, existingWorkLog.author?.toString() || '');
+      const isAuthorOrAdmin = canModify(user, log.author?.toString() || '');
 
-      // Owner approval only applies to signed logs, so anyone else editing
-      // a non-signed log can be rejected before the project lookup.
-      if (!isAuthorOrAdmin && existingWorkLog.status !== FORM_STATUS.SIGNED) {
+      if (!isAuthorOrAdmin && log.status !== FORM_STATUS.SIGNED) {
         return ApiError.forbidden('You do not have permission to update this work log');
       }
 
       const projectId =
-        typeof existingWorkLog.project === 'string'
-          ? existingWorkLog.project
-          : existingWorkLog.project?.toString();
+        typeof log.project === 'string' ? log.project : log.project?.toString();
       const {
         projectName,
         projectOwnerName,
@@ -80,24 +82,23 @@ export async function PUT(
         projectOwnerEmail,
         projectContractorEmail,
         projectOwnerUserId,
-      } = await fetchProjectContext(projectId);
+      } = await fetchProjectContext(projectId, context);
 
       const isOwnerApproval =
-        isProjectOwner(user, projectOwnerUserId) &&
-        existingWorkLog.status === FORM_STATUS.SIGNED;
+        isProjectOwner(user, projectOwnerUserId) && log.status === FORM_STATUS.SIGNED;
 
       if (!isAuthorOrAdmin && !isOwnerApproval) {
         return ApiError.forbidden('You do not have permission to update this work log');
       }
 
-      const existingSignatureCount = existingWorkLog.signatures?.length ?? 0;
-      const existingSignatures = existingWorkLog.signatures ?? [];
+      const existingSignatureCount = log.signatures?.length ?? 0;
+      const existingSignatures = log.signatures ?? [];
       const updatedSignatures = Array.isArray(updateData.signatures)
         ? updateData.signatures
         : existingSignatures;
       const hasNewSignature = updatedSignatures.length > existingSignatureCount;
 
-      if (existingWorkLog.status === 'completed') {
+      if (log.status === 'completed') {
         return ApiError.badRequest('This work log is completed and locked.');
       }
 
@@ -188,7 +189,7 @@ export async function PUT(
       }
 
       return ApiError.success(workLog);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -206,6 +207,8 @@ export async function DELETE(
     if (!user) {
       return ApiError.unauthorized();
     }
+
+    const context = resolveRepositoryContext(user);
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       // First, get the existing work log to check ownership
@@ -232,7 +235,7 @@ export async function DELETE(
       }
 
       return ApiError.success({ success: true });
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

@@ -1,6 +1,7 @@
 import type { Collection, ObjectId } from 'mongodb';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
+import type { RepositoryContext } from './base/RepositoryContext';
 import { ValidationUtils } from '@/lib/api/validation';
 import { CATALOG_KINDS, type CatalogKind } from '@/lib/schemas/projectSchema';
 import { mergeCatalogValues } from '@/lib/catalog/mergeCatalog';
@@ -60,8 +61,8 @@ export type { CatalogKind };
  * Handles all database operations for projects
  */
 export class ProjectRepository extends BaseRepository<Project> {
-  constructor(collection: any) {
-    super(collection);
+  constructor(collection: any, context: RepositoryContext) {
+    super(collection, context);
   }
 
   /**
@@ -109,8 +110,7 @@ export class ProjectRepository extends BaseRepository<Project> {
    * Search projects by name
    */
   async searchByName(searchTerm: string, options: FindOptions = {}): Promise<Project[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         name: { $regex: searchTerm, $options: 'i' },
       })
       .sort({ name: 1 })
@@ -125,8 +125,7 @@ export class ProjectRepository extends BaseRepository<Project> {
    * Get projects summary (lightweight for dropdowns)
    */
   async findSummary(): Promise<Pick<Project, '_id' | 'name' | 'description' | 'location' | 'status' | 'manager' | 'startDate' | 'endDate' | 'ownerEmail' | 'contractorEmail' | 'ownerUserId' | 'contractorUserId'>[]> {
-    const documents = await this.collection
-      .find({})
+    const documents = await this.scopedFindCursor({})
       .project({ _id: 1, name: 1, description: 1, location: 1, status: 1, manager: 1, startDate: 1, endDate: 1, ownerEmail: 1, contractorEmail: 1, ownerUserId: 1, contractorUserId: 1 })
       .sort({ name: 1 })
       .toArray();
@@ -178,13 +177,12 @@ export class ProjectRepository extends BaseRepository<Project> {
       uploadedAt: dwg.uploadedAt ?? new Date(),
     };
 
-    const result = await this.collection.findOneAndUpdate(
-      { _id: objectId } as any,
+    const result = await this.scopedFindOneAndUpdate(
+      { _id: objectId },
       {
         $push: { dwgFiles: entry },
         $set: { updatedAt: new Date() },
-      },
-      { returnDocument: 'after' }
+      }
     );
 
     return result ? this.mapToEntity(result) : null;
@@ -200,13 +198,12 @@ export class ProjectRepository extends BaseRepository<Project> {
   ): Promise<Project | null> {
     const objectId = ValidationUtils.normalizeObjectId(projectId);
 
-    const result = await this.collection.findOneAndUpdate(
-      { _id: objectId } as any,
+    const result = await this.scopedFindOneAndUpdate(
+      { _id: objectId },
       {
         $pull: { dwgFiles: { url } },
         $set: { updatedAt: new Date() },
-      },
-      { returnDocument: 'after' }
+      }
     );
 
     return result ? this.mapToEntity(result) : null;
@@ -224,8 +221,8 @@ export class ProjectRepository extends BaseRepository<Project> {
     const objectId = ValidationUtils.normalizeObjectId(projectId);
     const deduped = Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
 
-    const result = await this.collection.findOneAndUpdate(
-      { _id: objectId } as any,
+    const result = await this.scopedFindOneAndUpdate(
+      { _id: objectId },
       {
         $set: { [kind]: deduped, updatedAt: new Date() },
       },
@@ -245,7 +242,7 @@ export class ProjectRepository extends BaseRepository<Project> {
     source: Partial<Record<CatalogKind, string[]>>
   ): Promise<Project | null> {
     const objectId = ValidationUtils.normalizeObjectId(projectId);
-    const existing = await this.collection.findOne({ _id: objectId } as any);
+    const existing = await this.scopedFindOneRaw({ _id: objectId });
     if (!existing) return null;
 
     const merged: Partial<Record<CatalogKind, string[]>> = {};
@@ -254,8 +251,8 @@ export class ProjectRepository extends BaseRepository<Project> {
       merged[kind] = mergeCatalogValues(base, source[kind] ?? []);
     }
 
-    const result = await this.collection.findOneAndUpdate(
-      { _id: objectId } as any,
+    const result = await this.scopedFindOneAndUpdate(
+      { _id: objectId },
       { $set: { ...merged, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -268,8 +265,7 @@ export class ProjectRepository extends BaseRepository<Project> {
    * number of option values across the four catalog arrays.
    */
   async findCatalogSummaries(): Promise<Array<{ _id: string; name: string; total: number }>> {
-    const documents = await this.collection
-      .find({})
+    const documents = await this.scopedFindCursor({})
       .project({
         _id: 1,
         name: 1,
@@ -296,8 +292,7 @@ export class ProjectRepository extends BaseRepository<Project> {
    * Find projects within budget range
    */
   async findByBudgetRange(minBudget: number, maxBudget: number, options: FindOptions = {}): Promise<Project[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         budget: {
           $gte: minBudget,
           $lte: maxBudget,
@@ -315,8 +310,7 @@ export class ProjectRepository extends BaseRepository<Project> {
    * Find projects by date range (start date)
    */
   async findByStartDateRange(startDate: Date, endDate: Date, options: FindOptions = {}): Promise<Project[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         startDate: {
           $gte: startDate,
           $lte: endDate,

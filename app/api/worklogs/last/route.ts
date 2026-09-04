@@ -1,11 +1,12 @@
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser } from '@/utils/auth';
+import { getAuthUser, resolveRepositoryContext } from '@/utils/auth';
 
 export async function GET(request: Request) {
   try {
     const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
+    const context = resolveRepositoryContext(user);
 
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('project');
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
         equipment: last.equipment ?? [],
         materials: last.materials ?? [],
       });
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
