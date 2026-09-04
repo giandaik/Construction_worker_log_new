@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { FileText, Plus, FolderOpen, ArrowRight } from "lucide-react"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
@@ -102,6 +103,10 @@ function StatCard({ label, value, hint, href }: { label: string; value: string; 
 
 export default async function HomePage() {
   const authUser = await getAuthUser();
+  if (!authUser) {
+    redirect("/login");
+  }
+
   const initialData = await getInitialData(resolveRepositoryContext(authUser));
   const isWorker = authUser?.role === 'user';
 

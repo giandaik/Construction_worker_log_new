@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const projectRepo = RepositoryFactory.getProjectRepository(context);
       const selectedDate = new Date(data.date);
       if (Number.isNaN(selectedDate.getTime())) {
         return ApiError.badRequest('Date is required.');
@@ -106,11 +107,11 @@ export async function POST(request: Request) {
       try {
         const projectId = typeof data.project === 'string' ? data.project : data.project?.toString();
         if (projectId) {
-            const project = await projectRepo.findById(projectId);
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
-            projectOwnerEmail = project?.ownerEmail;
-            projectContractorEmail = project?.contractorEmail;
+          const project = await projectRepo.findById(projectId);
+          projectOwnerName = project?.ownerName;
+          projectContractorName = project?.contractorName;
+          projectOwnerEmail = project?.ownerEmail;
+          projectContractorEmail = project?.contractorEmail;
         }
       } catch (error) {
         console.error('Error fetching project details:', error);
@@ -144,17 +145,13 @@ export async function POST(request: Request) {
       if (Array.isArray(data.signatures) && data.signatures.length > 0) {
         const latestSignature = data.signatures[data.signatures.length - 1];
 
-        // Fetch project details from database
+        // Fetch the project name for notification details.
         let projectName: string | undefined;
-        let projectOwnerName: string | undefined;
-        let projectContractorName: string | undefined;
         try {
           const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
           if (projectId) {
             const project = await projectRepo.findById(projectId);
             projectName = project?.name;
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
           }
         } catch (error) {
           console.error('Error fetching project details:', error);

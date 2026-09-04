@@ -45,6 +45,8 @@ export interface Project {
   updatedAt?: Date;
   ownerEmail: string;
   contractorEmail: string;
+  ownerName?: string;
+  contractorName?: string;
   ownerUserId: string | ObjectId;
   contractorUserId: string | ObjectId;
   dwgFiles?: DwgFile[];

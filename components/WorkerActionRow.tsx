@@ -59,7 +59,7 @@ async function getWorkerActionData(userId: string, tenantId: string): Promise<{
       recent: recent ? {
         _id: recent._id!.toString(),
         projectName: projectNames.get(recent.project.toString()) ?? 'Unknown project',
-        date: recent.date,
+        date: new Date(recent.date),
       } : null,
     }
   } catch (error) {
