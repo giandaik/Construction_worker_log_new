@@ -82,4 +82,17 @@ export class ApiError {
       { status: 403 }
     )
   }
+
+  /**
+   * Returns a standardized 409 conflict response.
+   *
+   * For a request that is well-formed and authenticated but contradicts the
+   * current state — a replayed "end impersonation", say.
+   */
+  static conflict(message: string): NextResponse {
+    return NextResponse.json(
+      { error: message },
+      { status: 409 }
+    )
+  }
 }

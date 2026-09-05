@@ -205,6 +205,61 @@ async function verifyAuthToken(
 export async function getAuthUser(
   request?: Request,
 ): Promise<AuthUser | null> {
+  const user = await resolveAuthUser(request);
+
+  if (!user?.impersonationId) {
+    return user;
+  }
+
+  // A token carrying an impersonation claim only authenticates while the
+  // audit-log entry naming it is still open. Without this the token stayed
+  // valid for its full 4h TTL after "End impersonation", so the super-admin
+  // kept a live session inside the tenant they had supposedly left.
+  return (await isImpersonationOpen(user.impersonationId)) ? user : null;
+}
+
+/**
+ * Resolves the auth user without checking whether an impersonation session
+ * is still open.
+ *
+ * Only `DELETE /api/platform/impersonation` may use this: it is the request
+ * that closes the session, so it has to be able to tell "already ended"
+ * (409) apart from "not authenticated" (401). Everything else must use
+ * `getAuthUser()`.
+ */
+export async function getAuthUserIgnoringImpersonationState(
+  request?: Request,
+): Promise<AuthUser | null> {
+  return resolveAuthUser(request);
+}
+
+/**
+ * Checks the impersonation audit log for an open entry.
+ *
+ * Fail-closed: a lookup that throws (database down, for instance) denies the
+ * request rather than letting a possibly-revoked session through.
+ */
+async function isImpersonationOpen(
+  impersonationId: string,
+): Promise<boolean> {
+  try {
+    const { DatabaseUtils } = await import("@/lib/api/database");
+    const { RepositoryFactory } = await import("@/lib/repositories");
+
+    await DatabaseUtils.connect();
+
+    return await RepositoryFactory.getImpersonationLogRepository().isSessionActive(
+      impersonationId,
+    );
+  } catch (error) {
+    console.error("Error checking impersonation session:", error);
+    return false;
+  }
+}
+
+async function resolveAuthUser(
+  request?: Request,
+): Promise<AuthUser | null> {
   const cookieToken = await getSessionCookieToken();
   const bearerToken = request
     ? getTokenFromRequest(request)

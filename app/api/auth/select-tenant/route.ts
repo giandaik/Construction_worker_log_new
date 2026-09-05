@@ -9,6 +9,19 @@ export async function POST(request: Request) {
     const authUser = await getAuthUser(request);
     if (!authUser) return ApiError.unauthorized();
 
+    // Laundering guard. This route mints a fresh 12h tenant token from the
+    // caller's *claims*, and it did not copy the impersonation claims across.
+    // So a super-admin impersonating a tenant user could trade the 4h
+    // impersonation token for a clean 12h token in the same tenant — one that
+    // no longer says it came from impersonation, survives "End impersonation",
+    // and leaves nothing in the audit log. Impersonation has to be ended
+    // first, which puts the switch back through the audited path.
+    if (authUser.impersonatedBy || authUser.impersonationId) {
+      return ApiError.badRequest(
+        "End impersonation before selecting a tenant"
+      );
+    }
+
     const { tenantId } = await request.json();
     if (!tenantId || typeof tenantId !== "string") {
       return ApiError.badRequest("tenantId is required");
