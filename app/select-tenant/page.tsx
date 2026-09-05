@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiFetch } from '@/lib/apiClient';
+import { setMobileToken } from '@/lib/mobile-auth';
 
 interface TenantOption {
   tenantId: string;
@@ -35,7 +37,7 @@ export default function SelectTenantPage() {
     setSelecting(tenantId);
     setError(null);
     try {
-      const res = await fetch('/api/auth/select-tenant', {
+      const res = await apiFetch('/api/auth/select-tenant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId }),
@@ -47,6 +49,11 @@ export default function SelectTenantPage() {
         return;
       }
       sessionStorage.removeItem('pending_tenants');
+      // Mobile carries the pending_selection token itself and must swap it for
+      // the tenant-scoped one. No-op on web, where the cookie already did it.
+      if (data.token) {
+        await setMobileToken(data.token);
+      }
       router.push('/');
     } catch {
       setError('Network error. Please try again.');

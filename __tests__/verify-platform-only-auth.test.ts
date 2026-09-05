@@ -9,6 +9,7 @@ import { POST as login } from '@/app/api/login/route';
 import { GET as listTenants } from '@/app/api/platform/tenants/route';
 import { DELETE as endImpersonation } from '@/app/api/platform/impersonation/route';
 import { POST as startImpersonation } from '@/app/api/platform/tenants/[id]/impersonate/route';
+import { POST as selectTenant } from '@/app/api/auth/select-tenant/route';
 import { GET as listMembers } from '@/app/api/tenant/members/route';
 import { middleware } from '@/middleware';
 import { SESSION_COOKIE_NAME } from '@/lib/constants/constants';
@@ -308,6 +309,60 @@ describe('mobile bearer credentials', () => {
     });
     return userId;
   }
+
+  function selectTenantRequest(token: string, tenantId: string) {
+    return new Request('http://localhost/api/auth/select-tenant', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ tenantId }),
+    });
+  }
+
+  it('completes tenant selection with a bearer-only pending_selection token', async () => {
+    const tenantId = await seedTenant('Alpha');
+    const userId = await seedMember(tenantId, 'MANAGER');
+    const pending = await signToken({
+      userId: userId.toString(),
+      name: 'Member',
+      role: 'pending_selection',
+    });
+
+    const response = await selectTenant(
+      selectTenantRequest(pending, tenantId.toString()),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.token).toBeTruthy();
+
+    const { payload } = await jwtVerify(
+      body.token,
+      new TextEncoder().encode(JWT_SECRET),
+    );
+    expect(payload.userId).toBe(userId.toString());
+    expect(payload.tenantId).toBe(tenantId.toString());
+    expect(payload.role).toBe('MANAGER');
+  });
+
+  it('still refuses a tenant the bearer user is not a member of', async () => {
+    const ownTenant = await seedTenant('Alpha');
+    const otherTenant = await seedTenant('Beta');
+    const userId = await seedMember(ownTenant);
+    const pending = await signToken({
+      userId: userId.toString(),
+      name: 'Member',
+      role: 'pending_selection',
+    });
+
+    const response = await selectTenant(
+      selectTenantRequest(pending, otherTenant.toString()),
+    );
+
+    expect(response.status).toBe(403);
+  });
 
   it('returns an impersonation token in the body that works as a bearer credential', async () => {
     const superAdminId = new mongoose.Types.ObjectId();

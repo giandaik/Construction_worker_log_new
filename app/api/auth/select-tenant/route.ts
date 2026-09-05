@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/api/errorHandling";
 
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await getAuthUser(request);
     if (!authUser) return ApiError.unauthorized();
 
     const { tenantId } = await request.json();
@@ -42,8 +42,13 @@ export async function POST(request: Request) {
       .setExpirationTime("12h")
       .sign(new TextEncoder().encode(jwtSecret));
 
+    // The tenant token is returned in the body as well as the cookie. The
+    // mobile WebView holds the pending_selection token itself and has to
+    // replace it with this one — same contract as POST /api/login.
     const response = NextResponse.json({
       message: "Tenant selected",
+      token,
+      redirect: "/app",
       user: { userId: authUser.userId, name: authUser.name, role: membership.tenantRole, tenantId },
     });
     setSessionCookie(response, token);

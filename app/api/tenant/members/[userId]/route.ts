@@ -9,7 +9,7 @@ export async function PUT(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins can manage members');
     const tenantId = requireTenantId(user);
@@ -35,11 +35,11 @@ export async function PUT(
 
 // DELETE — remove a member from the active tenant
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins can manage members');
     const tenantId = requireTenantId(user);

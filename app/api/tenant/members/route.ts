@@ -4,9 +4,9 @@ import { getAuthUser, isAdmin, requireTenantId } from '@/utils/auth';
 import { membershipSchema } from '@/lib/schemas/tenantSchema';
 
 // GET — list all members of the active tenant
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     const tenantId = requireTenantId(user);
 
@@ -29,7 +29,7 @@ export async function GET() {
 // POST — add a user to the active tenant (admin only)
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins can manage members');
     const tenantId = requireTenantId(user);
