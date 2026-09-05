@@ -4,11 +4,11 @@ import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 import { tenantUpdateSchema } from '@/lib/schemas/tenantSchema';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     const { id } = await params;
@@ -27,7 +27,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     const { id } = await params;
@@ -51,11 +51,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     const { id } = await params;

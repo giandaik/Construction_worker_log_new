@@ -10,7 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const superAdmin = await getAuthUser();
+    const superAdmin = await getAuthUser(request);
     if (!superAdmin || !isSuperAdmin(superAdmin)) return ApiError.forbidden();
 
     const { id: tenantId } = await params;

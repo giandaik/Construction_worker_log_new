@@ -4,11 +4,11 @@ import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 
 // GET — platform-level view of member count for a specific tenant
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     const { id: tenantId } = await params;

@@ -7,9 +7,9 @@ import { hash } from 'bcryptjs';
 import { PLATFORM_ROLES } from '@/lib/constants/roles';
 
 // GET — platform-level view of all users
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     return await RepositoryFactory.withUserRepository(async (userRepo) => {
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const actor = await getAuthUser();
+    const actor = await getAuthUser(request);
     if (!actor || !isSuperAdmin(actor)) return ApiError.forbidden();
 
     const parsed = platformSuperAdminSchema.safeParse(await request.json());

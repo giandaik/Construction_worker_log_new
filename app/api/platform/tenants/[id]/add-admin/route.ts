@@ -17,7 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) {
       return ApiError.forbidden('Only super admins can add admin users to tenants');
     }
