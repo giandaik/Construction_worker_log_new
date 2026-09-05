@@ -14,6 +14,8 @@ import {
 import { createWorkLogPdfAttachment } from '@/app/worklogs/[id]/exportToPDF';
 import { FORM_STATUS } from '@/lib/constants/constantValues';
 import { fetchProjectContext } from '@/lib/api/projectContext';
+import { workLogUpdateSchema } from '@/lib/schemas/workLogSchema';
+import type { WorkLog } from '@/lib/repositories/WorkLogRepository';
 
 export async function GET(
   request: Request,
@@ -53,7 +55,19 @@ export async function PUT(
     }
 
     const context = resolveRepositoryContext(user);
-    const requestData = await request.json();
+
+    // Strict: an unknown key is rejected rather than spread into `$set`.
+    // `tenantId`, `_id` and `createdAt` are not in the schema at all, so a
+    // client cannot name them; BaseRepository.update() strips them regardless.
+    const parsedBody = workLogUpdateSchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return ApiError.badRequest(
+        parsedBody.error.issues
+          .map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`)
+          .join(', ')
+      );
+    }
+    const requestData = parsedBody.data;
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       // First, get the existing work log to check ownership
@@ -65,7 +79,10 @@ export async function PUT(
 
       // Re-bind as non-null so TypeScript keeps the narrowing through awaited calls below
       const log = existingWorkLog;
-      let updateData = { ...requestData };
+      // Typed as the entity so the server-set fields below (status,
+      // rejectionComment) are checked; the parsed body cannot contribute keys
+      // outside the strict schema.
+      let updateData: Partial<WorkLog> = { ...requestData };
 
       const isAuthorOrAdmin = canModify(user, log.author?.toString() || '');
 

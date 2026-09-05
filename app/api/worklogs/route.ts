@@ -12,6 +12,7 @@ import {
   getWorkLogStatusFromSignatures,
   validateDraftSignatures,
 } from '@/lib/signatureUtils';
+import { workLogCreateSchema } from '@/lib/schemas/workLogSchema';
 
 export async function GET(request: Request) {
   try {
@@ -82,7 +83,17 @@ export async function POST(request: Request) {
     }
 
     const context = resolveRepositoryContext(user);
-    const data = await request.json();
+
+    // Strict: an unknown key is rejected rather than spread into the document.
+    const parsed = workLogCreateSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiError.badRequest(
+        parsed.error.issues
+          .map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`)
+          .join(', ')
+      );
+    }
+    const data = parsed.data;
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       const projectRepo = RepositoryFactory.getProjectRepository(context);
@@ -105,7 +116,7 @@ export async function POST(request: Request) {
       let projectContractorEmail: string | undefined;
 
       try {
-        const projectId = typeof data.project === 'string' ? data.project : data.project?.toString();
+        const projectId = data.project;
         if (projectId) {
           const project = await projectRepo.findById(projectId);
           projectOwnerName = project?.ownerName;

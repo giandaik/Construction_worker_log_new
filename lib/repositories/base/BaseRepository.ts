@@ -20,6 +20,25 @@ import { normalizeTenantId } from '@/lib/tenant/normalizeTenantId';
  *     that can exist — see `lib/repositories/base/RepositoryContext.ts`.
  */
 export abstract class BaseRepository<T extends { _id?: string | ObjectId }> implements IRepository<T> {
+  /**
+   * Fields a client may never set through `update()`.
+   *
+   * `tenantId` is the isolation invariant and is always derived from the auth
+   * context; `_id` and `createdAt` are server-assigned identity and
+   * provenance. Routes should still validate their bodies, but this is the
+   * choke point that holds even when one forgets.
+   *
+   * `author` is deliberately NOT here: reassigning a work log's author is a
+   * real feature (the edit form renders an author picker). It is constrained
+   * at the schema layer instead — it must be an ObjectId string — and the
+   * route already gates who may edit at all via `canModify`.
+   */
+  private static readonly IMMUTABLE_FIELDS = [
+    'tenantId',
+    '_id',
+    'createdAt',
+  ] as const;
+
   private collection: any;
   protected readonly context: RepositoryContext;
 
@@ -154,13 +173,24 @@ export abstract class BaseRepository<T extends { _id?: string | ObjectId }> impl
 
   /**
    * Update a document by ID
+   *
+   * `data` may originate from a request body, so the server-owned identity
+   * fields are stripped before it reaches `$set` — the same guard `create()`
+   * applies. Without this, a client could send `{"tenantId": "..."}` and move
+   * a document out of its own tenant: `scopeFilter()` scopes the *lookup*,
+   * not the payload, so the write itself was unconstrained.
    */
   async update(id: string | ObjectId, data: Partial<Omit<T, '_id' | 'createdAt'>>): Promise<T | null> {
     const objectId = ValidationUtils.normalizeObjectId(id);
+    const $set: any = { ...data, updatedAt: new Date() };
+    for (const immutable of BaseRepository.IMMUTABLE_FIELDS) {
+      delete $set[immutable];
+    }
+
     // scopeFilter() (inside scopedFindOneAndUpdate) prevents cross-tenant updates
     const result = await this.scopedFindOneAndUpdate(
       { _id: objectId },
-      { $set: { ...data, updatedAt: new Date() } }
+      { $set }
     );
 
     return result ? this.mapToEntity(result) : null;

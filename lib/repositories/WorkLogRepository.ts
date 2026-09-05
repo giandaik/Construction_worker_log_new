@@ -20,7 +20,8 @@ export interface Personnel {
 export interface Equipment {
   type: string;
   count: number;
-  hours: number;
+  // Optional: the offline queue replays rows captured without an hours value.
+  hours?: number;
 }
 
 /**
@@ -40,6 +41,9 @@ export interface Signature {
   signedBy: string;
   signedAt: string | Date;
   role?: string;
+  /** Signing party for the work log workflow: 'contractor' | 'owner'. */
+  projectRole?: string;
+  signedByUserId?: string;
 }
 
 /**
