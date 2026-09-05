@@ -2,6 +2,7 @@ import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isAdmin, requireTenantId } from '@/utils/auth';
 import { membershipSchema } from '@/lib/schemas/tenantSchema';
+import { membershipRefusalResponse } from '@/lib/tenant/membershipGuards';
 
 // GET — list all members of the active tenant
 export async function GET(request: Request) {
@@ -40,9 +41,10 @@ export async function POST(request: Request) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
     }
 
-    // Verify the target user exists
-    const targetUser = await RepositoryFactory.getUserRepository().findById(parsed.data.userId);
-    if (!targetUser) return ApiError.notFound('User');
+    // The target must exist and be unclaimed: a user who already belongs to
+    // another organisation cannot be grafted into this one.
+    const refusal = await membershipRefusalResponse(parsed.data.userId, tenantId);
+    if (refusal) return refusal;
 
     await RepositoryFactory.getMembershipRepository().upsertMembership(
       parsed.data.userId,
