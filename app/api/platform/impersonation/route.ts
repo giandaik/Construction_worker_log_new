@@ -39,7 +39,13 @@ export async function DELETE(request: Request) {
       .setExpirationTime('12h')
       .sign(new TextEncoder().encode(jwtSecret));
 
-    const response = NextResponse.json({ message: 'Impersonation ended', redirect: '/platform' });
+    // Returned in the body as well as the cookie so the mobile client can
+    // swap its stored bearer token for the restored super-admin one.
+    const response = NextResponse.json({
+      message: 'Impersonation ended',
+      token,
+      redirect: '/platform',
+    });
     setSessionCookie(response, token);
     return response;
   } catch (error) {

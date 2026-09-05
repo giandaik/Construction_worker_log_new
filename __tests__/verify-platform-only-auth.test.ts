@@ -8,6 +8,8 @@ import { NextRequest } from 'next/server';
 import { POST as login } from '@/app/api/login/route';
 import { GET as listTenants } from '@/app/api/platform/tenants/route';
 import { DELETE as endImpersonation } from '@/app/api/platform/impersonation/route';
+import { POST as startImpersonation } from '@/app/api/platform/tenants/[id]/impersonate/route';
+import { GET as listMembers } from '@/app/api/tenant/members/route';
 import { middleware } from '@/middleware';
 import { SESSION_COOKIE_NAME } from '@/lib/constants/constants';
 
@@ -76,6 +78,7 @@ beforeEach(async () => {
   await mongoose.connection.collection('users').deleteMany({});
   await mongoose.connection.collection('tenants').deleteMany({});
   await mongoose.connection.collection('impersonation_logs').deleteMany({});
+  await mongoose.connection.collection('user_tenant_memberships').deleteMany({});
 });
 
 describe('platform-only authentication', () => {
@@ -267,5 +270,135 @@ describe('bearer authentication on platform APIs', () => {
     const response = await middleware(request);
 
     expect(response.status).toBe(200);
+  });
+});
+
+/**
+ * The mobile WebView never receives the session cookie, so any route that mints
+ * a new JWT has to hand it back in the response body, and any route the mobile
+ * client calls has to accept `Authorization: Bearer`.
+ */
+describe('mobile bearer credentials', () => {
+  async function seedTenant(name: string, status = 'active') {
+    const tenantId = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('tenants').insertOne({
+      _id: tenantId,
+      name,
+      slug: name.toLowerCase(),
+      status,
+      plan: 'free',
+    });
+    return tenantId;
+  }
+
+  async function seedMember(tenantId: mongoose.Types.ObjectId, tenantRole = 'ADMIN') {
+    const userId = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('users').insertOne({
+      _id: userId,
+      name: 'Member',
+      email: `member-${userId.toString()}@example.com`,
+      role: 'user',
+    });
+    await mongoose.connection.collection('user_tenant_memberships').insertOne({
+      userId,
+      tenantId,
+      tenantRole,
+      isActive: true,
+      joinedAt: new Date(),
+    });
+    return userId;
+  }
+
+  it('returns an impersonation token in the body that works as a bearer credential', async () => {
+    const superAdminId = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('users').insertOne({
+      _id: superAdminId,
+      name: 'Platform Admin',
+      email: 'platform@example.com',
+      role: 'user',
+      platformRole: 'super_admin',
+    });
+    const tenantId = await seedTenant('Alpha');
+    const targetUserId = await seedMember(tenantId);
+
+    const adminToken = await platformToken('super_admin', superAdminId.toString());
+    const response = await startImpersonation(
+      new Request(`http://localhost/api/platform/tenants/${tenantId.toString()}/impersonate`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ userId: targetUserId.toString(), reason: 'support' }),
+      }),
+      { params: Promise.resolve({ id: tenantId.toString() }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.token).toBeTruthy();
+    expect(body.redirect).toBe('/app');
+
+    // The body token must be the same credential the cookie carries.
+    expect(response.cookies.get(SESSION_COOKIE_NAME)?.value).toBe(body.token);
+
+    // And it must authenticate a tenant route with no cookie present.
+    const members = await listMembers(
+      new Request('http://localhost/api/tenant/members', {
+        headers: { authorization: `Bearer ${body.token}` },
+      }),
+    );
+
+    expect(members.status).toBe(200);
+    const membersBody = await members.json();
+    const rows = membersBody.data ?? membersBody;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].userId.toString()).toBe(targetUserId.toString());
+  });
+
+  it('returns a restored super-admin token in the body when impersonation ends', async () => {
+    const superAdminId = new mongoose.Types.ObjectId();
+    const logId = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('users').insertOne({
+      _id: superAdminId,
+      name: 'Platform Admin',
+      email: 'platform@example.com',
+      role: 'user',
+      platformRole: 'super_admin',
+    });
+    await mongoose.connection.collection('impersonation_logs').insertOne({
+      _id: logId,
+      superAdminId,
+      targetTenantId: new mongoose.Types.ObjectId(),
+      targetUserId: new mongoose.Types.ObjectId(),
+      startedAt: new Date(),
+    });
+    await mongoose.connection.collection('tenants').insertOne({
+      name: 'Acme',
+      slug: 'acme',
+      status: 'active',
+      plan: 'free',
+    });
+
+    const token = await impersonationToken(superAdminId.toString(), logId.toString());
+    const response = await endImpersonation(
+      new Request('http://localhost/api/platform/impersonation', {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.token).toBeTruthy();
+    expect(response.cookies.get(SESSION_COOKIE_NAME)?.value).toBe(body.token);
+
+    const restored = await listTenants(
+      new Request('http://localhost/api/platform/tenants', {
+        headers: { authorization: `Bearer ${body.token}` },
+      }),
+    );
+
+    expect(restored.status).toBe(200);
   });
 });

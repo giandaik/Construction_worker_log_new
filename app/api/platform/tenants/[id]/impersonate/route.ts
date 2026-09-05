@@ -56,8 +56,13 @@ export async function POST(
       .setExpirationTime('4h')
       .sign(new TextEncoder().encode(jwtSecret));
 
+    // The token is returned in the body as well as the cookie: the mobile
+    // WebView never receives the session cookie and authenticates with
+    // `Authorization: Bearer` instead. Same contract as POST /api/login.
     const response = NextResponse.json({
       message: 'Impersonation started',
+      token,
+      redirect: '/app',
       impersonationId: logEntry._id?.toString(),
       targetUser: { userId, name: targetUser.name, tenantId, tenantRole: membership.tenantRole },
     });

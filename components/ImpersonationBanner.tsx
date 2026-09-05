@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/apiClient';
+import { setMobileToken } from '@/lib/mobile-auth';
 
 export function ImpersonationBanner() {
   const router = useRouter();
@@ -15,6 +16,11 @@ export function ImpersonationBanner() {
     try {
       const res = await apiFetch('/api/platform/impersonation', { method: 'DELETE' });
       const data = await res.json();
+      // The restored super-admin token comes back in the body for mobile,
+      // which never received the Set-Cookie. No-op on web.
+      if (data.token) {
+        await setMobileToken(data.token);
+      }
       router.push(data.redirect ?? '/platform');
     } catch {
       setLoading(false);
