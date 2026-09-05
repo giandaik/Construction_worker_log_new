@@ -1,7 +1,8 @@
 import { ApiError } from "@/lib/api/errorHandling";
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
-import { getAuthUser, isAdmin, requireTenantId } from "@/utils/auth";
+import { getAuthUser, isAdmin, isSuperAdmin, requireTenantId } from "@/utils/auth";
+import { canAssignRole, resolveTenantRole } from "@/lib/tenant/roleHierarchy";
 import { hash } from "bcryptjs";
 
 export async function GET(request: Request) {
@@ -51,6 +52,19 @@ export async function POST(request: Request) {
 
     return await RepositoryFactory.withUserRepository(async (userRepo) => {
       const { password, ...rest } = validatedData.data;
+      const requestedRole = rest.role ?? 'user';
+
+      // A manager is an admin as far as `isAdmin` is concerned, so without
+      // this they could create an account that outranks their own.
+      if (!isSuperAdmin(authUser)) {
+        const creatorRole = await resolveTenantRole(authUser);
+        if (!canAssignRole(creatorRole, requestedRole)) {
+          return ApiError.forbidden(
+            `Your role cannot create a user with the ${requestedRole} role`,
+          );
+        }
+      }
+
       const newUser = {
         ...rest,
         password: await hash(password, 12),
@@ -69,7 +83,7 @@ export async function POST(request: Request) {
         await RepositoryFactory.getMembershipRepository().upsertMembership(
           user._id!.toString(),
           authUser.tenantId,
-          roleMap[rest.role ?? 'user'] ?? 'worker'
+          roleMap[requestedRole] ?? 'worker'
         );
       }
 
