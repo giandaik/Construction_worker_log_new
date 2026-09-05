@@ -4,16 +4,21 @@ import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, setSessionCookie, validateJWTSecret } from '@/utils/auth';
 import { PLATFORM_ROLES } from '@/lib/constants/roles';
+import { DatabaseUtils } from '@/lib/api/database';
 
 // DELETE — end the active impersonation session and restore super-admin JWT
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
-    const user = await getAuthUser();
+    const user = await getAuthUser(request);
     if (!user) return ApiError.unauthorized();
 
     if (!user.impersonatedBy || !user.impersonationId) {
       return ApiError.badRequest('No active impersonation session');
     }
+
+    // The repositories below are used directly rather than through a
+    // with*Repository wrapper, so the connection must be established here.
+    await DatabaseUtils.connect();
 
     // Close the log entry
     await RepositoryFactory.getImpersonationLogRepository().endSession(user.impersonationId);

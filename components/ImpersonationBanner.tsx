@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiFetch } from '@/lib/apiClient';
 
 export function ImpersonationBanner() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export function ImpersonationBanner() {
   async function handleEnd() {
     setLoading(true);
     try {
-      const res = await fetch('/api/platform/impersonation', { method: 'DELETE' });
+      const res = await apiFetch('/api/platform/impersonation', { method: 'DELETE' });
       const data = await res.json();
       router.push(data.redirect ?? '/platform');
     } catch {

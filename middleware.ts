@@ -23,6 +23,32 @@ const PUBLIC_PATHS = [
   "/api/auth/select-tenant",
 ];
 
+/**
+ * The single platform endpoint an impersonated session is allowed to reach.
+ *
+ * An impersonation JWT deliberately carries no `platformRole` — inside the
+ * tenant the super-admin must be indistinguishable from the impersonated
+ * user. That also means the normal platform guard would 403 the request that
+ * ends the impersonation, leaving the session with no way out.
+ */
+const IMPERSONATION_EXIT_PATH = "/api/platform/impersonation";
+const IMPERSONATION_EXIT_METHOD = "DELETE";
+
+/**
+ * True only for a JWT minted by the impersonation route, which carries both
+ * the originating super-admin and the audit-log id.
+ */
+function isImpersonationToken(
+  payload: Record<string, unknown>,
+): boolean {
+  return (
+    typeof payload.impersonatedBy === "string" &&
+    Boolean(payload.impersonatedBy) &&
+    typeof payload.impersonationId === "string" &&
+    Boolean(payload.impersonationId)
+  );
+}
+
 function isPublicPath(pathname: string): boolean {
   // "/" is the public marketing landing page.
   // Exact match only — never use "/" in PUBLIC_PATHS because
@@ -172,8 +198,19 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/api/auth/") ||
       pathname === "/api/logout";
 
+    /**
+     * Ending an impersonation is the one platform call a non-platform token
+     * may make, and only with the impersonation claims present. Every other
+     * platform path — including any other method on this one — still
+     * requires SUPER_ADMIN.
+     */
+    const isImpersonationExit =
+      pathname === IMPERSONATION_EXIT_PATH &&
+      request.method === IMPERSONATION_EXIT_METHOD &&
+      isImpersonationToken(payload);
+
     /** Platform routes require SUPER_ADMIN. */
-    if (isPlatformRoute) {
+    if (isPlatformRoute && !isImpersonationExit) {
       if (!isPlatformUser) {
         if (isApiRoute) {
           return withCors(
@@ -225,6 +262,7 @@ export async function middleware(request: NextRequest) {
     if (
       !isPlatformUser &&
       !isPendingSelection &&
+      !isImpersonationExit &&
       !payload.tenantId
     ) {
       if (isApiRoute) {
