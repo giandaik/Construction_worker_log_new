@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { dbConnect } from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import { compare } from "bcryptjs";
@@ -6,6 +7,38 @@ import { SignJWT } from "jose";
 import { setSessionCookie, validateJWTSecret } from "@/utils/auth";
 import { RepositoryFactory } from "@/lib/repositories";
 import { PLATFORM_ROLES, isSuperAdminRole } from '@/lib/constants/roles';
+import { consumeRateLimit, getClientIp, resetRateLimit } from "@/lib/rateLimit";
+import { DUMMY_PASSWORD_HASH } from "@/lib/constants/security";
+
+/**
+ * Credentials must be strings before they reach MongoDB.
+ *
+ * Without this, a JSON object value such as `{"$regex":"^alice"}` is passed
+ * straight into the `findOne` filter and interpreted as a query operator,
+ * letting an attacker select an account by partial identifier.
+ */
+const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  password: z.string(),
+});
+
+/** Both failure paths return exactly this — never "no such user". */
+const INVALID_CREDENTIALS = "Invalid credentials";
+
+const LOGIN_RATE_LIMIT = {
+  limit: 10,
+  windowMs: 5 * 60 * 1000,
+};
+
+function tooManyRequests(retryAfterSeconds: number): NextResponse {
+  return NextResponse.json(
+    { error: "Too many login attempts. Please try again later." },
+    {
+      status: 429,
+      headers: { "Retry-After": String(retryAfterSeconds) },
+    },
+  );
+}
 
 async function buildToken(payload: Record<string, unknown>, jwtSecret: string): Promise<string> {
   return new SignJWT(payload)
@@ -17,12 +50,32 @@ async function buildToken(payload: Record<string, unknown>, jwtSecret: string): 
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const parsed = loginSchema.safeParse(body);
 
-    if (!email || !password) {
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
+      );
+    }
+
+    const { email, password } = parsed.data;
+
+    /**
+     * Two independent buckets: the IP bucket stops one host spraying many
+     * accounts, the email bucket stops a distributed spray against one
+     * account. Either being exhausted rejects the request.
+     */
+    const ipKey = `login:ip:${getClientIp(request)}`;
+    const emailKey = `login:email:${email}`;
+
+    const ipLimit = consumeRateLimit(ipKey, LOGIN_RATE_LIMIT);
+    const emailLimit = consumeRateLimit(emailKey, LOGIN_RATE_LIMIT);
+
+    if (ipLimit.isLimited || emailLimit.isLimited) {
+      return tooManyRequests(
+        Math.max(ipLimit.retryAfterSeconds, emailLimit.retryAfterSeconds),
       );
     }
 
@@ -32,9 +85,22 @@ export async function POST(request: Request) {
 
     const user = await usersCollection.findOne({ email });
 
-    if (!user || !user.password || !(await compare(password, user.password))) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    /**
+     * Always run one bcrypt compare, against the real hash when the account
+     * exists and the dummy hash otherwise, so both paths take the same time.
+     */
+    const passwordMatches = await compare(
+      password,
+      (user?.password as string | undefined) ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !user.password || !passwordMatches) {
+      return NextResponse.json({ error: INVALID_CREDENTIALS }, { status: 401 });
     }
+
+    // Credentials are good — a legitimate user is not locked out by earlier typos.
+    resetRateLimit(ipKey);
+    resetRateLimit(emailKey);
 
     const jwtSecret = validateJWTSecret();
 
@@ -58,7 +124,6 @@ export async function POST(request: Request) {
     const memberships = await RepositoryFactory.getMembershipRepository().findByUser(
       user._id.toString()
     );
-    console.log("User memberships:", user._id.toString(), memberships);
     const activeMemberships = memberships.filter((m) => m.isActive);
 
     if (activeMemberships.length === 0) {
@@ -123,5 +188,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to login" }, { status: 500 });
   }
 }
-
-

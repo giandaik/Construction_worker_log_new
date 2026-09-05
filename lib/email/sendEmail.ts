@@ -9,6 +9,34 @@ import {
 } from '@/lib/email/templates/workLogCompletionTemplate';
 import { RejectWorkLogPayload, buildRejectWorkLogTemplate } from '@/lib/email/templates/rejectWorkLogTemplate';
 
+/**
+ * Masks an address for logging: `alice@alpha.test` -> `a***@alpha.test`.
+ *
+ * Recipient addresses are personal data and must not reach the logs in full.
+ * The domain and first character are kept so a delivery problem is still
+ * diagnosable.
+ */
+const maskEmail = (value: string): string => {
+  const atIndex = value.lastIndexOf('@');
+
+  if (atIndex <= 0) {
+    return '***';
+  }
+
+  return `${value[0]}***${value.slice(atIndex)}`;
+};
+
+/** Masks one address or a list of them. */
+const maskRecipients = (value: string | string[] | undefined): string => {
+  if (!value) {
+    return '(none)';
+  }
+
+  const list = Array.isArray(value) ? value : value.split(',');
+
+  return list.map((entry) => maskEmail(entry.trim())).join(', ');
+};
+
 export type { SignatureNotificationPayload, WorkLogCompletionPayload };
 
 interface sendMailOptions {
@@ -79,7 +107,7 @@ export const sendSmtpEmail = async (options: sendMailOptions): Promise<boolean> 
   };
 
   try {
-    console.log('[SMTP] Sending email', { to: mailOptions.to, subject: mailOptions.subject });
+    console.log('[SMTP] Sending email', { to: maskRecipients(mailOptions.to), subject: mailOptions.subject });
     const info = await transporter.sendMail(mailOptions as any);
     console.log('[SMTP] Email sent', info && (info as any).messageId);
     return true;
@@ -125,7 +153,7 @@ export const sendWorkLogCompletedEmail = async (
     return false;
   }
 
-  console.log('[SMTP] Preparing completed work log email for recipients:', recipients);
+  console.log('[SMTP] Preparing completed work log email for recipients:', maskRecipients(recipients));
   const template = buildWorkLogCompletionTemplate(payload);
   
 
@@ -144,7 +172,7 @@ export const sendRejectWorkLogEmail = async (
 ): Promise<boolean> => {
   
 
-  console.log('[SMTP] Preparing rejection notification email for recipients:', payload.projectContractorEmail);
+  console.log('[SMTP] Preparing rejection notification email for recipients:', maskRecipients(payload.projectContractorEmail));
   const template = buildRejectWorkLogTemplate(payload);
 
   if (!payload.projectContractorEmail) {

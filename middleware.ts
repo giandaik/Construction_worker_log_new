@@ -174,6 +174,7 @@ export async function middleware(request: NextRequest) {
         const verified = await jwtVerify(
           tokenCandidate,
           new TextEncoder().encode(jwtSecret),
+          { algorithms: ["HS256"] },
         );
         payload = verified.payload;
         break;

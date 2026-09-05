@@ -165,9 +165,12 @@ async function verifyAuthToken(
   try {
     const jwtSecret = validateJWTSecret();
 
+    // Pinning the algorithm keeps a future asymmetric/`none` key from being
+    // accepted by a token that merely claims a different `alg`.
     const { payload } = await jwtVerify(
       token,
       new TextEncoder().encode(jwtSecret),
+      { algorithms: ["HS256"] },
     );
 
     return authUserFromPayload(payload);
