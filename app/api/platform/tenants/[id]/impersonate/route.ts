@@ -3,6 +3,7 @@ import { SignJWT } from 'jose';
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin, setSessionCookie, validateJWTSecret } from '@/utils/auth';
+import { impersonationRequestSchema } from '@/lib/schemas/tenantSchema';
 
 // POST — super-admin starts an impersonation session inside a tenant
 export async function POST(
@@ -14,8 +15,11 @@ export async function POST(
     if (!superAdmin || !isSuperAdmin(superAdmin)) return ApiError.forbidden();
 
     const { id: tenantId } = await params;
-    const { userId, reason } = await request.json();
-    if (!userId) return ApiError.badRequest('userId is required');
+    const parsed = impersonationRequestSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiError.badRequest(parsed.error.issues.map((issue) => issue.message).join(', '));
+    }
+    const { userId, reason } = parsed.data;
 
     // Verify tenant exists and is active
     const tenant = await RepositoryFactory.getTenantRepository().findById(tenantId);

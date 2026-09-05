@@ -31,6 +31,25 @@ export const membershipUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+/**
+ * Body of POST /api/platform/tenants/[id]/impersonate.
+ *
+ * `userId` had only a truthiness check, so an object body reached the
+ * membership lookup as a Mongo operator; `reason` was written to the audit log
+ * unvalidated, so an unbounded or non-string value landed there too. The audit
+ * trail is the only record of an impersonation — it has to be a real sentence
+ * or nothing at all.
+ */
+export const impersonationRequestSchema = z.object({
+  userId: z.string().trim().min(1, 'userId is required'),
+  reason: z
+    .string()
+    .trim()
+    .min(1, 'reason must not be empty')
+    .max(500, 'reason must be at most 500 characters')
+    .optional(),
+});
+
 export const tenantProvisioningSchema = z.object({
   name: z.string().trim().min(1, 'Tenant name is required'),
   slug: z.string().trim().toLowerCase().min(2).regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens').optional(),
