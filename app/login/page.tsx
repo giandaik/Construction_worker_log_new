@@ -33,6 +33,13 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.error || "Login failed");
+      } else if (data.message === "tenant_selection_required") {
+        // Store tenant list for the selection page
+        sessionStorage.setItem("pending_tenants", JSON.stringify(data.tenants));
+        if (data.token) {
+          await setMobileToken(data.token);
+        }
+        router.push("/select-tenant");
       } else {
         // On mobile the session cookie never reaches the WebView origin, so the
         // token from the response body is what keeps the session alive. No-op
@@ -40,7 +47,7 @@ export default function LoginPage() {
         if (data.token) {
           await setMobileToken(data.token);
         }
-        router.push("/app");
+        router.push(data.redirect ?? "/app");
       }
     } catch (err) {
       console.error(err);

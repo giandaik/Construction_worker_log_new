@@ -11,7 +11,8 @@ interface Personnel {
 interface Equipment {
     type: string;
     count: number;
-    hours: number;
+    // Optional: rows replayed from the offline queue may carry no hours value.
+    hours?: number;
 }
 
 interface Material {

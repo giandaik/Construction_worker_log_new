@@ -1,6 +1,6 @@
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser } from '@/utils/auth';
+import { getAuthUser, resolveRepositoryContext } from '@/utils/auth';
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -22,6 +22,7 @@ export async function GET(
     if (!user) {
       return ApiError.unauthorized();
     }
+    const context = resolveRepositoryContext(user);
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -36,7 +37,7 @@ export async function GET(
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
       const counts = await workLogRepo.countByDayForProject(id, startDay, endDay);
       return ApiError.success(counts);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

@@ -5,9 +5,31 @@ import { ApiError } from "@/lib/api/errorHandling";
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
 import { setSessionCookie, validateJWTSecret } from "@/utils/auth";
+import { consumeRateLimit, getClientIp } from "@/lib/rateLimit";
+
+/**
+ * Signup is unauthenticated and writes a user row, so it is a spam and
+ * enumeration surface ("Email is already in use"). Limited per IP.
+ */
+const SIGNUP_RATE_LIMIT = {
+  limit: 5,
+  windowMs: 60 * 60 * 1000,
+};
 
 export async function POST(request: Request) {
   try {
+    const { isLimited, retryAfterSeconds } = consumeRateLimit(
+      `signup:ip:${getClientIp(request)}`,
+      SIGNUP_RATE_LIMIT,
+    );
+
+    if (isLimited) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+      );
+    }
+
     const body = await request.json();
 
     const parsed = userSchema.safeParse(body);

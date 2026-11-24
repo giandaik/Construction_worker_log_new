@@ -1,19 +1,23 @@
 import { ApiError } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { projectUpdateSchema } from '@/lib/schemas/projectSchema';
-import { getAuthUser, isAdmin } from '@/utils/auth';
+import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request);
+    if (!authUser) return ApiError.unauthorized();
+    const context = resolveRepositoryContext(authUser);
+
     const { id } = await params;
     return await RepositoryFactory.withProjectRepository(async (projectRepo) => {
       const project = await projectRepo.findById(id);
       if (!project) return ApiError.notFound('Project');
       return ApiError.success(project);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -31,6 +35,7 @@ export async function PUT(
       return ApiError.forbidden('Only administrators can edit projects');
     }
 
+    const context = resolveRepositoryContext(user);
     const { id } = await params;
 
     const validatedData = projectUpdateSchema.safeParse(await request.json());
@@ -56,7 +61,7 @@ export async function PUT(
 
         if (!updated) return ApiError.notFound('Project');
         return ApiError.success(updated);
-      });
+      }, context);
     });
   } catch (error) {
     return ApiError.handle(error);
