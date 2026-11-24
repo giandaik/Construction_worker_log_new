@@ -12,6 +12,19 @@ committed.
 | Android | `npm run build:mobile` → `npx cap sync android` → `cd android && ./gradlew bundleRelease` | `android/app/build/outputs/bundle/release/app-release.aab` |
 | iOS | `npm run build:mobile` → `npx cap sync ios` → Xcode archive | `.xcarchive` → App Store Connect |
 
+**Name and identity.** The app ships as **sitely** — that string is the home
+screen label, the launcher label, the document title, and the name to register
+on both stores. It lives in four places that must stay in step:
+`capacitor.config.ts` (`appName`), `android/app/src/main/res/values/strings.xml`
+(`app_name`), `ios/App/App/Info.plist` (`CFBundleDisplayName`), and
+`app/layout.tsx` (`metadata.title`).
+
+The identifier is `com.constructionlog.app` — the reverse-DNS of the
+*descriptive* name, not the brand. It is separate from the display name and is
+**permanent once the first build is live on either store**: changing it later
+means a new listing with no upgrade path. If a `sitely`-owned domain exists,
+decide before the first upload; nothing else in the repo depends on it.
+
 `npm run build:mobile` stages a mobile-shaped tree (no API routes, no
 middleware, client-side page overrides), runs the Next static export into
 `out/`, and restores the tree afterwards. `cap sync` copies `out/` into the two

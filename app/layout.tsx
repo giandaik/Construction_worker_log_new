@@ -21,7 +21,7 @@ const fontDisplay = Fira_Sans_Condensed({
 })
 
 export const metadata = {
-  title: 'Construction Log',
+  title: 'sitely',
   description: 'Track and manage construction projects and daily work logs',
 }
 

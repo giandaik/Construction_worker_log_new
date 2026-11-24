@@ -1,6 +1,9 @@
-# Construction Worker Log
+# sitely — Construction Log
 
 A modern, offline-first web application for logging daily construction work activities.
+
+Ships to the App Store and Play Store as **sitely**; see `RELEASE.md` for the
+build and submission runbook.
 
 ## Features
 

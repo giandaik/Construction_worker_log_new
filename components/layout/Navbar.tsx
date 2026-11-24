@@ -33,7 +33,7 @@ export function Navbar() {
           <Link
             href="/app"
             className="flex items-center gap-2"
-            aria-label="Construction Worker Log home"
+            aria-label="sitely home"
           >
             <Image
               src="/sitely-logo.png"
