@@ -1,0 +1,14 @@
+{
+  "source": "public/sitely-logo.png",
+  "mark": {
+    "left": 392,
+    "top": 177,
+    "width": 236,
+    "height": 357
+  },
+  "sizes": {
+    "icon.png": "1024x1024",
+    "icon-foreground.png": "1024x1024",
+    "splash.png": "2732x2732"
+  }
+}

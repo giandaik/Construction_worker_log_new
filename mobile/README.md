@@ -47,30 +47,36 @@ structure, and add a row to the table above. No script changes needed.
 
 ## App icon and splash assets
 
-**Not done yet.** `ios/` and `android/` still carry the Capacitor default icon,
-which is fine for development but must not ship. Generating the real set needs
-source artwork that does not exist in the repo yet.
-
-Once there is artwork, put it in an `assets/` directory at the project root:
-
-| File | Size | Required |
-|---|---|---|
-| `assets/icon.png` | 1024×1024 | yes |
-| `assets/splash.png` | 2732×2732 | yes |
-| `assets/splash-dark.png` | 2732×2732 | optional (dark mode) |
-
-Keep the splash artwork centred and safe within the middle ~1200×1200 — the
-outer area gets cropped on tall or wide screens. The background should match the
-`SplashScreen.backgroundColor` in `capacitor.config.ts` (`#FBBF24`) so the crop
-edge is invisible.
-
-Then generate every iOS and Android variant:
+The icon and splash set is generated from the brand logo, so it is reproducible
+rather than hand-assembled. Two commands, in this order:
 
 ```bash
-npx @capacitor/assets generate --iconBackgroundColor '#FBBF24' --splashBackgroundColor '#FBBF24'
+npm run assets:make       # builds assets/*.png from public/sitely-logo.png
+npm run assets:generate   # writes every iOS/Android/PWA size
 ```
 
-That writes directly into `ios/App/App/Assets.xcassets/` and
+`scripts/make-icon-assets.mjs` crops the mark out of `public/sitely-logo.png`
+(the isometric mark above the wordmark — the bounding box is detected from the
+alpha channel, so a re-exported logo keeps working) and composes:
+
+| File | Contents | Used for |
+|---|---|---|
+| `assets/icon.png` | mark on the dark `#151a21` surface with an amber halo, 62% height | app icon |
+| `assets/icon-foreground.png` | mark alone, transparent, 42% height | Android adaptive foreground |
+| `assets/icon-background.png` | dark surface + halo | Android adaptive background |
+| `assets/splash.png` | amber `#FBBF24` field, mark on a dark rounded plate | launch screen |
+| `assets/splash-dark.png` | inverted: dark field, bare mark | launch screen, dark mode |
+
+The light splash keeps the amber field from `capacitor.config.ts` but sits the
+mark on a dark plate — the mark's own gold is invisible against amber otherwise.
+The icon is dark so it survives a light home screen wallpaper.
+
+`assets:generate` writes directly into `ios/App/App/Assets.xcassets/` and
 `android/app/src/main/res/`, both of which are committed, so review the diff and
-commit it. Re-run it whenever the artwork changes; `npx cap sync` does **not**
-regenerate icons.
+commit it. Re-run both commands whenever the artwork changes; `npx cap sync` does
+**not** regenerate icons.
+
+Splash artwork must stay centred and safe within the middle ~1200×1200 — the
+outer area gets cropped on tall or wide screens. Keep the generated splash
+background in step with `SplashScreen.backgroundColor` in `capacitor.config.ts`
+and `STATUS_BAR_COLOR` in `lib/mobile-statusbar.ts`.

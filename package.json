@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "build:mobile": "node scripts/build-mobile.mjs && npx cap sync",
+    "assets:make": "node scripts/make-icon-assets.mjs",
+    "assets:generate": "capacitor-assets generate --iconBackgroundColor '#151a21' --iconBackgroundColorDark '#151a21' --splashBackgroundColor '#FBBF24' --splashBackgroundColorDark '#151a21'",
     "start": "next start",
     "test": "vitest",
     "test:performance": "vitest run __tests__/performance",
@@ -59,6 +61,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
+    "@capacitor/assets": "^4.0.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
