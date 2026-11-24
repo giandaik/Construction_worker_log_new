@@ -3,11 +3,13 @@
  *
  * The web app is same-origin and needs none of this. The Capacitor WebView is
  * not: its document origin is `capacitor://localhost` on iOS and
- * `http://localhost` on Android, while the API lives on the deployed backend.
- * Every call from the app is therefore cross-origin and must be allowed
- * explicitly, preflight included.
+ * `https://localhost` on Android (Capacitor 6 changed `androidScheme` to
+ * `https`), while the API lives on the deployed backend. Every call from the
+ * app is therefore cross-origin and must be allowed explicitly, preflight
+ * included.
  *
- * Requests carry the session cookie (see `apiFetch`), so the response must send
+ * Requests carry the session cookie (see `apiFetch`) and, on mobile, the bearer
+ * token (see `lib/mobile-auth.ts`), so the response must send
  * `Access-Control-Allow-Credentials: true`. That is incompatible with the
  * wildcard origin — browsers reject `Allow-Origin: *` on a credentialed
  * request — so the request's own origin is echoed back, and only if it is on
@@ -17,9 +19,10 @@
 
 /** WebView document origins Capacitor serves the bundle from. */
 const WEBVIEW_ORIGINS = [
-  'capacitor://localhost', // iOS
+  'capacitor://localhost', // iOS (`iosScheme` default)
   'ionic://localhost', // iOS, older Capacitor/Ionic shells
-  'http://localhost', // Android (no port)
+  'https://localhost', // Android — `androidScheme` has defaulted to https since Capacitor 6
+  'http://localhost', // Android, only if `androidScheme` is explicitly set back to http
 ];
 
 /**

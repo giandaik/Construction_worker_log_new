@@ -132,7 +132,17 @@ describe('corsHeaders', () => {
 
   it('allows the iOS and Android WebView origins', async () => {
     const { corsHeaders } = await loadCors();
-    for (const origin of ['capacitor://localhost', 'ionic://localhost', 'http://localhost']) {
+    // https://localhost is the Android origin with Capacitor's default
+    // androidScheme (https since Capacitor 6); http://localhost only applies
+    // if that is overridden. Both must be allowed — a missing one means every
+    // API call from the app is blocked as cross-origin.
+    const origins = [
+      'capacitor://localhost',
+      'ionic://localhost',
+      'https://localhost',
+      'http://localhost',
+    ];
+    for (const origin of origins) {
       expect(corsHeaders(origin)['Access-Control-Allow-Origin']).toBe(origin);
     }
   });

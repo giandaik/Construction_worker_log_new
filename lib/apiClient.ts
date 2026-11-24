@@ -53,12 +53,17 @@ export function apiUrl(path: string): string {
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   if (!isCrossOriginApi()) return fetch(path, init);
 
-  const headers = new Headers(init?.headers);
+  const callerHeaders = init?.headers;
+  const callerAuthorised = new Headers(callerHeaders).has('Authorization');
 
-  if (!headers.has('Authorization')) {
-    const token = await getMobileToken();
-    if (token) headers.set('Authorization', `Bearer ${token}`);
-  }
+  // No bearer token to add (web-parity path, or the caller is acting as itself):
+  // forward the caller's init untouched apart from the credentials default, so
+  // what reaches `fetch` is exactly what was written.
+  const token = callerAuthorised ? null : await getMobileToken();
+  if (!token) return fetch(apiUrl(path), { credentials: 'include', ...init });
+
+  const headers = new Headers(callerHeaders);
+  headers.set('Authorization', `Bearer ${token}`);
 
   return fetch(apiUrl(path), { credentials: 'include', ...init, headers });
 }
