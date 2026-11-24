@@ -40,6 +40,22 @@ router handles it and the pages read their id from `useParams()`), but a cold
 load straight to `/worklogs/abc123` has no file to serve. Handling that properly
 belongs to the Phase 2/3 routing work.
 
+## Native shell behaviour
+
+`components/MobileInit.tsx` boots the plugins that only exist inside the native
+shell, after React mounts. Each lives in its own `lib/mobile-*.ts` module and is
+a no-op on web:
+
+| Module | What it fixes |
+|---|---|
+| `mobile-statusbar.ts` | Amber status bar with dark icons, instead of the default translucent one showing through. |
+| `mobile-splash.ts` | Hides the splash once React has mounted, rather than waiting out `launchShowDuration`. |
+| `mobile-backbutton.ts` | Android hardware back navigates the WebView history instead of closing the app. |
+
+`@capacitor/keyboard` is configured in `capacitor.config.ts` with
+`resize: 'native'` — without it iOS draws the keyboard over the focused field
+and the user types blind.
+
 ## Adding an override
 
 Drop the file at the path it should occupy under `app/`, mirroring the directory

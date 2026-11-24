@@ -1,0 +1,109 @@
+name: Mobile
+
+# Guards the two things a web CI cannot see: that the static export still
+# builds, and that the committed iOS/Android projects still compile against it.
+# Nothing here signs or uploads — release builds need the keystore and the
+# Apple team, which live outside the repo (see RELEASE.md).
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'utils/**'
+      - 'public/**'
+      - 'mobile/**'
+      - 'scripts/build-mobile.mjs'
+      - 'scripts/set-version.mjs'
+      - 'capacitor.config.ts'
+      - 'next.config.mobile.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'ios/**'
+      - 'android/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Any syntactically valid origin: this build is never shipped, it only proves
+  # the export compiles with a base URL inlined.
+  NEXT_PUBLIC_API_BASE_URL: https://mobile-ci.invalid
+
+jobs:
+  android:
+    name: Static export + Android debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check native versions match package.json
+        run: npm run version:check
+
+      - name: Build static export
+        run: npm run build:mobile
+
+      - name: Sync web assets into the Android project
+        run: npx cap sync android
+
+      - name: Assemble debug APK
+        run: |
+          cd android
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: iOS simulator build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build:mobile
+
+      - name: Sync web assets into the iOS project
+        run: npx cap sync ios
+
+      - name: Build for the simulator (no signing)
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build

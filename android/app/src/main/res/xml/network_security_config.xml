@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release network policy.
+
+  The app talks to its backend over HTTPS only (Capacitor's default
+  `androidScheme` is https, so the bundled WebView origin is
+  https://localhost and needs no cleartext exemption), and it stores the
+  session JWT on the device — plaintext HTTP would expose the token to anyone
+  on the site's Wi-Fi. Cleartext is therefore off everywhere.
+
+  If a dev build ever needs to reach a plain-HTTP backend, that belongs in a
+  debug-only manifest override, not here.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

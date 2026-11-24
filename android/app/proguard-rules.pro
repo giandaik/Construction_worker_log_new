@@ -1,21 +1,32 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# ProGuard / R8 rules for the release build.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# `minifyEnabled true` is on in android/app/build.gradle. R8 renames and strips
+# classes that are only reached by reflection, and Capacitor reaches its plugins
+# that way: the JS bridge looks a plugin up by the name declared in
+# `@CapacitorPlugin` and calls methods marked `@PluginMethod` through
+# JavaScriptInterface. Over-aggressive shrinking shows up as the app booting to
+# a blank WebView with "plugin not implemented" in logcat, so these keeps are
+# deliberate.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep attributes the bridge reflects over (annotations, method signatures).
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Capacitor core + every plugin registered with it.
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keepclassmembers class * {
+    @com.getcapacitor.PluginMethod public *;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# The JS bridge entry points.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# The app's own shell classes (MainActivity is referenced from the manifest by
+# name, which R8 does not treat as a use).
+-keep class com.constructionlog.app.** { *; }
+
+# Keep line numbers so Play Console crash reports resolve to real lines.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

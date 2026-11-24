@@ -25,6 +25,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!--
+	  App Store Connect asks this on every upload. The app only uses standard
+	  HTTPS/TLS via the system frameworks, which is exempt, so answering "no"
+	  here skips the per-build exemption paperwork.
+	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!--
 	  Required by @capacitor/camera. iOS terminates the app on first use of the
 	  camera or photo library if the matching usage description is missing.
 	-->
