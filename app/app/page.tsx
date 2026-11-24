@@ -145,7 +145,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        <section className="mt-10 grid gap-8 lg:grid-cols-3">
+        <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="animate-fade-up lg:col-span-2" style={{ animationDelay: '80ms' }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold uppercase">Recent work logs</h2>

@@ -426,7 +426,7 @@ export default function LandingPage() {
       </section>
 
       {/* Product showcase — the actual app, in the app's own design language */}
-      <section id="product" className="container scroll-mt-24 px-4 py-16 md:py-24">
+      <section id="product" className="container scroll-mt-24 overflow-x-clip px-4 py-16 md:py-24">
         <div className="grid items-center gap-12 md:grid-cols-2 lg:gap-16">
           <div className="max-w-xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
