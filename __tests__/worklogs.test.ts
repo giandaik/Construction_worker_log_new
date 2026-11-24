@@ -1,10 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import mongoose, { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import WorkLog, { IWorkLog } from '../lib/models/WorkLog';
 import Project, { IProject } from '../lib/models/Project';
 import User, { IUser } from '../lib/models/User';
-import { GET, POST } from './test-server';
+
+/**
+ * The API tests below drive the real route handlers, so only `getAuthUser` is
+ * faked; the tenant context derivation the routes rely on runs for real.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
+}));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
+
+import { GET, POST } from '../app/api/worklogs/route';
 
 // Import the Cached interface from dbConnect
 interface Cached {
@@ -17,6 +32,8 @@ declare global {
   // eslint-disable-next-line no-var
   var mongoose: Cached | undefined;
 }
+
+const TENANT_OBJECT_ID = new Types.ObjectId(TENANT_ID);
 
 describe('WorkLog Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -37,7 +54,8 @@ describe('WorkLog Tests', () => {
     defaultUser = await User.create({
       name: 'Test User',
       email: 'test@example.com',
-      role: 'manager'
+      password: 'not-a-real-hash',
+      role: 'manager',
     });
 
     // Create test project
@@ -47,8 +65,20 @@ describe('WorkLog Tests', () => {
       location: 'Test Location',
       startDate: new Date(),
       status: 'in-progress',
-      manager: defaultUser._id
+      ownerEmail: 'owner@example.com',
+      contractorEmail: 'contractor@example.com',
+      ownerUserId: defaultUser._id,
+      contractorUserId: defaultUser._id,
+      manager: defaultUser._id,
+      tenantId: TENANT_OBJECT_ID,
     });
+
+    mockGetAuthUser.mockResolvedValue({
+      userId: (defaultUser._id as Types.ObjectId).toString(),
+      name: 'Test User',
+      role: 'manager',
+      tenantId: TENANT_ID,
+    } as any);
   });
 
   afterEach(async () => {
@@ -68,6 +98,7 @@ describe('WorkLog Tests', () => {
   describe('Saving WorkLogs', () => {
     it('should save a valid work log', async () => {
       const workLogData: Partial<IWorkLog> = {
+        tenantId: TENANT_OBJECT_ID,
         date: new Date(),
         project: defaultProject._id as Types.ObjectId,
         author: defaultUser._id as Types.ObjectId,
@@ -75,7 +106,7 @@ describe('WorkLog Tests', () => {
         temperature: 25,
         workDescription: 'Test work description',
         personnel: [
-          { role: 'Worker', count: 5 }
+          { role: 'Worker', count: 5, workDetails: '' }
         ],
         equipment: [
           { type: 'Excavator', count: 1, hours: 8 }
@@ -102,6 +133,17 @@ describe('WorkLog Tests', () => {
 
       await expect(invalidWorkLog.save()).rejects.toThrow();
     });
+
+    it('refuses to save a work log with no tenant, so it can never leak across tenants', async () => {
+      const orphan = new WorkLog({
+        date: new Date(),
+        project: defaultProject._id as Types.ObjectId,
+        author: defaultUser._id as Types.ObjectId,
+        workDescription: 'No tenant',
+      });
+
+      await expect(orphan.save()).rejects.toThrow(/tenantId/);
+    });
   });
 
   describe('Retrieving WorkLogs', () => {
@@ -109,18 +151,20 @@ describe('WorkLog Tests', () => {
       // Create some test work logs
       const workLogs: Partial<IWorkLog>[] = [
         {
+          tenantId: TENANT_OBJECT_ID,
           date: new Date('2024-03-01'),
           project: defaultProject._id as Types.ObjectId,
           author: defaultUser._id as Types.ObjectId,
           workDescription: 'Work Log 1',
-          personnel: [{ role: 'Worker', count: 3 }]
+          personnel: [{ role: 'Worker', count: 3, workDetails: '' }]
         },
         {
+          tenantId: TENANT_OBJECT_ID,
           date: new Date('2024-03-02'),
           project: defaultProject._id as Types.ObjectId,
           author: defaultUser._id as Types.ObjectId,
           workDescription: 'Work Log 2',
-          personnel: [{ role: 'Worker', count: 4 }]
+          personnel: [{ role: 'Worker', count: 4, workDetails: '' }]
         }
       ];
 
@@ -162,7 +206,7 @@ describe('WorkLog Tests', () => {
         project: (defaultProject._id as Types.ObjectId).toString(),
         author: (defaultUser._id as Types.ObjectId).toString(),
         workDescription: 'API Test Work Log',
-        personnel: [{ role: 'Worker', count: 2 }]
+        personnel: [{ role: 'Worker', count: 2, workDetails: '' }]
       };
 
       const request = new Request('http://localhost:3000/api/worklogs', {
@@ -179,14 +223,37 @@ describe('WorkLog Tests', () => {
       expect(response.status).toBe(201);
       expect(data._id).toBeDefined();
       expect(data.workDescription).toBe('API Test Work Log');
+      expect(data.tenantId).toBe(TENANT_ID);
+    });
+
+    it('should reject an unauthenticated POST, so tenantId cannot come from the client', async () => {
+      mockGetAuthUser.mockResolvedValueOnce(null);
+
+      const request = new Request('http://localhost:3000/api/worklogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workDescription: 'Anon' }),
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(401);
     });
 
     it('should handle GET request to fetch work logs', async () => {
-      const response = await GET();
+      await WorkLog.create({
+        tenantId: TENANT_OBJECT_ID,
+        date: new Date('2024-04-01'),
+        project: defaultProject._id as Types.ObjectId,
+        author: defaultUser._id as Types.ObjectId,
+        workDescription: 'Listed Work Log',
+      });
+
+      const response = await GET(new Request('http://localhost:3000/api/worklogs'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(Array.isArray(data)).toBe(true);
+      expect(data[0].workDescription).toBe('Listed Work Log');
     });
   });
-}); 
+});

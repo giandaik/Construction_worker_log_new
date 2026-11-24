@@ -123,7 +123,7 @@ export abstract class BaseRepository<T extends { _id?: string | ObjectId }> impl
 
   async findAll(filter: Partial<T> = {}, options: FindOptions = {}): Promise<T[]> {
     const { limit, skip, sort, projection } = options;
-    let query = this.scopedFindCursor(filter as Record<string, any>);
+    let query = this.scopedFindCursor(this.normalizeFilter(filter) as Record<string, any>);
     if (projection) query = query.project(projection);
     if (sort) query = query.sort(sort);
     if (skip) query = query.skip(skip);
@@ -145,7 +145,7 @@ export abstract class BaseRepository<T extends { _id?: string | ObjectId }> impl
    * Find a single document matching the filter
    */
   async findOne(filter: Partial<T>): Promise<T | null> {
-    const document = await this.scopedFindOneRaw(filter as Record<string, any>);
+    const document = await this.scopedFindOneRaw(this.normalizeFilter(filter) as Record<string, any>);
     return document ? this.mapToEntity(document) : null;
   }
 

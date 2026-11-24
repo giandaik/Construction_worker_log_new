@@ -10,6 +10,10 @@ import { WorkLog, Project, User } from '../lib/models';
 
 let mongoServer: MongoMemoryServer;
 
+/** WorkerActionRow is tenant-scoped: nothing renders without a real tenant. */
+const TENANT_ID = '507f1f77bcf86cd799439011';
+const TENANT_OBJECT_ID = new mongoose.Types.ObjectId(TENANT_ID);
+
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   process.env.MONGODB_URI = mongoServer.getUri();
@@ -28,7 +32,7 @@ beforeEach(async () => {
 });
 
 async function renderForUser(userId: string) {
-  const element = await WorkerActionRow({ userId });
+  const element = await WorkerActionRow({ userId, tenantId: TENANT_ID });
   return render(element as React.ReactElement);
 }
 
@@ -47,6 +51,7 @@ async function seedProject(name: string) {
     contractorEmail: 'contractor@example.com',
     ownerUserId: new mongoose.Types.ObjectId(),
     contractorUserId: new mongoose.Types.ObjectId(),
+    tenantId: TENANT_OBJECT_ID,
   });
   return projectId;
 }
@@ -56,6 +61,7 @@ describe('WorkerActionRow', () => {
     const userId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Athens Tower');
     const draft = await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: userId,
       project: projectId,
       date: new Date('2026-06-20'),
@@ -76,6 +82,7 @@ describe('WorkerActionRow', () => {
     const userId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Kifissia House');
     await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: userId,
       project: projectId,
       date: new Date('2026-06-19'),
@@ -96,6 +103,7 @@ describe('WorkerActionRow', () => {
     const userId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Kifissia House');
     const recent = await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: userId,
       project: projectId,
       date: new Date('2026-06-19'),
@@ -124,6 +132,7 @@ describe('WorkerActionRow', () => {
     const userId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Athens Tower');
     await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: userId,
       project: projectId,
       date: new Date('2026-06-18'),
@@ -134,6 +143,7 @@ describe('WorkerActionRow', () => {
       materials: [],
     });
     const newer = await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: userId,
       project: projectId,
       date: new Date('2026-06-20'),
@@ -155,6 +165,7 @@ describe('WorkerActionRow', () => {
     const otherUserId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Athens Tower');
     await WorkLog.create({
+      tenantId: TENANT_OBJECT_ID,
       author: otherUserId,
       project: projectId,
       date: new Date('2026-06-20'),

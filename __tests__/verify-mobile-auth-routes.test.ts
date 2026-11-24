@@ -10,6 +10,7 @@ import { jwtVerify } from 'jose';
 import { SESSION_COOKIE_NAME } from '@/lib/constants/constants';
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters-long';
+const { TENANT_ID } = vi.hoisted(() => ({ TENANT_ID: '507f1f77bcf86cd799439011' }));
 const PASSWORD = 'correct-horse-battery-staple';
 const EMAIL = 'mobile-login@example.com';
 
@@ -30,6 +31,7 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   await mongoose.connection.collection('users').deleteMany({});
+  await mongoose.connection.collection('user_tenant_memberships').deleteMany({});
 });
 
 function jsonRequest(url: string, body: unknown): Request {
@@ -42,11 +44,23 @@ function jsonRequest(url: string, body: unknown): Request {
 
 describe('POST /api/login', () => {
   beforeEach(async () => {
-    await mongoose.connection.collection('users').insertOne({
+    const { insertedId } = await mongoose.connection.collection('users').insertOne({
       name: 'Ada',
       email: EMAIL,
       password: await hash(PASSWORD, 12),
       role: 'admin',
+    });
+
+    // Login now resolves the tenant from membership: a user with no active
+    // membership is refused (403) and never receives a token. The issued JWT
+    // carries the membership's tenantRole/tenantId, not the account's legacy
+    // `role` field.
+    await mongoose.connection.collection('user_tenant_memberships').insertOne({
+      userId: insertedId,
+      tenantId: new mongoose.Types.ObjectId(TENANT_ID),
+      tenantRole: 'admin',
+      isActive: true,
+      joinedAt: new Date(),
     });
   });
 

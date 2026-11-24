@@ -4,10 +4,21 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import User from '../lib/models/User';
 
 // Admin auth so POST/PUT pass the isAdmin gate; route never reads other user fields.
-vi.mock('@/utils/auth', () => ({
-  getAuthUser: vi.fn(),
-  isAdmin: (u: any) => u?.role === 'admin' || u?.role === 'manager',
+/**
+ * Only `getAuthUser` is faked. Everything else in `@/utils/auth` — notably
+ * `resolveRepositoryContext`, which derives the tenant-scoped repository
+ * context from the authenticated user — runs for real, so these tests
+ * exercise the same tenant plumbing the routes use in production.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
 }));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
 
 import { POST } from '../app/api/projects/route';
 import { GET, PUT } from '../app/api/projects/[id]/route';
@@ -44,7 +55,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  mockedGetAuthUser.mockResolvedValue({ role: 'admin' } as any);
+  mockedGetAuthUser.mockResolvedValue({ role: 'admin', name: 'Geo Admin', tenantId: TENANT_ID } as any);
 });
 
 describe('Project geolocation — API routes pass coordinates through', () => {

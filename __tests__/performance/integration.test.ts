@@ -3,9 +3,23 @@
  * End-to-end tests for overall application performance
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
+
+/**
+ * The routes under measurement are tenant-scoped; without a session they
+ * return 401 and the timing numbers below would be measuring nothing.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
+}));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
 
 describe('Performance: Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -15,6 +29,13 @@ describe('Performance: Integration Tests', () => {
     const mongoUri = mongoServer.getUri();
     process.env.MONGODB_URI = mongoUri;
     await mongoose.connect(mongoUri);
+
+    mockGetAuthUser.mockResolvedValue({
+      userId: new Types.ObjectId().toString(),
+      name: 'Perf Admin',
+      role: 'admin',
+      tenantId: TENANT_ID,
+    } as any);
   });
 
   afterAll(async () => {
@@ -67,14 +88,14 @@ describe('Performance: Integration Tests', () => {
 
       // Seed data
       await db.collection('projects').insertMany([
-        { name: 'Project 1', description: 'Test 1' },
-        { name: 'Project 2', description: 'Test 2' },
-        { name: 'Project 3', description: 'Test 3' },
+        { name: 'Project 1', description: 'Test 1', tenantId: new Types.ObjectId(TENANT_ID) },
+        { name: 'Project 2', description: 'Test 2', tenantId: new Types.ObjectId(TENANT_ID) },
+        { name: 'Project 3', description: 'Test 3', tenantId: new Types.ObjectId(TENANT_ID) },
       ]);
 
       const startTime = Date.now();
       const { GET } = await import('@/app/api/projects/route');
-      const response = await GET();
+      const response = await GET(new Request('http://localhost/api/projects'));
       const duration = Date.now() - startTime;
 
       expect(response.status).toBe(200);
@@ -96,13 +117,25 @@ describe('Performance: Integration Tests', () => {
       await db.collection('worklogs').deleteMany({});
 
       await db.collection('projects').insertMany([
-        { name: 'Project A' },
-        { name: 'Project B' },
+        { name: 'Project A', tenantId: new Types.ObjectId(TENANT_ID) },
+        { name: 'Project B', tenantId: new Types.ObjectId(TENANT_ID) },
       ]);
 
       await db.collection('worklogs').insertMany([
-        { date: '2025-12-01', project: 'p1', author: 'u1', workDescription: 'Work 1' },
-        { date: '2025-12-02', project: 'p2', author: 'u2', workDescription: 'Work 2' },
+        {
+          tenantId: new Types.ObjectId(TENANT_ID),
+          date: new Date('2025-12-01'),
+          project: new Types.ObjectId(),
+          author: new Types.ObjectId(),
+          workDescription: 'Work 1',
+        },
+        {
+          tenantId: new Types.ObjectId(TENANT_ID),
+          date: new Date('2025-12-02'),
+          project: new Types.ObjectId(),
+          author: new Types.ObjectId(),
+          workDescription: 'Work 2',
+        },
       ]);
 
       // Parallel requests (like homepage does)
@@ -114,7 +147,7 @@ describe('Performance: Integration Tests', () => {
       ]);
 
       const [projectsResponse, worklogsResponse] = await Promise.all([
-        projectsModule.GET(),
+        projectsModule.GET(new Request('http://localhost/api/projects')),
         worklogsModule.GET(new Request('http://localhost/api/worklogs')),
       ]);
 
@@ -151,18 +184,22 @@ describe('Performance: Integration Tests', () => {
       // Test API endpoints
       const db = mongoose.connection;
       await db.collection('projects').deleteMany({});
-      await db.collection('projects').insertOne({ name: 'Test Project' });
+      await db.collection('projects').insertOne({
+        name: 'Test Project',
+        tenantId: new Types.ObjectId(TENANT_ID),
+      });
 
       const apiProjectsStart = Date.now();
       const { GET: getProjects } = await import('@/app/api/projects/route');
-      await getProjects();
+      await getProjects(new Request('http://localhost/api/projects'));
       metrics.apiProjects = Date.now() - apiProjectsStart;
 
       await db.collection('worklogs').deleteMany({});
       await db.collection('worklogs').insertOne({
-        date: '2025-12-01',
-        project: 'test',
-        author: 'test',
+        tenantId: new Types.ObjectId(TENANT_ID),
+        date: new Date('2025-12-01'),
+        project: new Types.ObjectId(),
+        author: new Types.ObjectId(),
         workDescription: 'Test work',
       });
 

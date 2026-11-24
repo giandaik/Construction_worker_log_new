@@ -1,18 +1,141 @@
 /**
  * Performance Tests for Bundle Size and Code Splitting
  * Tests dynamic imports and bundle optimization
+ *
+ * These assertions read the *production* build output in `.next`, which is a
+ * cache rather than a fact: Next never prunes stale chunks, and a `next dev`
+ * compile leaves unminified megabytes behind. Each test therefore measures
+ * only what the current build manifest references, and skips (loudly) when
+ * `.next` is missing or older than the sources.
  */
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
-describe('Performance: Bundle Size Optimization', () => {
-  const buildDir = join(process.cwd(), '.next');
-  const serverDir = join(buildDir, 'server', 'app');
+const buildDir = join(process.cwd(), '.next');
+const serverDir = join(buildDir, 'server', 'app');
+const clientChunksDir = join(buildDir, 'static', 'chunks');
 
+/** JS chunks the current build manifest references, or null when absent. */
+function currentBuildChunks(): string[] | null {
+  const manifestPath = join(buildDir, 'app-build-manifest.json');
+  if (!existsSync(manifestPath)) return null;
+
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+    pages?: Record<string, string[]>;
+  };
+
+  const chunks = new Set<string>();
+  for (const files of Object.values(manifest.pages ?? {})) {
+    for (const file of files) {
+      if (file.endsWith('.js') && existsSync(join(buildDir, file))) chunks.add(file);
+    }
+  }
+  return [...chunks];
+}
+
+/** Chunks a route loads eagerly, per the current build manifest. */
+function eagerChunksFor(route: string): string[] {
+  const manifestPath = join(buildDir, 'app-build-manifest.json');
+  if (!existsSync(manifestPath)) return [];
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+    pages?: Record<string, string[]>;
+  };
+  return manifest.pages?.[route] ?? [];
+}
+
+/** Newest mtime under the source trees that feed the bundle. */
+function newestSourceMtime(): number {
+  let newest = 0;
+  const roots = ['app', 'lib', 'components', 'hooks', 'utils'].map((d) =>
+    join(process.cwd(), d),
+  );
+
+  function walk(dir: string) {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir)) {
+      const fullPath = join(dir, entry);
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) walk(fullPath);
+      else if (/\.(ts|tsx|js|jsx|css)$/.test(entry)) {
+        newest = Math.max(newest, stat.mtimeMs);
+      }
+    }
+  }
+
+  roots.forEach(walk);
+  return newest;
+}
+
+/**
+ * True when `.next` reflects the sources on disk. A stale or leftover dev
+ * build makes every size assertion below meaningless, so they skip instead of
+ * reporting a number about code that no longer exists.
+ */
+function buildMatchesSources(): boolean {
+  const buildId = join(buildDir, 'BUILD_ID');
+  const buildMtime = existsSync(buildId) ? statSync(buildId).mtimeMs : 0;
+  return buildMtime >= newestSourceMtime();
+}
+
+/** Client chunks whose content matches `marker` — i.e. a code-split artifact. */
+function findChunksContaining(marker: RegExp): string[] {
+  if (!existsSync(clientChunksDir)) return [];
+  const matches: string[] = [];
+  for (const entry of readdirSync(clientChunksDir)) {
+    if (!entry.endsWith('.js')) continue;
+    const fullPath = join(clientChunksDir, entry);
+    if (statSync(fullPath).isFile() && marker.test(readFileSync(fullPath, 'utf-8'))) {
+      matches.push(entry);
+    }
+  }
+  return matches;
+}
+
+describe('Performance: Bundle Size Optimization', () => {
   describe('Dynamic Import - PDF Export', () => {
-    it('should have exportToPDF as a separate chunk', () => {
+    it('ships the PDF exporter (jspdf) in a chunk of its own', () => {
+      if (!existsSync(clientChunksDir)) {
+        console.warn('Build directory not found. Run "npm run build" first.');
+        return;
+      }
+
+      const chunks = findChunksContaining(/jspdf|jsPDF/);
+
+      console.log(`
+        📦 PDF Export Module:
+        - Chunks containing jspdf: ${chunks.length}
+        ${chunks.map((chunk) => `        - ${chunk}`).join('\n')}
+      `);
+
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    it('does not load the PDF exporter eagerly on the worklog detail route', () => {
+      if (!existsSync(clientChunksDir)) {
+        console.warn('Build directory not found. Run "npm run build" first.');
+        return;
+      }
+
+      const pdfChunks = findChunksContaining(/jspdf|jsPDF/);
+      if (pdfChunks.length === 0) {
+        // No chunk to reason about; the previous test reports this.
+        return;
+      }
+
+      const eager = eagerChunksFor('/worklogs/[id]/page').map((file) =>
+        file.replace(/^static\/chunks\//, ''),
+      );
+
+      // The heavy export path must be fetched on demand, never in the route's
+      // initial chunk set — that is the entire point of the dynamic import.
+      for (const chunk of pdfChunks) {
+        expect(eager).not.toContain(chunk);
+      }
+    });
+
+    it('keeps the /worklogs/[id] route bundle small', () => {
       const worklogIdDir = join(serverDir, 'worklogs', '[id]');
 
       if (!existsSync(worklogIdDir)) {
@@ -20,95 +143,46 @@ describe('Performance: Bundle Size Optimization', () => {
         return;
       }
 
-      // Check that page.js exists and is small (due to dynamic import)
       const pageFile = join(worklogIdDir, 'page.js');
+      if (!existsSync(pageFile)) return;
 
-      if (existsSync(pageFile)) {
-        const pageContent = readFileSync(pageFile, 'utf-8');
+      const pageSize = statSync(pageFile).size;
 
-        // Should contain dynamic import() call
-        expect(pageContent).toMatch(/import\s*\(/);
+      console.log(`
+        📦 Route Bundle:
+        - /worklogs/[id]/page.js size: ${(pageSize / 1024).toFixed(2)} KB
+      `);
 
-        const pageSize = statSync(pageFile).size;
-
-        // With dynamic import, page should be much smaller
-        // Before: ~130KB, After: should be <50KB
-        expect(pageSize).toBeLessThan(50000);
-
-        console.log(`
-          📦 Dynamic Import Verification:
-          - /worklogs/[id]/page.js size: ${(pageSize / 1024).toFixed(2)} KB
-          - Contains dynamic import: ✓
-        `);
-      }
-    });
-
-    it('should have exportToPDF.js as separate chunk', () => {
-      const worklogIdDir = join(serverDir, 'worklogs', '[id]');
-
-      if (!existsSync(worklogIdDir)) {
-        return;
-      }
-
-      const exportFile = join(worklogIdDir, 'exportToPDF.js');
-
-      if (existsSync(exportFile)) {
-        const exportSize = statSync(exportFile).size;
-
-        console.log(`
-          📦 PDF Export Module:
-          - exportToPDF.js size: ${(exportSize / 1024).toFixed(2)} KB
-          - Loaded on-demand: ✓
-        `);
-
-        expect(exportSize).toBeGreaterThan(0);
-      }
+      // Before the dynamic import this route carried the PDF exporter inline.
+      expect(pageSize).toBeLessThan(50000);
     });
   });
 
   describe('Overall Bundle Size', () => {
     it('should have reasonable total bundle size', () => {
-      const staticDir = join(buildDir, 'static');
+      const chunks = currentBuildChunks();
 
-      if (!existsSync(staticDir)) {
-        console.warn('Build directory not found. Run "npm run build" first.');
+      if (!chunks) {
+        console.warn('Build manifest not found. Run "npm run build" first.');
         return;
       }
 
-      // Get all chunk files
-      function getJSFiles(dir: string): string[] {
-        const files: string[] = [];
-
-        if (!existsSync(dir)) return files;
-
-        const entries = readdirSync(dir);
-
-        for (const entry of entries) {
-          const fullPath = join(dir, entry);
-          const stat = statSync(fullPath);
-
-          if (stat.isDirectory()) {
-            files.push(...getJSFiles(fullPath));
-          } else if (entry.endsWith('.js')) {
-            files.push(fullPath);
-          }
-        }
-
-        return files;
+      if (!buildMatchesSources()) {
+        console.warn(
+          'Skipping bundle-size assertion: .next is older than the sources. Run "npm run build".',
+        );
+        return;
       }
 
-      const jsFiles = getJSFiles(staticDir);
-      const totalSize = jsFiles.reduce((sum, file) => {
-        return sum + statSync(file).size;
-      }, 0);
+      const totalSize = chunks.reduce((sum, file) => sum + statSync(join(buildDir, file)).size, 0);
 
       console.log(`
         📦 Bundle Size Metrics:
-        - Total JS files: ${jsFiles.length}
+        - JS chunks in this build: ${chunks.length}
         - Total size: ${(totalSize / 1024 / 1024).toFixed(2)} MB
       `);
 
-      // Total bundle should be reasonable (<5MB for client code)
+      // Total client bundle should be reasonable (<5MB)
       expect(totalSize).toBeLessThan(5 * 1024 * 1024);
     });
   });

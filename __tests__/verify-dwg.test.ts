@@ -15,10 +15,21 @@ vi.mock('@vercel/blob', () => ({
   del: vi.fn(async () => undefined),
 }));
 
-vi.mock('@/utils/auth', () => ({
-  getAuthUser: vi.fn(),
-  isAdmin: (u: any) => u?.role === 'admin' || u?.role === 'manager',
+/**
+ * Only `getAuthUser` is faked. Everything else in `@/utils/auth` — notably
+ * `resolveRepositoryContext`, which derives the tenant-scoped repository
+ * context from the authenticated user — runs for real, so these tests
+ * exercise the same tenant plumbing the routes use in production.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
 }));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
 
 // Required because the route reads process.env at module load time
 process.env.BLOB_READ_WRITE_TOKEN = 'fake-token';
@@ -114,6 +125,7 @@ describe('Task 1 — Data model: Project.dwgFiles + WorkLog.dwgRefs', () => {
       date: new Date(),
       project: p,
       author: u._id,
+      tenantId: new Types.ObjectId(TENANT_ID),
       workDescription: 'work',
       dwgRefs: ['https://blob/a.dwg', 'https://blob/b.dwg'],
     });
@@ -205,13 +217,13 @@ describe('Task 4 — POST /api/upload/pdf validation', () => {
   });
 
   it('returns 403 when authenticated as worker (role=user)', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'user' });
     const res = await uploadPdf(makeRequest({ file: new Blob(['x']), projectId: 'irrelevant' }));
     expect(res.status).toBe(403);
   });
 
   it('returns 400 when file is not .pdf', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'admin' });
     const file = new File(['hello'], 'plan.png', { type: 'image/png' });
     const res = await uploadPdf(
       makeRequest({ file, projectId: new Types.ObjectId().toString() }),
@@ -222,7 +234,7 @@ describe('Task 4 — POST /api/upload/pdf validation', () => {
   });
 
   it('returns 400 when file exceeds 25MB', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'manager' });
     const big = new Blob([new Uint8Array(26 * 1024 * 1024)]);
     const file = new File([big], 'big.pdf', { type: 'application/pdf' });
     const res = await uploadPdf(
@@ -232,7 +244,7 @@ describe('Task 4 — POST /api/upload/pdf validation', () => {
   });
 
   it('returns 200 with url/pathname/filename/size on happy path', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'manager' });
     const projectId = new Types.ObjectId().toString();
     const file = new File(['%PDF-bytes'], 'site-plan.pdf', { type: 'application/pdf' });
     const res = await uploadPdf(makeRequest({ file, projectId }));
@@ -248,7 +260,7 @@ describe('Task 5 — attach route accepts optional PDF fields', () => {
   it('POST happy path persists pdfUrl/pdfFilename/pdfSize', async () => {
     const projectId = await makeProject();
     const userId = new Types.ObjectId().toString();
-    mockedGetAuthUser.mockResolvedValueOnce({ userId, name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId, name: 'n', role: 'manager' });
 
     const res = await attachDwg(
       jsonRequest({
@@ -272,7 +284,7 @@ describe('Task 5 — attach route accepts optional PDF fields', () => {
   });
 
   it('POST returns 400 when pdfUrl is not a valid URL', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'admin' });
     const res = await attachDwg(
       jsonRequest({
         url: 'https://x/a.dwg',
@@ -309,7 +321,7 @@ describe('Task 5 — attach route accepts optional PDF fields', () => {
     });
 
     vi.mocked(blobDel).mockClear();
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: userId.toString(), name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: userId.toString(), name: 'n', role: 'admin' });
     const res = await removeDwg(
       jsonRequest({ url: dwgUrl }),
       { params: Promise.resolve({ id: projectId }) },
@@ -329,20 +341,20 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 403 when authenticated as worker (role=user)', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'user' });
     const res = await uploadDwg(makeRequest({ file: new Blob(['x']), projectId: 'irrelevant' }));
     expect(res.status).toBe(403);
   });
 
   it('returns 400 when projectId missing', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'admin' });
     const file = new File(['hello'], 'plan.dwg', { type: 'application/acad' });
     const res = await uploadDwg(makeRequest({ file }));
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when file is not .dwg', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'admin' });
     const file = new File(['hello'], 'plan.png', { type: 'image/png' });
     const res = await uploadDwg(
       makeRequest({ file, projectId: new Types.ObjectId().toString() }),
@@ -353,7 +365,7 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 400 when file exceeds 25MB', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'manager' });
     const big = new Blob([new Uint8Array(26 * 1024 * 1024)]);
     const file = new File([big], 'big.dwg', { type: 'application/acad' });
     const res = await uploadDwg(
@@ -363,7 +375,7 @@ describe('Task 2 — POST /api/upload/dwg validation', () => {
   });
 
   it('returns 200 with url/pathname/filename/size on happy path (manager + .dwg + valid projectId)', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'manager' });
     const projectId = new Types.ObjectId().toString();
     const file = new File(['CAD-bytes'], 'site-plan.dwg', { type: 'application/acad' });
     const res = await uploadDwg(makeRequest({ file, projectId }));
@@ -393,6 +405,7 @@ async function makeProject(): Promise<string> {
     ownerUserId: u._id,
     contractorUserId: u._id,
     manager: u._id,
+    tenantId: new Types.ObjectId(TENANT_ID),
   });
   return (project._id as Types.ObjectId).toString();
 }
@@ -412,7 +425,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
   });
 
   it('POST returns 403 when role=user', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'user' });
     const res = await attachDwg(
       jsonRequest({ url: 'https://x/a.dwg', pathname: 'p', filename: 'a.dwg', size: 1 }),
       { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
@@ -421,7 +434,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
   });
 
   it('POST returns 400 for malformed body', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'admin' });
     const res = await attachDwg(
       jsonRequest({ url: 'not-a-url', filename: 'a.dwg', size: -1 }),
       { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
@@ -430,7 +443,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
   });
 
   it('POST returns 404 for unknown project', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID,
       userId: new Types.ObjectId().toString(),
       name: 'n',
       role: 'admin',
@@ -445,7 +458,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
   it('POST happy path: appends DWG to project.dwgFiles', async () => {
     const projectId = await makeProject();
     const userId = new Types.ObjectId().toString();
-    mockedGetAuthUser.mockResolvedValueOnce({ userId, name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId, name: 'n', role: 'manager' });
 
     const res = await attachDwg(
       jsonRequest({
@@ -483,7 +496,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
       },
     });
 
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: userId.toString(), name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: userId.toString(), name: 'n', role: 'admin' });
     const res = await removeDwg(
       jsonRequest({ url: dropUrl }),
       { params: Promise.resolve({ id: projectId }) },
@@ -505,7 +518,7 @@ describe('Task 3 — POST/DELETE /api/projects/[id]/dwgs', () => {
     );
     expect(res.status).toBe(401);
 
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'user' });
+    mockedGetAuthUser.mockResolvedValueOnce({ tenantId: TENANT_ID, userId: 'u', name: 'n', role: 'user' });
     res = await removeDwg(
       jsonRequest({ url: 'https://x/a.dwg' }),
       { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },

@@ -106,6 +106,29 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
   }
 
   /**
+   * The raw driver does not cast filter values, and callers routinely hold the
+   * string form of an ObjectId (from a JWT, a URL param or a form field). Left
+   * unnormalized, `{ author: '<hex>' }` silently matches nothing while looking
+   * exactly like "this worker has no logs". Normalize the reference fields
+   * here so the bug cannot reappear at every call site.
+   */
+  protected normalizeFilter(filter: Partial<WorkLog>): any {
+    const normalized: any = { ...filter };
+
+    for (const key of ['author', 'project'] as const) {
+      const value = normalized[key];
+      if (typeof value !== 'string') continue;
+      try {
+        normalized[key] = ValidationUtils.normalizeObjectId(value);
+      } catch {
+        // A malformed id must not throw here: the query simply matches nothing.
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
    * Find work logs by project ID
    */
   async findByProject(
