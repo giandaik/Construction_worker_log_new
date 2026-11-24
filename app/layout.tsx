@@ -25,6 +25,19 @@ export const metadata = {
   description: 'Track and manage construction projects and daily work logs',
 }
 
+/**
+ * `viewportFit: 'cover'` lets the layout reach under the notch and the status
+ * bar, which is what the Capacitor shell draws over. The insets that come with
+ * it are consumed by `env(safe-area-inset-*)` in the app chrome — without
+ * `cover` the WebView is inset by the OS and those values are always 0, so the
+ * two have to be changed together.
+ */
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover' as const,
+}
+
 export default function RootLayout({
   children,
 }: {

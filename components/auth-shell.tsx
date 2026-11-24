@@ -8,7 +8,7 @@ interface AuthShellProps {
 
 export function AuthShell({ title, children }: AuthShellProps) {
   return (
-    <div className="blueprint-grid relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="blueprint-grid relative flex min-h-screen items-center justify-center bg-background px-4 pb-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
       <div className="hazard-stripe absolute inset-x-0 top-0 h-2" />
       <div className="animate-fade-up w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">

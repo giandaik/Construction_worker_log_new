@@ -23,7 +23,10 @@ export function Navbar() {
   const links = NAV_LINKS.filter((link) => isNavLinkVisible(link, user?.role))
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card">
+    // `pt-[env(safe-area-inset-top)]` keeps the header out from under the
+    // status bar when the WebView is edge-to-edge (forced from Android 15, and
+    // the case the Capacitor shell opts into). Zero on web, so nothing moves.
+    <header className="sticky top-0 z-40 border-b bg-card pt-[env(safe-area-inset-top)]">
       <div className="hazard-stripe h-1.5" />
       <div className="container flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

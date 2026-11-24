@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { isMobileApp } from '@/lib/mobile-auth';
+import { initBackButton } from '@/lib/mobile-backbutton';
 import { initSplashScreen } from '@/lib/mobile-splash';
 import { initStatusBar } from '@/lib/mobile-statusbar';
 
@@ -20,6 +21,10 @@ export function MobileInit() {
       // colour lands.
       await initStatusBar();
       await initSplashScreen();
+
+      // Independent of the splash: a missed back-button registration only costs
+      // the default (close-the-app) behaviour, never the boot.
+      await initBackButton();
     })();
   }, []);
 

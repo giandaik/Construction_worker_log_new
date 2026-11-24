@@ -14,6 +14,13 @@ const config: CapacitorConfig = {
       backgroundColor: '#FBBF24',
       showSpinner: false,
     },
+    Keyboard: {
+      // The work-log form is long and its fields sit near the bottom of the
+      // viewport. Without resizing, iOS slides the keyboard over the focused
+      // input and the user types blind. `native` shrinks the WebView instead so
+      // the browser scrolls the field into view; Android already does this.
+      resize: 'native',
+    },
   },
 };
 
