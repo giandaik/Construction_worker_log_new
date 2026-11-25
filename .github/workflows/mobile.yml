@@ -33,9 +33,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Syntactically valid origin: this build is never shipped, it only proves the
-  # export compiles with a base URL inlined.
-  NEXT_PUBLIC_API_BASE_URL: https://mobile-ci.invalid
+  # Inlined into the bundle, so it must be the real backend. Override with the
+  # repository variable API_BASE_URL when the deployment moves; the fallback is
+  # the production Vercel deployment. A placeholder here ships an app that
+  # installs and then fails every request.
+  NEXT_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://construction-worker-log-new.vercel.app' }}
   # Capacitor 8 emits `gradlew` expecting JDK 17+; the project targets 21.
   JAVA_VERSION: '21'
   NODE_VERSION: '22'

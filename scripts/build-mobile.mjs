@@ -166,6 +166,32 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 }
 process.on('exit', restoreOnce);
 
+/**
+ * Placeholders that compile but can never answer. A build that inlines one of
+ * these installs on a phone and fails at the first request — which is how a
+ * tester ends up unable to log in with no visible error but "Network error".
+ */
+const UNREACHABLE_SUFFIXES = ['.invalid', '.test', '.example'];
+
+function assertReachable(value, source) {
+  let host;
+  try {
+    host = new URL(value).hostname;
+  } catch {
+    console.error(`NEXT_PUBLIC_API_BASE_URL from ${source} is not an absolute URL: ${value}`);
+    process.exit(1);
+  }
+  if (UNREACHABLE_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+    console.error(
+      `NEXT_PUBLIC_API_BASE_URL from ${source} points at ${host}, which by definition resolves ` +
+        'nowhere. The app would install and then fail every request.\n\n' +
+        'Point it at the deployed backend (the value in .env.mobile) or unset it locally to fall ' +
+        'back to that file.',
+    );
+    process.exit(1);
+  }
+}
+
 const apiBaseUrl = resolveApiBaseUrl();
 
 if (!apiBaseUrl.value) {
@@ -180,6 +206,7 @@ if (!apiBaseUrl.value) {
 }
 
 console.log(`API base URL: ${apiBaseUrl.value}  (from ${apiBaseUrl.source})`);
+assertReachable(apiBaseUrl.value, apiBaseUrl.source ?? 'environment');
 
 console.log('\nStaging mobile build tree...');
 stage();
