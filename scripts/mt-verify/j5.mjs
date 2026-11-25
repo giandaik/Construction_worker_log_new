@@ -1,14 +1,15 @@
 /**
  * J5 — Impersonation: the full web + bearer cycle, statefulness, guards.
  */
-import { Sess, rec, expectStatus, flush, fixture, mongoEval } from './lib.mjs';
+import { Sess, rec, expectStatus, flush, fixture, mongoEval, runtimeTenantId, runtimeUserId } from './lib.mjs';
 
 const f = fixture('fixture');
 const BETA = f.tenants['beta-builders'];
 const BOB = f.users['bob@beta.test'];
 const ALICE = f.users['alice@alpha.test'];
 const SUPER = f.users['superadmin@gmail.com'];
-const GAMMA = f.tenants['gamma-works'];
+const GAMMA = runtimeTenantId('gamma-works');
+const GINA = runtimeUserId('gina@gamma.test');
 
 const admin = new Sess('superadmin');
 await admin.login('superadmin@gmail.com', '12345$dl');
@@ -73,7 +74,7 @@ admin.cookie = superCookie;
 expectStatus('UC-5.4k', await admin.req('POST', '/api/auth/select-tenant', { bearer: liveToken, body: { tenantId: BETA } }), 400, 'select-tenant refuses a live impersonation token');
 
 expectStatus('UC-5.4a', await admin.req('POST', `/api/platform/tenants/${GAMMA}/impersonate`, {
-  cookie: true, body: { userId: f.users['gina@gamma.test'], reason: 'x' },
+  cookie: true, body: { userId: GINA, reason: 'x' },
 }), [200, 201], 'impersonate a legit Gamma admin (control case)');
 
 admin.cookie = superCookie;

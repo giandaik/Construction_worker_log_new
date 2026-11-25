@@ -22,6 +22,28 @@ export function mongoEval(expr) {
   const bin = process.env.MONGOSH || '/opt/homebrew/bin/mongosh';
   return execFileSync(bin, ['--quiet', DB_URI, '--eval', expr]).toString().trim();
 }
+
+/**
+ * Ids for things a journey creates at run time (gamma-works and its admin gina
+ * are provisioned by J1, after setup.mjs dumped the fixture). Reading them from
+ * the fixture yields `undefined`, which the API answers with a 400 — a failure
+ * that says nothing about the application.
+ */
+export function runtimeTenantId(slug) {
+  const id = mongoEval(`const d=db.tenants.findOne({slug:"${slug}"}); print(d ? d._id.toString() : "null")`);
+  if (!id || id === 'null') {
+    throw new Error(`tenant "${slug}" does not exist — run j1 first (it provisions gamma-works)`);
+  }
+  return id;
+}
+
+export function runtimeUserId(email) {
+  const id = mongoEval(`const u=db.users.findOne({email:"${email}"}); print(u ? u._id.toString() : "null")`);
+  if (!id || id === 'null') {
+    throw new Error(`user "${email}" does not exist — run j1 first (it creates the gamma admin)`);
+  }
+  return id;
+}
 const RESULTS = new URL('./results.jsonl', import.meta.url).pathname;
 
 let ipSeq = 0;

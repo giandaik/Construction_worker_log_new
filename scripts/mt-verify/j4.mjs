@@ -1,13 +1,13 @@
 /**
  * J4 — Multi-tenant user: web (cookie) and mobile (bearer) selection flows.
  */
-import { Sess, rec, expectStatus, flush, fixture } from './lib.mjs';
+import { Sess, rec, expectStatus, flush, fixture, runtimeTenantId } from './lib.mjs';
 import { readFileSync } from 'node:fs';
 
 const f = fixture('fixture');
 const ALPHA = f.tenants['alpha-constructions'];
 const BETA = f.tenants['beta-builders'];
-const GAMMA = f.tenants['gamma-works'];
+const GAMMA = runtimeTenantId('gamma-works');
 
 // UC-4.1 single login, two memberships
 const web = new Sess('multi');
