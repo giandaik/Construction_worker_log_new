@@ -1,5 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { buildSignatureNotificationTemplate } from '@/lib/email/templates/signatureNotificationTemplate';
+
+/**
+ * `vi.mock` is hoisted above every import, so the nodemailer stub has to be
+ * created inside `vi.hoisted` — a factory that closes over test-body locals
+ * throws "createTransport is not defined" before any test runs.
+ */
+const { sendMailMock, createTransportMock } = vi.hoisted(() => ({
+  sendMailMock: vi.fn(),
+  createTransportMock: vi.fn(),
+}));
+
+vi.mock('nodemailer', () => ({
+  default: { createTransport: createTransportMock },
+  createTransport: createTransportMock,
+}));
+
 import { sendSignatureNotificationEmail } from '@/lib/email/sendEmail';
 
 describe('SMTP email notification', () => {
@@ -9,6 +25,11 @@ describe('SMTP email notification', () => {
     process.env.RESEND_FROM_EMAIL = 'noreply@example.com';
     process.env.RESEND_NOTIFICATION_RECIPIENT = 'notify@example.com';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    sendMailMock.mockReset();
+    createTransportMock.mockReset();
+    sendMailMock.mockResolvedValue({ messageId: 'msg-1' });
+    createTransportMock.mockReturnValue({ sendMail: sendMailMock });
   });
 
   afterEach(() => {
@@ -20,7 +41,7 @@ describe('SMTP email notification', () => {
       signerName: 'Jane Smith',
       signerRole: 'Supervisor',
       projectName: 'Downtown Renovation',
-      signatureTimestamp: '2026-06-08T14:30:00Z',
+      signatureSignedAt: '2026-06-08T14:30:00Z',
       workLogId: 'abc123',
     });
 
@@ -33,28 +54,28 @@ describe('SMTP email notification', () => {
     expect(template.text).toContain('Signer: Jane Smith');
     expect(template.text).toContain('Role: Supervisor');
     expect(template.text).toContain('Project: Downtown Renovation');
-    expect(template.text).toContain('UTC');
+    // The signer's timestamp is rendered in the runtime's locale, so assert on
+    // the rendered value rather than a hard-coded zone suffix.
+    expect(template.text).toContain(new Date('2026-06-08T14:30:00Z').toLocaleString());
   });
 
   it('sends mail via nodemailer with the expected payload', async () => {
-    const sendMail = vi.fn().mockResolvedValue({ messageId: 'msg-1' });
-    const createTransport = vi.fn().mockReturnValue({ sendMail });
-
-    vi.mock('nodemailer', () => ({ createTransport }));
-
+    // The notification goes to the *project owner*: without one there is no
+    // recipient and the sender refuses rather than blasting a default inbox.
     const result = await sendSignatureNotificationEmail({
       signerName: 'Jane Smith',
       signerRole: 'Supervisor',
       projectName: 'Downtown Renovation',
-      signatureTimestamp: '2026-06-08T14:30:00Z',
+      signatureSignedAt: '2026-06-08T14:30:00Z',
+      projectOwnerEmail: 'owner@example.com',
     });
 
     expect(result).toBe(true);
-    expect(createTransport).toHaveBeenCalled();
-    expect(sendMail).toHaveBeenCalledTimes(1);
-    const mailArgs = sendMail.mock.calls[0][0];
+    expect(createTransportMock).toHaveBeenCalled();
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    const mailArgs = sendMailMock.mock.calls[0][0];
     expect(mailArgs.from).toBe('noreply@example.com');
-    expect(mailArgs.to).toContain('notify@example.com');
+    expect(mailArgs.to).toBe('owner@example.com');
     expect(mailArgs.subject).toContain('Jane Smith');
     expect(mailArgs.html).toContain('Work Log Signature');
   });

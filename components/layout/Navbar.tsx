@@ -1,79 +1,137 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import Image from "next/image"
-import { usePathname } from "next/navigation"
-import { Plus } from "lucide-react"
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { Plus } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LogoutButton } from "@/components/LogoutButton"
-import { useCurrentUser } from "@/hooks/useCurrentUser"
-import { NAV_LINKS, isNavLinkVisible } from "./navConfig"
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoutButton } from "@/components/LogoutButton";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import {
+  NAV_LINKS,
+  isNavLinkVisible,
+  isPlatformUser,
+} from "./navConfig";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
-/** Home is active only on exact "/app"; section links are prefix-active. */
-export function isPathActive(pathname: string, href: string): boolean {
-  if (href === "/app") return pathname === "/app"
-  return pathname === href || pathname.startsWith(href + "/")
+/**
+ * Authenticated application home is /app.
+ *
+ * The public marketing/landing page is /.
+ */
+export function isPathActive(
+  pathname: string,
+  href: string,
+): boolean {
+  if (href === "/app") {
+    return pathname === "/app";
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function Navbar() {
-  const pathname = usePathname()
-  const { user } = useCurrentUser()
-  const links = NAV_LINKS.filter((link) => isNavLinkVisible(link, user?.role))
+  const pathname = usePathname();
+  const { user } = useCurrentUser();
+
+  const platformUser = isPlatformUser(user?.platformRole);
+
+  const links = NAV_LINKS.filter((link) =>
+    isNavLinkVisible(
+      link,
+      user?.role,
+      user?.platformRole,
+    ),
+  );
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card">
-      <div className="hazard-stripe h-1.5" />
-      <div className="container flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Link
-            href="/app"
-            className="flex items-center gap-2"
-            aria-label="Construction Worker Log home"
-          >
-            <Image
-              src="/sitely-logo.png"
-              alt="sitely — Construction Log"
-              width={36}
-              height={36}
-              className="h-9 w-9 shrink-0 rounded-md"
-            />
-          </Link>
+    <>
+      {user?.impersonatedBy && <ImpersonationBanner />}
 
-          <nav className="flex flex-wrap items-center gap-1" aria-label="Primary">
-            {links.map((link) => {
-              const active = isPathActive(pathname, link.href)
-              const Icon = link.icon
-              return (
-                <Button
-                  key={link.href}
-                  variant={active ? "secondary" : "ghost"}
-                  size="sm"
-                  asChild
-                >
-                  <Link href={link.href} aria-current={active ? "page" : undefined}>
-                    <Icon className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">{link.label}</span>
-                  </Link>
-                </Button>
-              )
-            })}
-          </nav>
-        </div>
+      <header className="sticky top-0 z-40 border-b bg-card">
+        <div className="hazard-stripe h-1.5" />
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Button asChild size="sm">
-            <Link href="/logs/new">
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">New log</span>
-              <span className="sm:hidden">New</span>
+        <div className="container flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link
+              href={platformUser ? "/platform" : "/app"}
+              className="flex items-center gap-2"
+              aria-label="Construction Worker Log home"
+            >
+              <Image
+                src="/sitely-logo.png"
+                alt="sitely — Construction Log"
+                width={36}
+                height={36}
+                className="h-9 w-9 shrink-0 rounded-md"
+              />
             </Link>
-          </Button>
-          <ThemeToggle />
-          <LogoutButton />
+
+            <nav
+              className="flex flex-wrap items-center gap-1"
+              aria-label="Primary"
+            >
+              {links.map((link) => {
+                const active = isPathActive(
+                  pathname,
+                  link.href,
+                );
+
+                const Icon = link.icon;
+
+                return (
+                  <Button
+                    key={link.href}
+                    variant={active ? "secondary" : "ghost"}
+                    size="sm"
+                    asChild
+                  >
+                    <Link
+                      href={link.href}
+                      aria-current={
+                        active ? "page" : undefined
+                      }
+                    >
+                      <Icon className="h-4 w-4 sm:mr-2" />
+
+                      <span className="hidden sm:inline">
+                        {link.label}
+                      </span>
+                    </Link>
+                  </Button>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/*
+             * SuperAdmin is a platform user, not a tenant worker.
+             * Therefore they should not see the tenant "New log" action.
+             */}
+            {!platformUser && (
+              <Button asChild size="sm">
+                <Link href="/logs/new">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+
+                  <span className="hidden sm:inline">
+                    New log
+                  </span>
+
+                  <span className="sm:hidden">
+                    New
+                  </span>
+                </Link>
+              </Button>
+            )}
+
+            <ThemeToggle />
+            <LogoutButton />
+          </div>
         </div>
-      </div>
-    </header>
-  )
+      </header>
+    </>
+  );
 }

@@ -1,8 +1,8 @@
 // GET all work logs
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/constants';
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser } from '@/utils/auth';
+import { getAuthUser, resolveRepositoryContext } from '@/utils/auth';
 import {
   sendSignatureNotificationEmail,
   sendWorkLogCompletedEmail,
@@ -12,7 +12,7 @@ import {
   getWorkLogStatusFromSignatures,
   validateDraftSignatures,
 } from '@/lib/signatureUtils';
-import { DatabaseUtils } from '@/lib/api/database';
+import { workLogCreateSchema } from '@/lib/schemas/workLogSchema';
 
 export async function GET(request: Request) {
   try {
@@ -20,8 +20,10 @@ export async function GET(request: Request) {
     if (!authUser) {
       return ApiError.unauthorized();
     }
+    const context = resolveRepositoryContext(authUser);
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const projectRepo = RepositoryFactory.getProjectRepository(context);
       // Get project filter from query parameters
       const { searchParams } = new URL(request.url);
       const projectId = searchParams.get('project');
@@ -65,7 +67,7 @@ export async function GET(request: Request) {
       }
 
       return ApiError.success(workLogs);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -80,9 +82,21 @@ export async function POST(request: Request) {
       return ApiError.unauthorized();
     }
 
-    const data = await request.json();
+    const context = resolveRepositoryContext(user);
+
+    // Strict: an unknown key is rejected rather than spread into the document.
+    const parsed = workLogCreateSchema.safeParse(await readJsonBody(request));
+    if (!parsed.success) {
+      return ApiError.badRequest(
+        parsed.error.issues
+          .map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`)
+          .join(', ')
+      );
+    }
+    const data = parsed.data;
 
     return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const projectRepo = RepositoryFactory.getProjectRepository(context);
       const selectedDate = new Date(data.date);
       if (Number.isNaN(selectedDate.getTime())) {
         return ApiError.badRequest('Date is required.');
@@ -102,18 +116,14 @@ export async function POST(request: Request) {
       let projectContractorEmail: string | undefined;
 
       try {
-        await DatabaseUtils.withConnection(async (db) => {
-          const projectsCollection = db.collection('projects');
-          const projectId = typeof data.project === 'string' ? data.project : data.project?.toString();
-          if (projectId) {
-            const { ObjectId } = await import('mongodb');
-            const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
-            projectOwnerName = project?.ownerName;
-            projectContractorName = project?.contractorName;
-            projectOwnerEmail = project?.ownerEmail;
-            projectContractorEmail = project?.contractorEmail;
-          }
-        });
+        const projectId = data.project;
+        if (projectId) {
+          const project = await projectRepo.findById(projectId);
+          projectOwnerName = project?.ownerName;
+          projectContractorName = project?.contractorName;
+          projectOwnerEmail = project?.ownerEmail;
+          projectContractorEmail = project?.contractorEmail;
+        }
       } catch (error) {
         console.error('Error fetching project details:', error);
       }
@@ -146,22 +156,14 @@ export async function POST(request: Request) {
       if (Array.isArray(data.signatures) && data.signatures.length > 0) {
         const latestSignature = data.signatures[data.signatures.length - 1];
 
-        // Fetch project details from database
+        // Fetch the project name for notification details.
         let projectName: string | undefined;
-        let projectOwnerName: string | undefined;
-        let projectContractorName: string | undefined;
         try {
-          await DatabaseUtils.withConnection(async (db) => {
-            const projectsCollection = db.collection('projects');
-            const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
-            if (projectId) {
-              const { ObjectId } = await import('mongodb');
-              const project = await projectsCollection.findOne({ _id: new ObjectId(projectId) });
-              projectName = project?.name;
-              projectOwnerName = project?.ownerName;
-              projectContractorName = project?.contractorName;
-            }
-          });
+          const projectId = typeof workLog.project === 'string' ? workLog.project : workLog.project?.toString();
+          if (projectId) {
+            const project = await projectRepo.findById(projectId);
+            projectName = project?.name;
+          }
         } catch (error) {
           console.error('Error fetching project details:', error);
         }
@@ -202,7 +204,7 @@ export async function POST(request: Request) {
       console.log(`Work log created in ${Date.now() - startTime}ms`);
 
       return ApiError.success(workLog, 201);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

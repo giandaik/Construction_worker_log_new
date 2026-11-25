@@ -91,15 +91,15 @@ describe("navConfig role gating", () => {
   })
 
   it("shows the admin link only to admin/manager", () => {
-    expect(isNavLinkVisible(adminLink, "admin")).toBe(true)
-    expect(isNavLinkVisible(adminLink, "manager")).toBe(true)
-    expect(isNavLinkVisible(adminLink, "user")).toBe(false)
-    expect(isNavLinkVisible(adminLink, undefined)).toBe(false)
+    expect(isNavLinkVisible(adminLink, "admin", undefined)).toBe(true)
+    expect(isNavLinkVisible(adminLink, "manager", undefined)).toBe(true)
+    expect(isNavLinkVisible(adminLink, "user", undefined)).toBe(false)
+    expect(isNavLinkVisible(adminLink, undefined, undefined)).toBe(false)
   })
 
   it("shows non-admin links to everyone", () => {
-    expect(isNavLinkVisible(publicLink, "user")).toBe(true)
-    expect(isNavLinkVisible(publicLink, undefined)).toBe(true)
+    expect(isNavLinkVisible(publicLink, "user", undefined)).toBe(true)
+    expect(isNavLinkVisible(publicLink, undefined, undefined)).toBe(true)
   })
 })
 

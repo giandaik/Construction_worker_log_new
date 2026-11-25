@@ -10,11 +10,23 @@ import {
   CATALOG_KINDS,
 } from '../lib/schemas/projectSchema';
 import { ProjectRepository } from '../lib/repositories/ProjectRepository';
+import { tenantContext } from '../lib/repositories/base/RepositoryContext';
 
-vi.mock('@/utils/auth', () => ({
-  getAuthUser: vi.fn(),
-  isAdmin: (u: any) => u?.role === 'admin' || u?.role === 'manager',
+/**
+ * Only `getAuthUser` is faked. Everything else in `@/utils/auth` — notably
+ * `resolveRepositoryContext`, which derives the tenant-scoped repository
+ * context from the authenticated user — runs for real, so these tests
+ * exercise the same tenant plumbing the routes use in production.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
 }));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
 
 import { PUT as putCatalog } from '../app/api/projects/[id]/catalog/route';
 import { getAuthUser } from '@/utils/auth';
@@ -55,6 +67,7 @@ async function makeProject(): Promise<string> {
     ownerUserId: u._id,
     contractorUserId: u._id,
     manager: u._id,
+    tenantId: new Types.ObjectId(TENANT_ID),
   });
   return (project._id as Types.ObjectId).toString();
 }
@@ -180,7 +193,7 @@ describe('Catalog — Project model persistence', () => {
 describe('Catalog — ProjectRepository.setCatalog', () => {
   it('replaces the array atomically, trims and dedupes', async () => {
     const projectId = await makeProject();
-    const repo = new ProjectRepository(mongoose.connection.collection('projects'));
+    const repo = new ProjectRepository(mongoose.connection.collection('projects'), tenantContext(TENANT_ID));
 
     const updated = await repo.setCatalog(projectId, 'personnelRoles', [
       'Εργάτης',
@@ -195,7 +208,7 @@ describe('Catalog — ProjectRepository.setCatalog', () => {
   });
 
   it('returns null for an unknown project id', async () => {
-    const repo = new ProjectRepository(mongoose.connection.collection('projects'));
+    const repo = new ProjectRepository(mongoose.connection.collection('projects'), tenantContext(TENANT_ID));
     const result = await repo.setCatalog(
       new Types.ObjectId().toString(),
       'equipmentTypes',
@@ -225,7 +238,7 @@ describe('Catalog — PUT /api/projects/[id]/catalog', () => {
   });
 
   it('returns 400 when body is malformed', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin', tenantId: TENANT_ID });
     const res = await putCatalog(
       jsonRequest({ kind: 'nope', values: ['x'] }),
       { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
@@ -234,7 +247,7 @@ describe('Catalog — PUT /api/projects/[id]/catalog', () => {
   });
 
   it('returns 404 for unknown project', async () => {
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'admin', tenantId: TENANT_ID });
     const res = await putCatalog(
       jsonRequest({ kind: 'personnelRoles', values: ['x'] }),
       { params: Promise.resolve({ id: new Types.ObjectId().toString() }) },
@@ -244,7 +257,7 @@ describe('Catalog — PUT /api/projects/[id]/catalog', () => {
 
   it('happy path: replaces the catalog array on the project', async () => {
     const projectId = await makeProject();
-    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager' });
+    mockedGetAuthUser.mockResolvedValueOnce({ userId: 'u', name: 'n', role: 'manager', tenantId: TENANT_ID });
 
     const res = await putCatalog(
       jsonRequest({

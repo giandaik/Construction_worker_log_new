@@ -1,10 +1,15 @@
 import { ApiError } from "@/lib/api/errorHandling";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { projectSchema } from "@/lib/schemas/projectSchema";
 import { RepositoryFactory } from "@/lib/repositories";
-import { getAuthUser, isAdmin } from "@/utils/auth";
+import { getAuthUser, isAdmin, resolveRepositoryContext } from "@/utils/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request);
+    if (!authUser) return ApiError.unauthorized();
+    const context = resolveRepositoryContext(authUser);
+
     return await RepositoryFactory.withRepositories(async ({ projects: projectRepo, workLogs: workLogRepo }) => {
       // Ensure default project exists
       await projectRepo.ensureDefaultProject();
@@ -26,7 +31,7 @@ export async function GET() {
       });
 
       return ApiError.success(projectsWithStats);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -41,7 +46,9 @@ export async function POST(request: Request) {
       return ApiError.forbidden('Only administrators can create projects');
     }
 
-    const projectData = await request.json();
+    const context = resolveRepositoryContext(user);
+
+    const projectData = await readJsonBody(request);
 
     // Validate project data
     const validatedData = projectSchema.safeParse(projectData);
@@ -84,7 +91,7 @@ export async function POST(request: Request) {
         const project = await projectRepo.create(newProject as any);
 
         return ApiError.success(project, 201);
-      });
+      }, context);
     });
     
   } catch (error) {

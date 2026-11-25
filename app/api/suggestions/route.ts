@@ -1,7 +1,6 @@
 import { ApiError } from '@/lib/api/errorHandling';
-import { DatabaseUtils } from '@/lib/api/database';
-import { getAuthUser } from '@/utils/auth';
-import mongoose from 'mongoose';
+import { RepositoryFactory } from '@/lib/repositories';
+import { getAuthUser, resolveRepositoryContext } from '@/utils/auth';
 
 const ALLOWED_FIELDS = {
   'personnel.role': { collection: 'worklogs', path: 'personnel.role' },
@@ -27,33 +26,17 @@ export async function GET(request: Request) {
       return ApiError.badRequest(`field must be one of: ${Object.keys(ALLOWED_FIELDS).join(', ')}`);
     }
 
-    const { collection, path } = ALLOWED_FIELDS[field];
+    const { path } = ALLOWED_FIELDS[field];
+    const context = resolveRepositoryContext(user);
 
-    return await DatabaseUtils.withCollection(collection, async (worklogs) => {
-      const match: Record<string, unknown> = {
-        author: new mongoose.Types.ObjectId(user.userId),
-      };
-      if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-        match.project = new mongoose.Types.ObjectId(projectId);
-      }
-
-      const results = await worklogs
-        .aggregate([
-          { $match: match },
-          { $unwind: `$${path.split('.')[0]}` },
-          { $group: { _id: `$${path}`, count: { $sum: 1 } } },
-          { $match: { _id: { $nin: [null, ''] } } },
-          { $sort: { count: -1, _id: 1 } },
-          { $limit: 50 },
-        ])
-        .toArray();
-
-      const suggestions = results
-        .map((r) => (typeof r._id === 'string' ? r._id.trim() : ''))
-        .filter((s) => s.length > 0);
-
+    return await RepositoryFactory.withWorkLogRepository(async (workLogRepo) => {
+      const suggestions = await workLogRepo.findSuggestions(
+        path,
+        user.userId,
+        projectId ?? undefined,
+      );
       return ApiError.success({ suggestions });
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

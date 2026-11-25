@@ -38,7 +38,7 @@ vi.mock('../lib/data-fetchers', () => ({
 
 // Mock sonner toast
 vi.mock('sonner', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import('sonner')>();
   return {
     ...actual,
     toast: {
@@ -80,7 +80,7 @@ describe('EditWorkLogForm', () => {
     project: '507f1f77bcf86cd799439012',
     author: '507f1f77bcf86cd799439014',
     workDescription: 'Foundation work completed',
-    weather: 'Sunny',
+    weather: 'sunny',
     temperature: 22,
     personnel: [
       { role: 'Mason', count: 3, workDetails: 'Bricklaying' },
@@ -97,7 +97,7 @@ describe('EditWorkLogForm', () => {
         data: 'data:image/png;base64,iVBORw0KGgoAAAANS...',
         signedBy: 'John Doe',
         signedAt: new Date('2025-12-01T10:00:00Z'),
-        role: 'Site Supervisor',
+        projectRole: 'owner',
       },
     ],
   };
@@ -105,6 +105,21 @@ describe('EditWorkLogForm', () => {
   // Setup fetch mock before each test
   beforeEach(() => {
     global.fetch = vi.fn((url) => {
+      // The personnel/equipment/material rows are strict-selects fed by the
+      // project catalog, so the page also loads /api/projects/<id>.
+      if (url.includes('/api/projects/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            _id: '507f1f77bcf86cd799439012',
+            name: 'Project A',
+            personnelRoles: ['Mason'],
+            equipmentTypes: ['Excavator'],
+            materialNames: ['Concrete'],
+            materialUnits: ['cubic meters'],
+          }),
+        });
+      }
       if (url.includes('/api/worklogs/')) {
         if (url.includes('PUT') || (global.fetch as any).mock.calls[0]?.[1]?.method === 'PUT') {
           return Promise.resolve({
@@ -141,8 +156,9 @@ describe('EditWorkLogForm', () => {
       expect(descriptionField.value).toBe('Foundation work completed');
     });
 
-    const weatherField = screen.getByRole('textbox', { name: /weather/i }) as HTMLInputElement;
-    expect(weatherField.value).toBe('Sunny');
+    // Weather is a picker, not a text box: the stored key shows as a pressed option.
+    const weatherButton = screen.getByRole('button', { name: /sunny/i });
+    expect(weatherButton).toHaveAttribute('aria-pressed', 'true');
 
     const temperatureField = screen.getByRole('spinbutton', { name: /temperature/i }) as HTMLInputElement;
     expect(temperatureField.value).toBe('22');
@@ -157,11 +173,10 @@ describe('EditWorkLogForm', () => {
       expect(screen.queryByText(/loading form/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
 
-    // Check personnel section
+    // Check personnel section — Role is a catalog select, seeded from the log
     await waitFor(() => {
-      const roleInputs = screen.getAllByPlaceholderText(/role/i);
-      expect(roleInputs.length).toBeGreaterThan(0);
-      expect((roleInputs[0] as HTMLInputElement).value).toBe('Mason');
+      const roleSelect = screen.getByLabelText('Role') as HTMLSelectElement;
+      expect(roleSelect.value).toBe('Mason');
     });
   });
 
@@ -174,11 +189,10 @@ describe('EditWorkLogForm', () => {
       expect(screen.queryByText(/loading form/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
 
-    // Check equipment section
+    // Check equipment section — Type is a catalog select
     await waitFor(() => {
-      const typeInputs = screen.getAllByPlaceholderText(/type/i);
-      expect(typeInputs.length).toBeGreaterThan(0);
-      expect((typeInputs[0] as HTMLInputElement).value).toBe('Excavator');
+      const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+      expect(typeSelect.value).toBe('Excavator');
     });
   });
 
@@ -191,13 +205,10 @@ describe('EditWorkLogForm', () => {
       expect(screen.queryByText(/loading form/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
 
-    // Check materials section
+    // Check materials section — Name is a catalog select
     await waitFor(() => {
-      const nameInputs = screen.getAllByPlaceholderText(/name/i);
-      const concreteInput = nameInputs.find(
-        (input) => (input as HTMLInputElement).value === 'Concrete'
-      );
-      expect(concreteInput).toBeTruthy();
+      const nameSelect = screen.getByLabelText('Name') as HTMLSelectElement;
+      expect(nameSelect.value).toBe('Concrete');
     });
   });
 
@@ -212,9 +223,9 @@ describe('EditWorkLogForm', () => {
 
     // Check signatures section
     await waitFor(() => {
-      expect(screen.getByText(/signatures/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/signatures/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/john doe/i)).toBeInTheDocument();
-      expect(screen.getByText(/site supervisor/i)).toBeInTheDocument();
+      expect(screen.getByText(/^owner$/i)).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 
@@ -229,12 +240,12 @@ describe('EditWorkLogForm', () => {
 
     // Find and click Add Personnel button
     const addPersonnelButton = screen.getByRole('button', { name: /add personnel/i });
+    await waitFor(() => expect(addPersonnelButton).toBeEnabled());
     fireEvent.click(addPersonnelButton);
 
     // Verify new personnel row is added
     await waitFor(() => {
-      const roleInputs = screen.getAllByPlaceholderText(/role/i);
-      expect(roleInputs.length).toBeGreaterThan(1);
+      expect(screen.getAllByLabelText('Role').length).toBeGreaterThan(1);
     });
   });
 
@@ -249,12 +260,12 @@ describe('EditWorkLogForm', () => {
 
     // Find and click Add Equipment button
     const addEquipmentButton = screen.getByRole('button', { name: /add equipment/i });
+    await waitFor(() => expect(addEquipmentButton).toBeEnabled());
     fireEvent.click(addEquipmentButton);
 
     // Verify new equipment row is added
     await waitFor(() => {
-      const typeInputs = screen.getAllByPlaceholderText(/type/i);
-      expect(typeInputs.length).toBeGreaterThan(1);
+      expect(screen.getAllByLabelText('Type').length).toBeGreaterThan(1);
     });
   });
 
@@ -269,12 +280,12 @@ describe('EditWorkLogForm', () => {
 
     // Find and click Add Material button
     const addMaterialButton = screen.getByRole('button', { name: /add material/i });
+    await waitFor(() => expect(addMaterialButton).toBeEnabled());
     fireEvent.click(addMaterialButton);
 
     // Verify new material row is added
     await waitFor(() => {
-      const nameInputs = screen.getAllByPlaceholderText(/name/i);
-      expect(nameInputs.length).toBeGreaterThan(1);
+      expect(screen.getAllByLabelText('Name').length).toBeGreaterThan(1);
     });
   });
 
@@ -328,6 +339,8 @@ describe('EditWorkLogForm', () => {
   });
 
   it('should handle API errors gracefully', async () => {
+    const { toast } = await import('sonner');
+
     // Override fetch to return error
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -340,10 +353,11 @@ describe('EditWorkLogForm', () => {
 
     render(<EditWorkLogForm />);
 
-    // Wait for error handling
+    // A failed load ends in a usable form plus a visible error — never an
+    // endless skeleton the worker cannot escape.
     await waitFor(() => {
-      // The form should still render even with error (showing loading state)
-      expect(screen.getByText(/loading form/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /update work log/i })).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith('Failed to load work log data');
     }, { timeout: 3000 });
   });
 

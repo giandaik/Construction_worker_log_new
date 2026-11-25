@@ -1,7 +1,9 @@
 import { ApiError } from "@/lib/api/errorHandling";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
-import { getAuthUser, isAdmin } from "@/utils/auth";
+import { getAuthUser, isAdmin, isSuperAdmin, requireTenantId } from "@/utils/auth";
+import { canAssignRole, resolveTenantRole } from "@/lib/tenant/roleHierarchy";
 import { hash } from "bcryptjs";
 
 export async function GET(request: Request) {
@@ -11,14 +13,20 @@ export async function GET(request: Request) {
       return ApiError.unauthorized();
     }
 
-    return await RepositoryFactory.withUserRepository(async (userRepo) => {
-      await userRepo.ensureDefaultUser();
+    const tenantId = requireTenantId(authUser);
+    const memberships = await RepositoryFactory.getMembershipRepository().findByTenant(tenantId);
+    const userRepo = RepositoryFactory.getUserRepository();
+    const users = await Promise.all(
+      memberships
+        .filter((membership) => membership.isActive)
+        .map((membership) => userRepo.findById(membership.userId.toString())),
+    );
 
-      // Return user summary (lightweight for dropdowns)
-      const users = await userRepo.findSummary();
-
-      return ApiError.success(users);
-    });
+    return ApiError.success(
+      users
+        .filter((user): user is NonNullable<typeof user> => Boolean(user))
+        .map(({ _id, name, email, role }) => ({ _id, name, email, role })),
+    );
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -33,7 +41,7 @@ export async function POST(request: Request) {
       return ApiError.forbidden('Only administrators can create users');
     }
 
-    const userData = await request.json();
+    const userData = await readJsonBody(request);
 
     // Validate user data with Zod schema
     const validatedData = userSchema.safeParse(userData);
@@ -45,6 +53,19 @@ export async function POST(request: Request) {
 
     return await RepositoryFactory.withUserRepository(async (userRepo) => {
       const { password, ...rest } = validatedData.data;
+      const requestedRole = rest.role ?? 'user';
+
+      // A manager is an admin as far as `isAdmin` is concerned, so without
+      // this they could create an account that outranks their own.
+      if (!isSuperAdmin(authUser)) {
+        const creatorRole = await resolveTenantRole(authUser);
+        if (!canAssignRole(creatorRole, requestedRole)) {
+          return ApiError.forbidden(
+            `Your role cannot create a user with the ${requestedRole} role`,
+          );
+        }
+      }
+
       const newUser = {
         ...rest,
         password: await hash(password, 12),
@@ -53,9 +74,23 @@ export async function POST(request: Request) {
 
       const user = await userRepo.create(newUser as any);
 
+      // Automatically add the new user to the creating admin's tenant
+      if (authUser.tenantId) {
+        const roleMap: Record<string, 'admin' | 'manager' | 'worker'> = {
+          admin: 'admin',
+          manager: 'manager',
+          user: 'worker',
+        };
+        await RepositoryFactory.getMembershipRepository().upsertMembership(
+          user._id!.toString(),
+          authUser.tenantId,
+          roleMap[requestedRole] ?? 'worker'
+        );
+      }
+
       return ApiError.success(user, 201);
     });
   } catch (error) {
     return ApiError.handle(error);
   }
-} 
+}

@@ -13,11 +13,23 @@ import {
   EMPTY_CATALOG,
   type ProjectCatalog,
 } from '../lib/catalog/mergeCatalog';
+import { tenantContext } from '../lib/repositories/base/RepositoryContext';
 
-vi.mock('@/utils/auth', () => ({
-  getAuthUser: vi.fn(),
-  isAdmin: (u: any) => u?.role === 'admin' || u?.role === 'manager',
+/**
+ * Only `getAuthUser` is faked. Everything else in `@/utils/auth` — notably
+ * `resolveRepositoryContext`, which derives the tenant-scoped repository
+ * context from the authenticated user — runs for real, so these tests
+ * exercise the same tenant plumbing the routes use in production.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
 }));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
 
 import { POST as importCatalog } from '../app/api/projects/[id]/catalog/import/route';
 import { GET as getCatalogSources } from '../app/api/projects/catalog-sources/route';
@@ -69,6 +81,7 @@ async function makeProject(catalog: Partial<ProjectCatalog> = {}): Promise<strin
     ownerUserId: u._id,
     contractorUserId: u._id,
     manager: u._id,
+    tenantId: new Types.ObjectId(TENANT_ID),
     ...catalog,
   });
   return (project._id as Types.ObjectId).toString();
@@ -142,7 +155,7 @@ describe('toProjectCatalog / totalCatalogCount', () => {
 describe('ProjectRepository.mergeCatalog', () => {
   it('unions the source catalog into the target, de-duplicating', async () => {
     const targetId = await makeProject({ personnelRoles: ['Εργάτης'], materialUnits: ['kg'] });
-    const repo = new ProjectRepository(mongoose.connection.collection('projects'));
+    const repo = new ProjectRepository(mongoose.connection.collection('projects'), tenantContext(TENANT_ID));
 
     const updated = await repo.mergeCatalog(targetId, {
       personnelRoles: ['Εργάτης', 'Χειριστής'],
@@ -155,7 +168,7 @@ describe('ProjectRepository.mergeCatalog', () => {
   });
 
   it('returns null for a missing target', async () => {
-    const repo = new ProjectRepository(mongoose.connection.collection('projects'));
+    const repo = new ProjectRepository(mongoose.connection.collection('projects'), tenantContext(TENANT_ID));
     const result = await repo.mergeCatalog(new Types.ObjectId().toString(), { personnelRoles: ['X'] });
     expect(result).toBeNull();
   });
@@ -165,7 +178,7 @@ describe('ProjectRepository.findCatalogSummaries', () => {
   it('returns id, name, and total catalog count per project', async () => {
     await makeProject({ personnelRoles: ['A', 'B'], materialUnits: ['kg'] });
     await makeProject();
-    const repo = new ProjectRepository(mongoose.connection.collection('projects'));
+    const repo = new ProjectRepository(mongoose.connection.collection('projects'), tenantContext(TENANT_ID));
 
     const summaries = await repo.findCatalogSummaries();
     expect(summaries).toHaveLength(2);
@@ -192,7 +205,7 @@ describe('POST /api/projects/[id]/catalog/import', () => {
   });
 
   it('merges the source catalog into the target (happy path)', async () => {
-    mockedGetAuthUser.mockResolvedValue({ role: 'manager' } as any);
+    mockedGetAuthUser.mockResolvedValue({ role: 'manager', tenantId: TENANT_ID } as any);
     const sourceId = await makeProject({ personnelRoles: ['Εργάτης', 'Χειριστής'], materialUnits: ['m³'] });
     const targetId = await makeProject({ personnelRoles: ['Εργάτης'] });
 
@@ -206,7 +219,7 @@ describe('POST /api/projects/[id]/catalog/import', () => {
   });
 
   it('rejects importing a project into itself', async () => {
-    mockedGetAuthUser.mockResolvedValue({ role: 'manager' } as any);
+    mockedGetAuthUser.mockResolvedValue({ role: 'manager', tenantId: TENANT_ID } as any);
     const id = await makeProject({ personnelRoles: ['A'] });
     const res = await importCatalog(jsonRequest({ sourceProjectId: id }), {
       params: Promise.resolve({ id }),
@@ -215,7 +228,7 @@ describe('POST /api/projects/[id]/catalog/import', () => {
   });
 
   it('returns 404 when the source project does not exist', async () => {
-    mockedGetAuthUser.mockResolvedValue({ role: 'manager' } as any);
+    mockedGetAuthUser.mockResolvedValue({ role: 'manager', tenantId: TENANT_ID } as any);
     const targetId = await makeProject();
     const res = await importCatalog(jsonRequest({ sourceProjectId: new Types.ObjectId().toString() }), {
       params: Promise.resolve({ id: targetId }),
@@ -232,7 +245,7 @@ describe('GET /api/projects/catalog-sources', () => {
   });
 
   it('returns per-project catalog totals for admins', async () => {
-    mockedGetAuthUser.mockResolvedValue({ role: 'admin' } as any);
+    mockedGetAuthUser.mockResolvedValue({ role: 'admin', tenantId: TENANT_ID } as any);
     await makeProject({ personnelRoles: ['A', 'B'] });
     const res = await getCatalogSources(new Request('http://localhost/api/projects/catalog-sources'));
     expect(res.status).toBe(200);

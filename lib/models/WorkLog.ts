@@ -12,6 +12,7 @@ export interface IWorkLog extends Document {
   date: Date;
   project: mongoose.Types.ObjectId | IProject;
   author: mongoose.Types.ObjectId | IUser;
+  tenantId?: mongoose.Types.ObjectId;
   weather?: string;
   temperature?: number;
   workDescription: string;
@@ -43,6 +44,7 @@ export interface IWorkLog extends Document {
 const WorkLogSchema: Schema = new Schema(
   {
     date: { type: Date, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     project: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'Project', 

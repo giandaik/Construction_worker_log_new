@@ -54,11 +54,15 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   if (!isCrossOriginApi()) return fetch(path, init);
 
   const headers = new Headers(init?.headers);
+  const token = headers.has('Authorization') ? null : await getMobileToken();
 
-  if (!headers.has('Authorization')) {
-    const token = await getMobileToken();
-    if (token) headers.set('Authorization', `Bearer ${token}`);
-  }
+  // Nothing to authenticate with: forward the caller's init untouched, so a
+  // mobile call without a stored session differs from a web call only by
+  // `credentials: 'include'` and the absolute URL. Converting headers into a
+  // `Headers` instance here would silently rewrite a plain object (and drop
+  // any prototype-free plain object the caller passed).
+  if (!token) return fetch(apiUrl(path), { credentials: 'include', ...init });
 
+  headers.set('Authorization', `Bearer ${token}`);
   return fetch(apiUrl(path), { credentials: 'include', ...init, headers });
 }

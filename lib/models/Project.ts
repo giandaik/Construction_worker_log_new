@@ -19,6 +19,7 @@ export interface IProject extends Document {
   location: string;
   latitude?: number;
   longitude?: number;
+  tenantId?: mongoose.Types.ObjectId;
   startDate: Date;
   endDate?: Date;
   status: 'planned' | 'in-progress' | 'completed' | 'on-hold';
@@ -41,6 +42,7 @@ const ProjectSchema: Schema = new Schema(
     name: { type: String, required: true },
     description: { type: String},
     location: { type: String, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     latitude: { type: Number },
     longitude: { type: Number },
     startDate: { type: Date, required: true },

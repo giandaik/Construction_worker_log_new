@@ -2,6 +2,27 @@ import { NextResponse } from 'next/server'
 import { ValidationError } from './validation'
 
 /**
+ * Reads a JSON request body, turning a malformed or empty body into a 400.
+ *
+ * `request.json()` throws a SyntaxError on an empty or truncated body, and every
+ * route's catch reports that as 500 — a client mistake logged as a server fault.
+ */
+export async function readJsonBody<T = Record<string, unknown>>(request: Request): Promise<T> {
+  // Some callers (and the route tests) hand in a minimal object that only has
+  // `json()`. Use it when the full Request API is not there.
+  if (typeof (request as { text?: unknown }).text !== 'function') {
+    return (await (request as unknown as { json: () => Promise<T> }).json()) as T
+  }
+  const text = await request.text()
+  if (!text.trim()) throw new ValidationError('Request body must be valid JSON')
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new ValidationError('Request body must be valid JSON')
+  }
+}
+
+/**
  * Centralized API error handling utility
  * Provides consistent error responses across all API routes
  */
@@ -11,9 +32,9 @@ export class ApiError {
    * Automatically handles different error types and returns appropriate responses
    */
   static handle(error: unknown): NextResponse {
-    console.error('API Error:', error)
-
-    // Handle validation errors with custom status codes
+    // A ValidationError is a client mistake answered with a 4xx. Logging it as
+    // "API Error" turned expected refusals into stack traces and buried the ones
+    // that really were server faults.
     if (error instanceof ValidationError) {
       return NextResponse.json(
         { error: error.message },
@@ -21,6 +42,7 @@ export class ApiError {
       )
     }
 
+    console.error('API Error:', error)
     // Handle standard JavaScript errors
     if (error instanceof Error) {
       return NextResponse.json(
@@ -80,6 +102,19 @@ export class ApiError {
     return NextResponse.json(
       { error: message },
       { status: 403 }
+    )
+  }
+
+  /**
+   * Returns a standardized 409 conflict response.
+   *
+   * For a request that is well-formed and authenticated but contradicts the
+   * current state — a replayed "end impersonation", say.
+   */
+  static conflict(message: string): NextResponse {
+    return NextResponse.json(
+      { error: message },
+      { status: 409 }
     )
   }
 }

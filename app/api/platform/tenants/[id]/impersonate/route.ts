@@ -1,0 +1,78 @@
+import { NextResponse } from 'next/server';
+import { SignJWT } from 'jose';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
+import { RepositoryFactory } from '@/lib/repositories';
+import { getAuthUser, isSuperAdmin, setSessionCookie, validateJWTSecret } from '@/utils/auth';
+import { impersonationRequestSchema } from '@/lib/schemas/tenantSchema';
+
+// POST — super-admin starts an impersonation session inside a tenant
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const superAdmin = await getAuthUser(request);
+    if (!superAdmin || !isSuperAdmin(superAdmin)) return ApiError.forbidden();
+
+    const { id: tenantId } = await params;
+    const parsed = impersonationRequestSchema.safeParse(await readJsonBody(request));
+    if (!parsed.success) {
+      return ApiError.badRequest(parsed.error.issues.map((issue) => issue.message).join(', '));
+    }
+    const { userId, reason } = parsed.data;
+
+    // Verify tenant exists and is active
+    const tenant = await RepositoryFactory.getTenantRepository().findById(tenantId);
+    if (!tenant) return ApiError.notFound('Tenant');
+    if (tenant.status !== 'active') {
+      return ApiError.badRequest('Cannot impersonate into an inactive tenant');
+    }
+
+    // Verify the target user is actually a member of this tenant
+    const membership = await RepositoryFactory.getMembershipRepository().findMembership(
+      userId,
+      tenantId
+    );
+    if (!membership) return ApiError.badRequest('User is not a member of this tenant');
+
+    const targetUser = await RepositoryFactory.getUserRepository().findById(userId);
+    if (!targetUser) return ApiError.notFound('User');
+
+    // Record the impersonation
+    const logEntry = await RepositoryFactory.getImpersonationLogRepository().startSession(
+      superAdmin.userId,
+      tenantId,
+      userId,
+      reason
+    );
+
+    const jwtSecret = validateJWTSecret();
+    const token = await new SignJWT({
+      userId,
+      name: targetUser.name,
+      role: membership.tenantRole,
+      tenantId,
+      impersonatedBy: superAdmin.userId,
+      impersonationId: logEntry._id?.toString(),
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('4h')
+      .sign(new TextEncoder().encode(jwtSecret));
+
+    // The token is returned in the body as well as the cookie: the mobile
+    // WebView never receives the session cookie and authenticates with
+    // `Authorization: Bearer` instead. Same contract as POST /api/login.
+    const response = NextResponse.json({
+      message: 'Impersonation started',
+      token,
+      redirect: '/app',
+      impersonationId: logEntry._id?.toString(),
+      targetUser: { userId, name: targetUser.name, tenantId, tenantRole: membership.tenantRole },
+    });
+    setSessionCookie(response, token);
+    return response;
+  } catch (error) {
+    return ApiError.handle(error);
+  }
+}

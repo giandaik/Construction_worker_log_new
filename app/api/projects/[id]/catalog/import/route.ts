@@ -1,8 +1,8 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { catalogImportSchema } from '@/lib/schemas/projectSchema';
 import { toProjectCatalog } from '@/lib/catalog/mergeCatalog';
-import { getAuthUser, isAdmin } from '@/utils/auth';
+import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
 
 /**
  * Copy (additively merge) another project's option catalog into this one.
@@ -19,8 +19,10 @@ export async function POST(
       return ApiError.forbidden('Only admins or supervisors can manage the project catalog');
     }
 
+    const context = resolveRepositoryContext(user);
+
     const { id } = await params;
-    const parsed = catalogImportSchema.safeParse(await request.json());
+    const parsed = catalogImportSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
     }
@@ -38,7 +40,7 @@ export async function POST(
       if (!updated) return ApiError.notFound('Project');
 
       return ApiError.success(updated);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }

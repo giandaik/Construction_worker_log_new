@@ -3,9 +3,24 @@
  * Tests database query projections and payload size reduction
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
+
+/**
+ * Both endpoints are tenant-scoped and authenticated. Only `getAuthUser` is
+ * faked; the projection logic under test runs for real.
+ */
+const { TENANT_ID, mockGetAuthUser } = vi.hoisted(() => ({
+  TENANT_ID: '507f1f77bcf86cd799439011',
+  mockGetAuthUser: vi.fn(),
+}));
+
+vi.mock('@/utils/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/auth')>();
+  return { ...actual, getAuthUser: mockGetAuthUser };
+});
+
 import { GET as getProjects } from '@/app/api/projects/route';
 import { GET as getWorkLogs } from '@/app/api/worklogs/route';
 
@@ -20,6 +35,13 @@ describe('Performance: API Payload Optimization', () => {
 
     await mongoose.connect(mongoUri);
 
+    mockGetAuthUser.mockResolvedValue({
+      userId: new Types.ObjectId().toString(),
+      name: 'Perf Admin',
+      role: 'admin',
+      tenantId: TENANT_ID,
+    } as any);
+
     // Seed test data with many fields
     const db = mongoose.connection;
     await db.collection('projects').insertMany([
@@ -28,6 +50,7 @@ describe('Performance: API Payload Optimization', () => {
         description: 'Description A',
         location: 'Location A',
         status: 'active',
+        tenantId: new Types.ObjectId(TENANT_ID),
         client: 'Client A',
         budget: 100000,
         startDate: new Date(),
@@ -43,6 +66,7 @@ describe('Performance: API Payload Optimization', () => {
         description: 'Description B',
         location: 'Location B',
         status: 'completed',
+        tenantId: new Types.ObjectId(TENANT_ID),
         client: 'Client B',
         budget: 200000,
         startDate: new Date(),
@@ -57,9 +81,10 @@ describe('Performance: API Payload Optimization', () => {
 
     await db.collection('worklogs').insertMany([
       {
-        date: '2025-12-01',
-        project: 'project1',
-        author: 'user1',
+        tenantId: new Types.ObjectId(TENANT_ID),
+        date: new Date('2025-12-01'),
+        project: new Types.ObjectId(),
+        author: new Types.ObjectId(),
         workDescription: 'Work description 1',
         personnel: [{ role: 'Worker', count: 5 }],
         equipment: [{ type: 'Excavator', count: 1, hours: 8 }],
@@ -81,7 +106,7 @@ describe('Performance: API Payload Optimization', () => {
 
   describe('Projects API - Payload Size', () => {
     it('should only return projected fields (_id, name, description, location, status)', async () => {
-      const response = await getProjects();
+      const response = await getProjects(new Request('http://localhost/api/projects'));
       const data = await response.json();
 
       expect(data).toBeInstanceOf(Array);
@@ -96,18 +121,19 @@ describe('Performance: API Payload Optimization', () => {
       expect(project).toHaveProperty('location');
       expect(project).toHaveProperty('status');
 
-      // Should NOT have these fields (not projected)
+      // The list projection deliberately keeps the scheduling fields the
+      // picker and dashboard need (startDate/endDate/manager) ...
+      expect(project).toHaveProperty('worklogCount');
+
+      // ... and drops anything heavyweight or unrelated to the list view.
       expect(project).not.toHaveProperty('client');
       expect(project).not.toHaveProperty('budget');
-      expect(project).not.toHaveProperty('startDate');
-      expect(project).not.toHaveProperty('endDate');
-      expect(project).not.toHaveProperty('manager');
       expect(project).not.toHaveProperty('teamMembers');
       expect(project).not.toHaveProperty('largeField');
     });
 
     it('should have significantly reduced payload size', async () => {
-      const response = await getProjects();
+      const response = await getProjects(new Request('http://localhost/api/projects'));
       const data = await response.json();
       const jsonString = JSON.stringify(data);
 
@@ -164,7 +190,7 @@ describe('Performance: API Payload Optimization', () => {
       const fullSize = JSON.stringify(fullProjects).length;
 
       // Get projected document
-      const response = await getProjects();
+      const response = await getProjects(new Request('http://localhost/api/projects'));
       const projectedData = await response.json();
       const projectedSize = JSON.stringify(projectedData).length;
 

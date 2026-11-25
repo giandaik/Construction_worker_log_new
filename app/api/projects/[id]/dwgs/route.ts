@@ -1,8 +1,8 @@
 import { del } from '@vercel/blob';
 import { z } from 'zod';
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
-import { getAuthUser, isAdmin } from '@/utils/auth';
+import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
 
 const attachBodySchema = z.object({
   url: z.string().url(),
@@ -27,8 +27,9 @@ export async function POST(
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins or supervisors can manage DWG files');
 
+    const context = resolveRepositoryContext(user);
     const { id } = await params;
-    const parsed = attachBodySchema.safeParse(await request.json());
+    const parsed = attachBodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map(i => i.message).join(', '));
     }
@@ -40,7 +41,7 @@ export async function POST(
       });
       if (!updated) return ApiError.notFound('Project');
       return ApiError.success(updated);
-    });
+    }, context);
   } catch (error) {
     return ApiError.handle(error);
   }
@@ -55,8 +56,9 @@ export async function DELETE(
     if (!user) return ApiError.unauthorized();
     if (!isAdmin(user)) return ApiError.forbidden('Only admins or supervisors can manage DWG files');
 
+    const context = resolveRepositoryContext(user);
     const { id } = await params;
-    const parsed = removeBodySchema.safeParse(await request.json());
+    const parsed = removeBodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map(i => i.message).join(', '));
     }
@@ -64,10 +66,12 @@ export async function DELETE(
     const { updated, removedPdfUrl } = await RepositoryFactory.withProjectRepository(
       async (projectRepo) => {
         const existing = await projectRepo.findById(id);
-        const pdfUrl = existing?.dwgFiles?.find((d) => d.url === parsed.data.url)?.pdfUrl;
+        if (!existing) return { updated: null, removedPdfUrl: undefined };
+        const pdfUrl = existing.dwgFiles?.find((d) => d.url === parsed.data.url)?.pdfUrl;
         const result = await projectRepo.removeDwgFile(id, parsed.data.url);
         return { updated: result, removedPdfUrl: pdfUrl };
       },
+      context
     );
     if (!updated) return ApiError.notFound('Project');
 

@@ -1,6 +1,7 @@
 import type { Collection, ObjectId } from 'mongodb';
 import { BaseRepository } from './base/BaseRepository';
 import type { FindOptions } from './base/IRepository';
+import type { RepositoryContext } from './base/RepositoryContext';
 import { ValidationUtils } from '@/lib/api/validation';
 import {FORM_STATUS} from "@/lib/constants/constantValues";
 
@@ -19,7 +20,8 @@ export interface Personnel {
 export interface Equipment {
   type: string;
   count: number;
-  hours: number;
+  // Optional: the offline queue replays rows captured without an hours value.
+  hours?: number;
 }
 
 /**
@@ -39,6 +41,9 @@ export interface Signature {
   signedBy: string;
   signedAt: string | Date;
   role?: string;
+  /** Signing party for the work log workflow: 'contractor' | 'owner'. */
+  projectRole?: string;
+  signedByUserId?: string;
 }
 
 /**
@@ -96,8 +101,31 @@ export interface WorkLogWithDetails extends WorkLog {
  * Handles all database operations for work logs
  */
 export class WorkLogRepository extends BaseRepository<WorkLog> {
-  constructor(collection: any) {
-    super(collection);
+  constructor(collection: any, context: RepositoryContext) {
+    super(collection, context);
+  }
+
+  /**
+   * The raw driver does not cast filter values, and callers routinely hold the
+   * string form of an ObjectId (from a JWT, a URL param or a form field). Left
+   * unnormalized, `{ author: '<hex>' }` silently matches nothing while looking
+   * exactly like "this worker has no logs". Normalize the reference fields
+   * here so the bug cannot reappear at every call site.
+   */
+  protected normalizeFilter(filter: Partial<WorkLog>): any {
+    const normalized: any = { ...filter };
+
+    for (const key of ['author', 'project'] as const) {
+      const value = normalized[key];
+      if (typeof value !== 'string') continue;
+      try {
+        normalized[key] = ValidationUtils.normalizeObjectId(value);
+      } catch {
+        // A malformed id must not throw here: the query simply matches nothing.
+      }
+    }
+
+    return normalized;
   }
 
   /**
@@ -157,13 +185,12 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     const projectObjectId = ValidationUtils.normalizeObjectId(projectId);
     const projectStr = typeof projectId === 'string' ? projectId : projectId.toString();
 
-    const document = await this.collection
-      .find({
+    const document = await this.scopedFindCursor({
         $and: [
           { author: authorObjectId },
           { $or: [{ project: projectObjectId }, { project: projectStr }] },
         ],
-      } as any)
+      })
       .sort({ date: -1, createdAt: -1 })
       .limit(1)
       .next();
@@ -184,7 +211,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     const objectId = ValidationUtils.normalizeObjectId(projectId);
     const idString = typeof projectId === 'string' ? projectId : projectId.toString();
 
-    const documents = await this.collection.aggregate([
+    const documents = await this.scopedAggregate([
       { $match: { $or: [{ project: objectId }, { project: idString }] } },
       {
         $addFields: {
@@ -200,7 +227,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
       { $match: { day: { $gte: startDay, $lte: endDay } } },
       { $group: { _id: '$day', count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
-    ]).toArray();
+    ]);
 
     return documents.map((doc: any) => ({ date: doc._id, count: doc.count }));
   }
@@ -217,7 +244,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     const objectId = ValidationUtils.normalizeObjectId(projectId);
     const idString = typeof projectId === 'string' ? projectId : projectId.toString();
 
-    const documents = await this.collection.aggregate([
+    const documents = await this.scopedAggregate([
       { $match: { $or: [{ project: objectId }, { project: idString }] } },
       {
         $addFields: {
@@ -232,7 +259,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
       },
       { $match: { day } },
       { $limit: 1 },
-    ]).toArray();
+    ]);
 
     return documents.length ? this.mapToEntity(documents[0]) : null;
   }
@@ -243,7 +270,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
    * project._id regardless of how the reference was stored.
    */
   async getProjectStats(): Promise<ProjectLogStats[]> {
-    const documents = await this.collection.aggregate([
+    const documents = await this.scopedAggregate([
       {
         $group: {
           _id: { $toString: '$project' },
@@ -253,7 +280,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
           },
         },
       },
-    ]).toArray();
+    ]);
 
     return documents.map((doc: any) => ({
       project: doc._id,
@@ -270,8 +297,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     endDate: Date,
     options: FindOptions = {}
   ): Promise<WorkLog[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         date: {
           $gte: startDate,
           $lte: endDate,
@@ -291,16 +317,26 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
    */
   async findByIdWithDetails(id: string | ObjectId): Promise<WorkLogWithDetails | null> {
     const objectId = ValidationUtils.normalizeObjectId(id);
+    const tenantObjectId = this.tenantId ? this.normalizedTenantId : undefined;
 
-    const documents = await this.collection.aggregate([
+    const documents = await this.scopedAggregate([
       { $match: { _id: objectId } },
       {
         $lookup: {
           from: 'projects',
-          localField: 'project',
-          foreignField: '_id',
+          let: { projectId: '$project' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$_id', '$$projectId'] },
+                // Defensive: never resolve a project belonging to another
+                // tenant, even if a WorkLog somehow holds a foreign project id.
+                ...(tenantObjectId ? { tenantId: tenantObjectId } : {}),
+              },
+            },
+            { $project: { name: 1, location: 1 } },
+          ],
           as: 'projectData',
-          pipeline: [{ $project: { name: 1, location: 1 } }],
         },
       },
       {
@@ -320,7 +356,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
         },
       },
       { $project: { projectData: 0, authorData: 0 } },
-    ]).toArray();
+    ]);
 
     if (!documents.length) return null;
 
@@ -354,8 +390,7 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
     searchTerm: string,
     options: FindOptions = {}
   ): Promise<WorkLog[]> {
-    const documents = await this.collection
-      .find({
+    const documents = await this.scopedFindCursor({
         workDescription: { $regex: searchTerm, $options: 'i' },
       })
       .sort({ createdAt: -1 })
@@ -364,6 +399,35 @@ export class WorkLogRepository extends BaseRepository<WorkLog> {
       .toArray();
 
     return documents.map((doc: any) => this.mapToEntity(doc));
+  }
+
+  async findSuggestions(
+    path: string,
+    authorId: string | ObjectId,
+    projectId?: string,
+  ): Promise<string[]> {
+    const authorObjectId = ValidationUtils.normalizeObjectId(authorId);
+    const match: Record<string, any> = { author: authorObjectId };
+
+    if (projectId) {
+      const projectObjectId = ValidationUtils.normalizeObjectId(projectId);
+      match.project = { $in: [projectObjectId, projectId] };
+    }
+
+    const documents = await this.scopedAggregate([
+      { $match: match },
+      { $unwind: `$${path.split('.')[0]}` },
+      { $group: { _id: `$${path}`, count: { $sum: 1 } } },
+      { $match: { _id: { $nin: [null, ''] } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 50 },
+    ]);
+
+    return documents
+      .map((document: any) =>
+        typeof document._id === 'string' ? document._id.trim() : ''
+      )
+      .filter((value: string) => value.length > 0);
   }
 
   /**
