@@ -25,11 +25,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
-
-# mobile build config (per-machine backend URL); .env.mobile.example is tracked
-.env.mobile
+# local env files — ignore every .env* variant, including the per-machine
+# test/review files (.env.mt-test holds MONGODB_URI and NEXT_JWT_SECRET).
+# Only the *.example templates are tracked.
+.env*
+!.env*.example
 
 # vercel
 .vercel
@@ -57,3 +57,7 @@ next-env.d.ts
 # private planning docs
 docs/commercialization-plan.md
 
+
+# PDF sheet build artifacts (font download cache, rendered previews)
+.pdf-font-cache/
+.pdf-preview/
