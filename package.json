@@ -17,7 +17,7 @@
     "a11y:install-hook": "ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit && echo 'pre-commit hook installed'",
     "version:set": "node scripts/set-version.mjs",
     "version:check": "node scripts/set-version.mjs --check",
-    "dist:android": "node scripts/dist-firebase.mjs android/app/build/outputs/apk/debug/app-debug.apk --platform android",
+    "dist:android": "node scripts/dist-firebase.mjs android/app/build/outputs/apk/release/app-release.apk --platform android",
     "dist:ios": "node scripts/dist-firebase.mjs build/App.ipa --platform ios"
   },
   "dependencies": {

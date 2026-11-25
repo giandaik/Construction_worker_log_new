@@ -73,29 +73,44 @@ Set up once:
    (`1:…:android:…`) — that is what the script needs, not the API key.
 2. **App Distribution → Testers & Groups →** create group `testers`, add emails.
 3. Project settings → Service accounts → **Generate new private key** → a `.json` file.
-4. Locally: `npx firebase-tools@14 login` (browser, once), then
+4. A signing key, so testers can install build N+1 over build N (see
+   "First-time keystore" below), pushed into six repository secrets:
+
+   ```bash
+   gh secret set ANDROID_KEYSTORE_BASE64 < <(base64 -i android/app/release.keystore | tr -d '\n')
+   gh secret set ANDROID_KEYSTORE_PASSWORD   # prompts — never on the command line
+   gh secret set ANDROID_KEY_ALIAS
+   gh secret set ANDROID_KEY_PASSWORD
+   gh secret set FIREBASE_APP_ID_ANDROID     # 1:…:android:…
+   gh secret set FIREBASE_SERVICE_ACCOUNT < service-account.json
+   ```
+
+5. Locally: `npx firebase-tools@14 login` (browser, once), then
    ```bash
    printf 'FIREBASE_APP_ID_ANDROID=1:…:android:…\n' > .env.firebase   # gitignored
    ```
-5. In CI: repo settings → Secrets → `FIREBASE_APP_ID_ANDROID` (the id) and
-   `FIREBASE_SERVICE_ACCOUNT` (the whole JSON file, pasted).
 
 Every release after that:
 
 ```bash
+npm run version:set
 npm run build:mobile && npx cap sync android
-cd android && ./gradlew assembleDebug && cd ..
+cd android && ./gradlew assembleRelease && cd ..   # upload-key signed
 npm run dist:android -- --notes "Back button, signed-in flow"
 ```
 
-or **Actions → Mobile → Run workflow**, which builds the debug APK and distributes it in one go.
-Testers get an email, install the **App Tester** app once, then tap Install on each build.
-Uploads land at <https://console.firebase.google.com/project/_/appdistribution>.
+or **Actions → Mobile → Run workflow** → *Distribute signed APK to Firebase testers*, which does
+all of the above. Testers get an email, install the **App Tester** app once, then tap Install on
+each build. Uploads land at <https://console.firebase.google.com/project/_/appdistribution>.
 
 Notes:
 
-- Firebase wants an **APK**, not an `.aab`. Debug-signed is fine and is what the CI job ships;
-  a release-signed APK needs `android/keystore.properties` first.
+- Firebase wants an **APK**, not an `.aab`, and it must be signed — an unsigned
+  `assembleRelease` output installs nowhere. The CI job restores the upload keystore from
+  `ANDROID_KEYSTORE_BASE64` (`scripts/ci-android-keystore.sh`) and builds `assembleRelease`.
+- Builds from the plain *Export + debug APK* job are **debug-signed with a throwaway key regenerated
+  on every runner**. Installing one over another fails with "App not installed" — that is why
+  tester builds go through the signed job.
 - iOS works too (`npm run dist:ios -- build/App.ipa`) but the `.ipa` must already be **Ad Hoc**
   signed with every tester's UDID in the profile. Firebase removes the "email me the file" step,
   not the UDID step — TestFlight is less work for anyone outside the team.

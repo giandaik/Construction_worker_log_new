@@ -88,21 +88,11 @@ jobs:
       - run: npx cap sync android
       - name: Restore the upload keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not set"; exit 1
-          fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
-          cat > android/keystore.properties <<EOF
-          storeFile=release.keystore
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash scripts/ci-android-keystore.sh
       - run: cd android && ./gradlew --no-daemon bundleRelease
       - uses: actions/upload-artifact@v4
         with:
@@ -112,7 +102,7 @@ jobs:
           retention-days: 14
 
   android-firebase:
-    name: Distribute APK to Firebase testers
+    name: Distribute signed APK to Firebase testers
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
@@ -126,11 +116,19 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - run: npm ci
+      - run: npm run version:check
       - run: npm run build:mobile
       - run: npx cap sync android
-      # Debug-signed on purpose: an unsigned release APK cannot install, and the
-      # upload keystore lives in a secret this job does not need.
-      - run: cd android && ./gradlew --no-daemon assembleDebug
+      - name: Restore the upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash scripts/ci-android-keystore.sh
+      # Signed with the upload key, not the runner's throwaway debug key: testers
+      # install each build over the last one instead of uninstalling first.
+      - run: cd android && ./gradlew --no-daemon assembleRelease
       - name: Authenticate to Firebase
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -146,8 +144,13 @@ jobs:
           FIREBASE_RELEASE_NOTES: ${{ github.event.head_commit.message }}
         run: |
           node scripts/dist-firebase.mjs \
-            android/app/build/outputs/apk/debug/app-debug.apk \
+            android/app/build/outputs/apk/release/app-release.apk \
             --platform android --groups testers
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
 
   ios:
     name: iOS simulator build
