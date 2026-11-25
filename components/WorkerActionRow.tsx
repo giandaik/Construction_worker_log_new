@@ -28,7 +28,10 @@ async function getWorkerActionData(userId: string, tenantId: string): Promise<{
 
     const [draftDoc, recentDoc] = await Promise.all([
       workLogRepo.findAll({ author, status: 'pending' } as any, {
-        sort: { updatedAt: -1 },
+        // `_id` breaks the tie: two drafts created in the same millisecond share
+        // an updatedAt, and without a second key "Continue draft" opens
+        // whichever document Mongo happens to read first.
+        sort: { updatedAt: -1, _id: -1 },
         limit: 1,
         projection: { _id: 1, project: 1, updatedAt: 1 },
       }),

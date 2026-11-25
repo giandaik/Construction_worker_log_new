@@ -160,7 +160,38 @@ describe('WorkerActionRow', () => {
       .toHaveAttribute('href', `/worklogs/${newer._id.toString()}/edit`);
   });
 
-  it('excludes another worker\'s logs', async () => {
+  it('opens the newest draft when two share an updatedAt', async () => {
+    // Two drafts written in the same millisecond tie on updatedAt; the tie must
+    // resolve on _id, or "Continue draft" opens whichever document Mongo reads
+    // first. Inserted raw so the timestamps are identical by construction
+    // rather than by luck.
+    const userId = new mongoose.Types.ObjectId();
+    const projectId = await seedProject('Athens Tower');
+    const shared = new Date('2026-06-20T09:00:00.000Z');
+    const olderId = new mongoose.Types.ObjectId('aaaaaaaaaaaaaaaaaaaaaa01');
+    const newerId = new mongoose.Types.ObjectId('aaaaaaaaaaaaaaaaaaaaaa02');
+    await WorkLog.collection.insertMany([
+      {
+        _id: olderId, tenantId: TENANT_OBJECT_ID, author: userId, project: projectId,
+        date: new Date('2026-06-19'), workDescription: 'Older draft', status: 'pending',
+        personnel: [], equipment: [], materials: [],
+        createdAt: shared, updatedAt: shared,
+      },
+      {
+        _id: newerId, tenantId: TENANT_OBJECT_ID, author: userId, project: projectId,
+        date: new Date('2026-06-20'), workDescription: 'Newer draft', status: 'pending',
+        personnel: [], equipment: [], materials: [],
+        createdAt: shared, updatedAt: shared,
+      },
+    ]);
+
+    await renderForUser(userId.toString());
+
+    expect(screen.getByText('Continue draft').closest('a'))
+      .toHaveAttribute('href', `/worklogs/${newerId.toString()}/edit`);
+  });
+
+  it("excludes another worker's logs", async () => {
     const userId = new mongoose.Types.ObjectId();
     const otherUserId = new mongoose.Types.ObjectId();
     const projectId = await seedProject('Athens Tower');
