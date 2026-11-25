@@ -1,0 +1,334 @@
+/* ==========================================================================
+   Sitely — Design System · tokens v1.0
+   Field-document industrial: warm paper, cool ink, safety yellow.
+   Three layers only. Components read semantics; semantics read primitives.
+   Never write a hex or an HSL triplet inside a component rule.
+   ========================================================================== */
+
+/* ---------- LAYER 1 · PRIMITIVES ------------------------------------------
+   HSL triplets (H S% L%) so the same number works as hsl(var(--x)) and as
+   an alpha channel: hsl(var(--x) / .4). Never use these in a component.
+   -------------------------------------------------------------------------- */
+:root {
+  --ink-950: 220 15% 8%;
+  --ink-900: 220 15% 12%;
+  --ink-800: 220 14% 19%;
+  --ink-700: 220 12% 26%;
+  --ink-600: 220 10% 40%;
+  --ink-500: 220 10% 48%;
+  --ink-400: 220 10% 60%;
+  --ink-300: 220 10% 72%;
+  --paper-0: 0 0% 100%;
+  --paper-50: 40 20% 97%;
+  --paper-100: 40 14% 94%;
+  --paper-200: 40 10% 88%;
+  --paper-300: 40 10% 84%;
+  --paper-400: 40 10% 78%;
+  --yellow-50: 45 100% 96%;
+  --yellow-100: 45 95% 88%;
+  --yellow-200: 45 95% 78%;
+  --yellow-300: 45 100% 66%;
+  --yellow-400: 45 100% 56%;
+  --yellow-500: 45 100% 48%;
+  --yellow-600: 45 100% 42%;
+  --yellow-700: 45 100% 27%;
+  --green-100: 152 60% 92%;
+  --green-500: 152 70% 35%;
+  --green-600: 152 70% 29%;
+  --red-100: 0 90% 95%;
+  --red-500: 0 76% 50%;
+  --red-600: 0 76% 46%;
+  --amber-100: 32 95% 92%;
+  --amber-500: 32 92% 45%;
+  --amber-600: 32 92% 33%;
+  --asphalt-950: 220 15% 9%;
+  --asphalt-900: 220 15% 11%;
+  --asphalt-800: 220 14% 13%;
+  --asphalt-700: 220 12% 19%;
+  --asphalt-600: 220 10% 24%;
+  --asphalt-400: 220 8% 50%;
+  --asphalt-300: 220 8% 64%;
+  --asphalt-200: 220 8% 72%;
+  --asphalt-100: 40 15% 94%;
+}
+
+/* ---------- LAYER 2 · SEMANTIC · LIGHT (default) -------------------------- */
+:root {
+  /* App background. Warm paper, never pure white. */
+  --surface-page: hsl(var(--paper-50));
+  /* Cards, sheets, dialogs sitting on the page. */
+  --surface-raised: hsl(var(--paper-0));
+  /* Table heads, quiet rows, meta strips. */
+  --surface-sunken: hsl(var(--paper-100));
+  /* Same intent at 55% opacity, over a raised card. */
+  --surface-sunken-soft: hsl(var(--paper-100));
+  /* Charcoal block: hero band, toast, active nav. */
+  --surface-inverse: hsl(var(--ink-900));
+  /* Yellow wash: highlight rows, selected day, photo slot. */
+  --surface-accent-soft: hsl(var(--yellow-100));
+  /* Barely-there yellow for callout blocks. */
+  --surface-accent-quiet: hsl(var(--yellow-50));
+  /* Rejected / destructive confirmation block. */
+  --surface-danger-soft: hsl(var(--red-100));
+  /* Signed / approved confirmation block. */
+  --surface-success-soft: hsl(var(--green-100));
+  /* Late, missing photo, unsynced queue. */
+  --surface-warning-soft: hsl(var(--amber-100));
+  /* Body and headings. 15.9:1 on paper. */
+  --text-primary: hsl(var(--ink-900));
+  /* Labels, captions, meta. 5.7:1 — passes AA for 11px+. */
+  --text-secondary: hsl(var(--ink-600));
+  /* Placeholder and disabled only. 4.3:1 — never body copy. */
+  --text-tertiary: hsl(var(--ink-500));
+  /* On charcoal surfaces. */
+  --text-inverse: hsl(var(--paper-50));
+  /* On any yellow, green-tint or amber ground. */
+  --text-on-accent: hsl(var(--ink-950));
+  /* Links and inline emphasis. 4.8:1, not the 1.7:1 fill yellow. */
+  --text-link: hsl(var(--yellow-700));
+  /* Signed, synced. 4.8:1. */
+  --text-success: hsl(var(--green-600));
+  /* Rejected, delete. 4.8:1. */
+  --text-danger: hsl(var(--red-600));
+  /* Late, attention. 4.8:1. */
+  --text-warning: hsl(var(--amber-600));
+  /* Row separators at 60% — divide, never box. */
+  --border-subtle: hsl(var(--paper-300));
+  /* Card and input borders. 1.34:1 — structural, not decorative. */
+  --border-default: hsl(var(--paper-300));
+  /* Focused field, selected card, table head rule. */
+  --border-strong: hsl(var(--ink-700));
+  /* Section rule, active tab underline, hazard edge. */
+  --border-accent: hsl(var(--yellow-500));
+  /* Invalid field, destructive zone. */
+  --border-danger: hsl(var(--red-500));
+  /* Primary button and active state. Dark label only. */
+  --fill-primary: hsl(var(--yellow-500));
+  /* One step down; hover darkens, never lightens. */
+  --fill-primary-hover: hsl(45 100% 44%);
+  /* Quiet button, chip. */
+  --fill-secondary: hsl(var(--paper-100));
+  /* Destructive button. White label. */
+  --fill-danger: hsl(var(--red-500));
+  /* Filled success badge. White label fails — use soft+ink. */
+  --fill-success: hsl(var(--green-500));
+  /* Inverse button on paper. */
+  --fill-inverse: hsl(var(--ink-900));
+  /* Disabled ground, with --text-tertiary label. */
+  --fill-disabled: hsl(var(--paper-200));
+  /* Focus outline. 3.0:1 on paper, card and sunken. */
+  --focus-ring: hsl(45 100% 34%);
+  /* The gap between control and ring. */
+  --focus-ring-offset: hsl(var(--paper-0));
+  /* Never 1px: field use, gloves, sunlight. */
+  --focus-ring-width: 2px;
+  /* Draft */
+  --status-draft-ink: hsl(var(--ink-600));
+  /* Draft ground */
+  --status-draft-soft: hsl(var(--paper-100));
+  /* Submitted, awaiting signature */
+  --status-pending-ink: hsl(var(--amber-600));
+  /* Pending ground */
+  --status-pending-soft: hsl(var(--amber-100));
+  /* Signed — the only state that asserts legal completion */
+  --status-signed-ink: hsl(var(--green-600));
+  /* Signed ground */
+  --status-signed-soft: hsl(var(--green-100));
+  /* Rejected by the owner */
+  --status-rejected-ink: hsl(var(--red-600));
+  /* Rejected ground */
+  --status-rejected-soft: hsl(var(--red-100));
+  /* Locked after signing — read-only record */
+  --status-locked-ink: hsl(var(--ink-950));
+  /* Locked ground */
+  --status-locked-soft: hsl(var(--paper-200));
+
+  /* ---- type ---- */
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fira Sans Condensed", "Fira Sans", ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --font-document: "Roboto", "Fira Sans", sans-serif; /* the PDF writer embeds Roboto */
+
+  --fs-2xs: 0.6875rem;  /* 11 · uppercase micro labels, table heads */
+  --fs-xs: 0.75rem;     /* 12 · timestamps, captions, badge text */
+  --fs-sm: 0.875rem;    /* 14 · table cells, secondary UI, doc body */
+  --fs-base: 1rem;      /* 16 · form values, prose */
+  --fs-lg: 1.125rem;    /* 18 · lede, card titles */
+  --fs-xl: 1.25rem;     /* 20 · section titles */
+  --fs-2xl: 1.5rem;     /* 24 · page titles */
+  --fs-3xl: 1.875rem;   /* 30 · document title */
+  --fs-4xl: 2.25rem;    /* 36 · landing display */
+  --fs-display: clamp(2rem, 1.2rem + 3.4vw, 3rem);
+
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  --lh-tight: 1.15; --lh-snug: 1.35; --lh-normal: 1.5; --lh-relaxed: 1.65;
+  --ls-tight: -0.01em; --ls-normal: 0; --ls-label: 0.08em; --ls-wide: 0.12em;
+
+  /* ---- space · 4px grid ---- */
+  --space-0: 0; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 32px; --space-8: 40px;
+  --space-9: 48px; --space-10: 56px; --space-11: 64px; --space-12: 80px;
+  --space-page: clamp(16px, 4vw, 32px);
+  --space-section: var(--space-9);
+  --space-stack: var(--space-4);
+
+  /* ---- radius · one ramp, 2 → 14px ---- */
+  --radius-xs: 2px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px;
+  --radius-xl: 14px; --radius-pill: 999px;
+  --radius-control: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-badge: var(--radius-sm);
+
+  /* ---- elevation · warm, low, never a glow ---- */
+  --elev-0: none;
+  --elev-1: 0 1px 2px hsl(var(--ink-950) / 0.06);
+  --elev-2: 0 1px 2px hsl(var(--ink-950) / 0.06), 0 4px 12px hsl(var(--ink-950) / 0.06);
+  --elev-3: 0 2px 4px hsl(var(--ink-950) / 0.08), 0 16px 40px hsl(var(--ink-950) / 0.12);
+  --elev-doc: 0 1px 2px hsl(var(--ink-950) / 0.08), 0 12px 32px hsl(var(--ink-950) / 0.08);
+
+  /* ---- motion ---- */
+  --dur-instant: 90ms; --dur-quick: 160ms; --dur-base: 240ms; --dur-slow: 450ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- layout ---- */
+  --container-max: 1400px;
+  --measure: 68ch;
+  --sidebar-w: 264px;
+  --tap-min: 44px;           /* the smallest tappable box, glove width */
+  --control-h-sm: 36px; --control-h: 40px; --control-h-lg: 44px;
+
+  /* ---- icon ---- */
+  --icon-xs: 14px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+  --icon-stroke: 1.6;
+
+  /* ---- z ---- */
+  --z-base: 0; --z-sticky: 40; --z-overlay: 50; --z-dialog: 60; --z-toast: 70;
+
+  /* ---- component ---- */
+  --btn-pad-x: var(--space-4); --btn-gap: var(--space-2);
+  --card-pad: var(--space-5); --card-gap: var(--space-4);
+  --field-pad-x: var(--space-3); --field-pad-y: var(--space-2);
+  --field-gap: var(--space-2);
+  --label-size: var(--fs-2xs); --label-tracking: var(--ls-label);
+  --table-cell-pad-y: var(--space-3); --table-cell-pad-x: var(--space-4);
+  --badge-pad-x: var(--space-2); --badge-pad-y: 2px;
+  --hazard-size: 6px;        /* the safety stripe height */
+  --hazard-angle: -45deg;
+  --grid-cell: 24px;         /* blueprint grid */
+
+  /* ---- document / print layer ----
+     The Work Log is a record, not a screen: it stays on paper even when the
+     app is in dark mode. .doc re-declares the semantic layer for print. */
+  --doc-width: 210mm; --doc-margin: 15mm;
+  --doc-ink: hsl(var(--ink-900));
+  --doc-ink-soft: hsl(var(--ink-600));
+  --doc-rule: hsl(var(--paper-300));
+  --doc-paper: #fff;
+  --doc-hazard: 6px;
+  --doc-section-rule: 3px;   /* the yellow bar beside a section title */
+  --doc-card-radius: 10px;
+  --doc-quick-cols: 5;
+  --doc-photo-h: 180px;
+  --doc-sig-h: 56px;
+}
+
+/* shadcn/ui compatibility aliases — the running app reads these names. */
+:root {
+  --background: 40 20% 97%; --foreground: 220 15% 12%;
+  --card: 0 0% 100%; --card-foreground: 220 15% 12%;
+  --popover: 0 0% 100%; --popover-foreground: 220 15% 12%;
+  --primary: 45 100% 48%; --primary-foreground: 220 15% 8%;
+  --secondary: 40 14% 94%; --secondary-foreground: 220 14% 19%;
+  --muted: 40 14% 94%; --muted-foreground: 220 10% 40%;
+  --accent: 45 95% 88%; --accent-foreground: 220 15% 12%;
+  --destructive: 0 76% 50%; --destructive-foreground: 0 0% 100%;
+  --success: 152 70% 29%; --success-foreground: 0 0% 100%;
+  --border: 40 10% 84%; --input: 40 10% 78%;
+  --ring: 45 100% 34%;
+  --radius: 6px;
+}
+
+/* ---------- LAYER 2 · SEMANTIC · DARK (asphalt) --------------------------- */
+.dark {
+  /* Asphalt, not black: keeps the warm/cool tension. */
+  --surface-page: hsl(var(--asphalt-950));
+  --surface-raised: hsl(var(--asphalt-800));
+  --surface-sunken: hsl(var(--asphalt-900));
+  --surface-sunken-soft: hsl(var(--asphalt-900));
+  --surface-inverse: hsl(var(--paper-50));
+  /* Deep olive, not bright yellow — a yellow wash at night is a lamp. */
+  --surface-accent-soft: hsl(45 40% 20%);
+  --surface-accent-quiet: hsl(45 30% 14%);
+  --surface-danger-soft: hsl(0 35% 18%);
+  --surface-success-soft: hsl(152 30% 16%);
+  --surface-warning-soft: hsl(32 35% 16%);
+  --text-primary: hsl(var(--asphalt-100));
+  --text-secondary: hsl(var(--asphalt-300));
+  --text-tertiary: hsl(var(--asphalt-400));
+  --text-inverse: hsl(var(--ink-900));
+  --text-on-accent: hsl(var(--ink-950));
+  --text-link: hsl(45 95% 58%);
+  --text-success: hsl(152 60% 50%);
+  --text-danger: hsl(0 80% 68%);
+  --text-warning: hsl(38 95% 58%);
+  --border-subtle: hsl(var(--asphalt-700));
+  --border-default: hsl(var(--asphalt-600));
+  --border-strong: hsl(var(--asphalt-400));
+  --border-accent: hsl(var(--yellow-500));
+  --border-danger: hsl(0 70% 55%);
+  --fill-primary: hsl(45 100% 52%);
+  --fill-primary-hover: hsl(45 100% 58%);
+  --fill-secondary: hsl(var(--asphalt-700));
+  --fill-danger: hsl(0 72% 52%);
+  --fill-success: hsl(152 60% 42%);
+  --fill-inverse: hsl(var(--paper-50));
+  --fill-disabled: hsl(var(--asphalt-700));
+  --focus-ring: hsl(45 95% 60%);
+  --focus-ring-offset: hsl(var(--asphalt-950));
+  --focus-ring-width: 2px;
+  --status-draft-ink: hsl(var(--asphalt-300));
+  --status-draft-soft: hsl(var(--asphalt-700));
+  --status-pending-ink: hsl(38 95% 58%);
+  --status-pending-soft: hsl(32 35% 16%);
+  --status-signed-ink: hsl(152 60% 50%);
+  --status-signed-soft: hsl(152 30% 16%);
+  --status-rejected-ink: hsl(0 80% 68%);
+  --status-rejected-soft: hsl(0 35% 18%);
+  --status-locked-ink: hsl(var(--asphalt-100));
+  --status-locked-soft: hsl(var(--asphalt-700));
+  --elev-1: 0 1px 2px hsl(220 15% 3% / 0.5);
+  --elev-2: 0 1px 2px hsl(220 15% 3% / 0.5), 0 6px 16px hsl(220 15% 3% / 0.45);
+  --elev-3: 0 4px 8px hsl(220 15% 3% / 0.55), 0 20px 48px hsl(220 15% 3% / 0.55);
+  --background: 220 15% 9%; --foreground: 40 15% 94%;
+  --card: 220 14% 13%; --card-foreground: 40 15% 94%;
+  --popover: 220 14% 13%; --popover-foreground: 40 15% 94%;
+  --primary: 45 100% 52%; --primary-foreground: 220 15% 8%;
+  --secondary: 220 12% 19%; --secondary-foreground: 40 15% 94%;
+  --muted: 220 12% 19%; --muted-foreground: 220 8% 64%;
+  --accent: 45 40% 20%; --accent-foreground: 45 95% 85%;
+  --destructive: 0 72% 52%; --destructive-foreground: 0 0% 100%;
+  --success: 152 60% 46%; --success-foreground: 220 15% 8%;
+  --border: 220 10% 24%; --input: 220 10% 24%;
+  --ring: 45 95% 60%;
+}
+
+/* ---------- LAYER 3 · REDUCED MOTION ------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-instant: 0ms; --dur-quick: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
+}
+
+/* ---------- LAYER 3 · PRINT / DOCUMENT -----------------------------------
+   A signed log prints as paper: light tokens, document type, no elevation.
+   The hazard strip is a screen measure by default; on paper it has its own
+   size (3mm), because 6px at 210mm width is a hairline that disappears. */
+@media print {
+  :root {
+    --doc-hazard: 3mm;
+    --surface-page: var(--doc-paper); --surface-raised: var(--doc-paper);
+    --surface-sunken: #F4F4F5;
+    --text-primary: var(--doc-ink); --text-secondary: var(--doc-ink-soft);
+    --border-default: var(--doc-rule); --elev-1: none; --elev-2: none; --elev-doc: none;
+  }
+}
