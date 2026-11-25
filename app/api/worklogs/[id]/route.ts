@@ -1,5 +1,5 @@
 // GET a single work log by ID
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, canModify, isProjectOwner, resolveRepositoryContext } from '@/utils/auth';
 import {
@@ -59,7 +59,7 @@ export async function PUT(
     // Strict: an unknown key is rejected rather than spread into `$set`.
     // `tenantId`, `_id` and `createdAt` are not in the schema at all, so a
     // client cannot name them; BaseRepository.update() strips them regardless.
-    const parsedBody = workLogUpdateSchema.safeParse(await request.json());
+    const parsedBody = workLogUpdateSchema.safeParse(await readJsonBody(request));
     if (!parsedBody.success) {
       return ApiError.badRequest(
         parsedBody.error.issues

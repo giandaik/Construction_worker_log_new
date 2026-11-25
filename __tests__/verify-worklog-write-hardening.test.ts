@@ -192,6 +192,14 @@ describe('M4 — request schemas reject unknown keys', () => {
     expect(result.success).toBe(true);
   });
 
+  it('rejects author on update — ownership is server-derived and immutable', () => {
+    // A worker could PUT another id here and the route wrote it, reattributing
+    // the record to somebody else — including a user in another tenant.
+    expect(
+      workLogUpdateSchema.safeParse({ author: '6a9b1f665b379afdd4d885c5' }).success,
+    ).toBe(false);
+  });
+
   it('accepts offline-queue rows that omit workDetails and hours', () => {
     const result = workLogCreateSchema.safeParse({
       ...validCreate,

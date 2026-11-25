@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isAdmin, requireTenantId } from '@/utils/auth';
 import { membershipUpdateSchema } from '@/lib/schemas/tenantSchema';
@@ -16,7 +16,7 @@ export async function PUT(
     const tenantId = requireTenantId(user);
 
     const { userId } = await params;
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = membershipUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
@@ -30,10 +30,16 @@ export async function PUT(
     await RepositoryFactory.getMembershipRepository().upsertMembership(
       userId,
       tenantId,
-      parsed.data.tenantRole
+      parsed.data.tenantRole,
+      parsed.data.isActive
     );
 
-    return ApiError.success({ message: 'Member updated', userId, tenantRole: parsed.data.tenantRole });
+    return ApiError.success({
+      message: 'Member updated',
+      userId,
+      tenantRole: parsed.data.tenantRole,
+      ...(parsed.data.isActive === undefined ? {} : { isActive: parsed.data.isActive }),
+    });
   } catch (error) {
     return ApiError.handle(error);
   }

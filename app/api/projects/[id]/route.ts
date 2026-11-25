@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { projectUpdateSchema } from '@/lib/schemas/projectSchema';
 import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
@@ -38,7 +38,7 @@ export async function PUT(
     const context = resolveRepositoryContext(user);
     const { id } = await params;
 
-    const validatedData = projectUpdateSchema.safeParse(await request.json());
+    const validatedData = projectUpdateSchema.safeParse(await readJsonBody(request));
     if (!validatedData.success) {
       return ApiError.badRequest(
         validatedData.error.issues.map((issue) => issue.message).join(', ')

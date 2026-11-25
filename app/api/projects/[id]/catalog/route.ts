@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { catalogUpdateSchema } from '@/lib/schemas/projectSchema';
 import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
@@ -17,7 +17,7 @@ export async function PUT(
     const context = resolveRepositoryContext(user);
 
     const { id } = await params;
-    const parsed = catalogUpdateSchema.safeParse(await request.json());
+    const parsed = catalogUpdateSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
     }

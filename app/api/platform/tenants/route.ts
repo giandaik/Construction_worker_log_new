@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 import { DatabaseUtils } from '@/lib/api/database';
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const user = await getAuthUser(request);
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = tenantProvisioningSchema.safeParse(body);
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
@@ -86,6 +86,20 @@ export async function POST(request: Request) {
       administrator: { userId: adminId?.toString(), name: parsed.data.initialAdmin.name, email: parsed.data.initialAdmin.email, tenantRole: 'ADMIN' },
     }, 201);
   } catch (error) {
+    /**
+     * The duplicate checks inside the transaction raise plain Errors, and the
+     * driver may re-throw them wrapped, so match on the message rather than on
+     * the class. Without this the caller got a 500 for what is a normal
+     * validation outcome — the UI showed "A tenant with this slug already
+     * exists" next to an internal-server-error status.
+     */
+    const message = error instanceof Error ? error.message : '';
+    if (
+      message === 'A tenant with this slug already exists' ||
+      message === 'A user with this email already exists'
+    ) {
+      return ApiError.badRequest(message);
+    }
     return ApiError.handle(error);
   }
 }

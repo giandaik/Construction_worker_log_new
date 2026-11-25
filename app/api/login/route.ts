@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { z } from "zod";
 import { dbConnect } from "@/lib/dbConnect";
 import mongoose from "mongoose";
@@ -50,7 +51,7 @@ async function buildToken(payload: Record<string, unknown>, jwtSecret: string): 
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = loginSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -133,9 +134,33 @@ export async function POST(request: Request) {
       );
     }
 
+    /**
+     * Membership is not enough. A tenant can be disabled or suspended while
+     * its membership rows stay untouched, and until this check existed the
+     * platform's "disable tenant" switch changed a badge and nothing else:
+     * members kept logging in and reading their data. The tenant has to be
+     * usable too, or the switch is decoration.
+     */
+    const tenantRepo = RepositoryFactory.getTenantRepository();
+    const usable: Array<{ membership: (typeof activeMemberships)[number]; tenantName: string }> = [];
+
+    for (const membership of activeMemberships) {
+      const tenant = await tenantRepo.findById(membership.tenantId.toString());
+      if (tenant && tenant.status === 'active') {
+        usable.push({ membership, tenantName: tenant.name });
+      }
+    }
+
+    if (usable.length === 0) {
+      return NextResponse.json(
+        { error: "Your organisation is not currently active. Contact your platform administrator." },
+        { status: 403 }
+      );
+    }
+
     // Single tenant: issue full JWT immediately
-    if (activeMemberships.length === 1) {
-      const membership = activeMemberships[0];
+    if (usable.length === 1) {
+      const membership = usable[0].membership;
       const token = await buildToken(
         {
           userId: user._id.toString(),
@@ -162,13 +187,11 @@ export async function POST(request: Request) {
     }
 
     // Multiple tenants: return list so client can pick one
-    const tenantRepo = RepositoryFactory.getTenantRepository();
-    const tenantDetails = await Promise.all(
-      activeMemberships.map(async (m) => {
-        const tenant = await tenantRepo.findById(m.tenantId.toString());
-        return { tenantId: m.tenantId.toString(), tenantName: tenant?.name ?? m.tenantId.toString(), tenantRole: m.tenantRole };
-      })
-    );
+    const tenantDetails = usable.map(({ membership, tenantName }) => ({
+      tenantId: membership.tenantId.toString(),
+      tenantName,
+      tenantRole: membership.tenantRole,
+    }));
 
     // Issue a short-lived selector token (no tenantId yet)
     const selectorToken = await buildToken(
@@ -180,6 +203,10 @@ export async function POST(request: Request) {
       token: selectorToken,
       user: { _id: user._id.toString(), name: user.name, email: user.email },
       tenants: tenantDetails,
+      // The single-tenant branches answer with `redirect`; this one told the
+      // client to branch on the message string alone, so any client that reads
+      // `redirect` (the mobile app does) landed nowhere.
+      redirect: "/select-tenant",
     });
     setSessionCookie(response, selectorToken);
     return response;

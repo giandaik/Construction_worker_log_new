@@ -31,6 +31,7 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   await mongoose.connection.collection('users').deleteMany({});
+  await mongoose.connection.collection('tenants').deleteMany({});
   await mongoose.connection.collection('user_tenant_memberships').deleteMany({});
 });
 
@@ -52,9 +53,17 @@ describe('POST /api/login', () => {
     });
 
     // Login now resolves the tenant from membership: a user with no active
-    // membership is refused (403) and never receives a token. The issued JWT
-    // carries the membership's tenantRole/tenantId, not the account's legacy
-    // `role` field.
+    // membership — or whose organisation is not active — is refused (403) and
+    // never receives a token. The issued JWT carries the membership's
+    // tenantRole/tenantId, not the account's legacy `role` field.
+    await mongoose.connection.collection('tenants').insertOne({
+      _id: new mongoose.Types.ObjectId(TENANT_ID),
+      name: 'Mobile Test Co',
+      slug: 'mobile-test-co',
+      status: 'active',
+      createdAt: new Date(),
+    });
+
     await mongoose.connection.collection('user_tenant_memberships').insertOne({
       userId: insertedId,
       tenantId: new mongoose.Types.ObjectId(TENANT_ID),

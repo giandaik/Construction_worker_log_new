@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { hash } from "bcryptjs";
 import { SignJWT } from "jose";
 import { ApiError } from "@/lib/api/errorHandling";
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const body = await readJsonBody(request);
 
     const parsed = userSchema.safeParse(body);
     if (!parsed.success) {

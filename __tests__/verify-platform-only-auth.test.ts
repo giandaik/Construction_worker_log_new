@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { hash } from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest } from 'next/server';
 import { POST as login } from '@/app/api/login/route';
-import { GET as listTenants } from '@/app/api/platform/tenants/route';
+import { GET as listTenants, POST as provisionTenant } from '@/app/api/platform/tenants/route';
 import { DELETE as endImpersonation } from '@/app/api/platform/impersonation/route';
 import { POST as startImpersonation } from '@/app/api/platform/tenants/[id]/impersonate/route';
 import { POST as selectTenant } from '@/app/api/auth/select-tenant/route';
@@ -16,7 +16,9 @@ import { SESSION_COOKIE_NAME } from '@/lib/constants/constants';
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters-long';
 const PASSWORD = 'correct-horse-battery-staple';
-let mongoServer: MongoMemoryServer;
+// A replica set, not a standalone: provisioning runs inside a transaction, and
+// a standalone mongod cannot start one.
+let mongoServer: MongoMemoryReplSet;
 
 async function signToken(claims: Record<string, unknown>) {
   return new SignJWT(claims)
@@ -65,7 +67,7 @@ async function impersonationToken(
 
 beforeAll(async () => {
   process.env.NEXT_JWT_SECRET = JWT_SECRET;
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   process.env.MONGODB_URI = mongoServer.getUri();
   await mongoose.connect(process.env.MONGODB_URI);
 });
@@ -80,6 +82,62 @@ beforeEach(async () => {
   await mongoose.connection.collection('tenants').deleteMany({});
   await mongoose.connection.collection('impersonation_logs').deleteMany({});
   await mongoose.connection.collection('user_tenant_memberships').deleteMany({});
+});
+
+describe('provisioning reports business conflicts as 4xx', () => {
+  const body = (email: string, name = 'New Co') => ({
+    name,
+    initialAdmin: {
+      name: 'New Admin',
+      email,
+      password: 'passwordN1!',
+      confirmPassword: 'passwordN1!',
+    },
+  });
+
+  it('returns 400, not 500, for a slug that already exists', async () => {
+    const token = await platformToken();
+    await mongoose.connection.collection('tenants').insertOne({
+      _id: new mongoose.Types.ObjectId(),
+      name: 'Taken Co',
+      slug: 'taken-co',
+      status: 'active',
+    });
+
+    const response = await provisionTenant(
+      new Request('http://localhost/api/platform/tenants', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(body('fresh@example.test', 'Taken Co')),
+      }),
+    );
+
+    // The route raised a plain Error inside the transaction and the catch-all
+    // turned a normal validation outcome into an internal-server-error.
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/slug already exists/i);
+  });
+
+  it('returns 400, not 500, for an email that is already registered', async () => {
+    const token = await platformToken();
+    await mongoose.connection.collection('users').insertOne({
+      _id: new mongoose.Types.ObjectId(),
+      name: 'Existing',
+      email: 'existing@example.test',
+      role: 'user',
+    });
+
+    const response = await provisionTenant(
+      new Request('http://localhost/api/platform/tenants', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(body('existing@example.test', 'Another Co')),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/email already exists/i);
+  });
 });
 
 describe('platform-only authentication', () => {

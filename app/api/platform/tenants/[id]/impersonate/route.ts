@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin, setSessionCookie, validateJWTSecret } from '@/utils/auth';
 import { impersonationRequestSchema } from '@/lib/schemas/tenantSchema';
@@ -15,7 +15,7 @@ export async function POST(
     if (!superAdmin || !isSuperAdmin(superAdmin)) return ApiError.forbidden();
 
     const { id: tenantId } = await params;
-    const parsed = impersonationRequestSchema.safeParse(await request.json());
+    const parsed = impersonationRequestSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((issue) => issue.message).join(', '));
     }

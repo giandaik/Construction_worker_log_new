@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { SignJWT } from "jose";
 import { getAuthUser, setSessionCookie, validateJWTSecret } from "@/utils/auth";
 import { RepositoryFactory } from "@/lib/repositories";
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { tenantId } = await request.json();
+    const { tenantId } = await readJsonBody(request);
     if (!tenantId || typeof tenantId !== "string") {
       return ApiError.badRequest("tenantId is required");
     }

@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 import { tenantUpdateSchema } from '@/lib/schemas/tenantSchema';
@@ -31,7 +31,7 @@ export async function PUT(
     if (!user || !isSuperAdmin(user)) return ApiError.forbidden();
 
     const { id } = await params;
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = tenantUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));

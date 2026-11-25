@@ -1,6 +1,6 @@
 // GET all work logs
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/constants';
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, resolveRepositoryContext } from '@/utils/auth';
 import {
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     const context = resolveRepositoryContext(user);
 
     // Strict: an unknown key is rejected rather than spread into the document.
-    const parsed = workLogCreateSchema.safeParse(await request.json());
+    const parsed = workLogCreateSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(
         parsed.error.issues

@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isProjectOwner, resolveRepositoryContext } from '@/utils/auth';
 import { validateOwnerRejection } from '@/lib/signatureUtils';
@@ -22,7 +22,9 @@ export async function POST(
     const context = resolveRepositoryContext(user);
 
     // A missing or malformed body is a client error, not a 500.
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonBody<{ rejectionComment?: unknown }>(request).catch(
+      () => ({}) as { rejectionComment?: unknown }
+    );
     const rejectionComment =
       typeof body.rejectionComment === 'string' ? body.rejectionComment.trim() : '';
 

@@ -1,6 +1,6 @@
 import { del } from '@vercel/blob';
 import { z } from 'zod';
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isAdmin, resolveRepositoryContext } from '@/utils/auth';
 
@@ -29,7 +29,7 @@ export async function POST(
 
     const context = resolveRepositoryContext(user);
     const { id } = await params;
-    const parsed = attachBodySchema.safeParse(await request.json());
+    const parsed = attachBodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map(i => i.message).join(', '));
     }
@@ -58,7 +58,7 @@ export async function DELETE(
 
     const context = resolveRepositoryContext(user);
     const { id } = await params;
-    const parsed = removeBodySchema.safeParse(await request.json());
+    const parsed = removeBodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map(i => i.message).join(', '));
     }

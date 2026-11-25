@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ export async function POST(
 
     const { id: tenantId } = await params;
 
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = addAdminSchema.safeParse(body);
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));

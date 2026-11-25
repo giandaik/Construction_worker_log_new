@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/errorHandling";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
 import { getAuthUser, isAdmin, isSuperAdmin, requireTenantId } from "@/utils/auth";
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       return ApiError.forbidden('Only administrators can create users');
     }
 
-    const userData = await request.json();
+    const userData = await readJsonBody(request);
 
     // Validate user data with Zod schema
     const validatedData = userSchema.safeParse(userData);

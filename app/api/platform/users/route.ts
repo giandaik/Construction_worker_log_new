@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/errorHandling';
+import {ApiError, readJsonBody } from '@/lib/api/errorHandling';
 import { RepositoryFactory } from '@/lib/repositories';
 import type { User } from '@/lib/repositories';
 import { getAuthUser, isSuperAdmin } from '@/utils/auth';
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const actor = await getAuthUser(request);
     if (!actor || !isSuperAdmin(actor)) return ApiError.forbidden();
 
-    const parsed = platformSuperAdminSchema.safeParse(await request.json());
+    const parsed = platformSuperAdminSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return ApiError.badRequest(parsed.error.issues.map((issue) => issue.message).join(', '));
     }

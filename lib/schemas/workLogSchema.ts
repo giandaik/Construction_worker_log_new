@@ -122,7 +122,6 @@ const signatureEntrySchema = z
 const workLogRequestFields = {
   date: z.union([z.string(), z.date()]),
   project: objectIdString,
-  author: objectIdString,
   weather: z.string().optional(),
   temperature: z.number().optional(),
   workDescription: z.string(),
@@ -150,6 +149,11 @@ export const workLogCreateSchema = z
  *
  * The work log detail page approves a log by sending only
  * `{ signatures, status }`, so requiring the full document would break it.
+ *
+ * `author` is deliberately absent: ownership is server-derived at creation and
+ * immutable afterwards. When it was updatable, a worker could PUT another
+ * user's id and reattribute the record — including a user from a different
+ * tenant, who then owned a log they could not even read.
  */
 export const workLogUpdateSchema = z
   .object(workLogRequestFields)

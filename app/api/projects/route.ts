@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/errorHandling";
+import { readJsonBody } from '@/lib/api/errorHandling';
 import { projectSchema } from "@/lib/schemas/projectSchema";
 import { RepositoryFactory } from "@/lib/repositories";
 import { getAuthUser, isAdmin, resolveRepositoryContext } from "@/utils/auth";
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
     const context = resolveRepositoryContext(user);
 
-    const projectData = await request.json();
+    const projectData = await readJsonBody(request);
 
     // Validate project data
     const validatedData = projectSchema.safeParse(projectData);

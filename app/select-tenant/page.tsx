@@ -54,7 +54,9 @@ export default function SelectTenantPage() {
       if (data.token) {
         await setMobileToken(data.token);
       }
-      router.push('/');
+      // The API names the destination; selecting an organisation used to drop
+      // the user on the public marketing page instead of their dashboard.
+      router.push(data.redirect ?? '/app');
     } catch {
       setError('Network error. Please try again.');
       setSelecting(null);

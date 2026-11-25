@@ -308,3 +308,68 @@ describe('L2 — JWT verification pins the signing algorithm', () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe('tenant status gates login', () => {
+  it('refuses a member whose tenant is disabled', async () => {
+    // Disabling a tenant used to change a badge in /platform and nothing else:
+    // membership rows stayed active, so the member simply kept logging in.
+    const { tenantId } = await seedUser('alice@alpha.test');
+    await mongoose.connection
+      .collection('tenants')
+      .updateOne({ _id: tenantId }, { $set: { status: 'disabled' } });
+
+    const response = await login(
+      loginRequest({ email: 'alice@alpha.test', password: PASSWORD }),
+    );
+
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toMatch(/not currently active/i);
+  });
+
+  it('refuses a member whose tenant is suspended', async () => {
+    const { tenantId } = await seedUser('alice@alpha.test');
+    await mongoose.connection
+      .collection('tenants')
+      .updateOne({ _id: tenantId }, { $set: { status: 'suspended' } });
+
+    const response = await login(
+      loginRequest({ email: 'alice@alpha.test', password: PASSWORD }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it('counts only usable tenants when deciding whether to ask for a choice', async () => {
+    const { userId, tenantId: disabledTenant } = await seedUser('multi@x.test');
+    await mongoose.connection
+      .collection('tenants')
+      .updateOne({ _id: disabledTenant }, { $set: { status: 'disabled' } });
+
+    const liveTenant = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('tenants').insertOne({
+      _id: liveTenant,
+      name: 'Live Co',
+      slug: 'live-co',
+      status: 'active',
+    });
+    await mongoose.connection.collection('user_tenant_memberships').insertOne({
+      userId,
+      tenantId: liveTenant,
+      tenantRole: 'WORKER',
+      isActive: true,
+    });
+
+    const response = await login(
+      loginRequest({ email: 'multi@x.test', password: PASSWORD }),
+    );
+    const body = await response.json();
+
+    // Two memberships, one of them in a disabled tenant: exactly one door is
+    // open, so the user goes straight in — and into the live tenant, not the
+    // disabled one the membership row still points at.
+    expect(response.status).toBe(200);
+    expect(body.message).toBe('Logged in successfully');
+    expect(body.user.tenantId).toBe(liveTenant.toString());
+    expect(body.tenants).toBeUndefined();
+  });
+});

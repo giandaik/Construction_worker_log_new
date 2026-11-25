@@ -47,21 +47,36 @@ export class UserTenantMembershipRepository extends BaseRepository<UserTenantMem
     });
   }
 
+  /**
+   * Creates the membership, or updates one that already exists.
+   *
+   * `isActive` is only written when the caller names it: re-adding an existing
+   * member should not silently re-activate an account an admin deactivated.
+   * New rows always start active.
+   */
   async upsertMembership(
     userId: string | ObjectId,
     tenantId: string | ObjectId,
-    tenantRole: TenantRole | Lowercase<TenantRole>
+    tenantRole: TenantRole | Lowercase<TenantRole>,
+    isActive?: boolean
   ): Promise<void> {
     const normalizedRole = normalizeTenantRole(tenantRole);
     await this.scopedUpdateOne(
       { userId: normalizeTenantId(userId.toString()), tenantId: normalizeTenantId(tenantId) },
       {
-        $set: { tenantRole: normalizedRole, isActive: true, updatedAt: new Date() },
+        $set: {
+          tenantRole: normalizedRole,
+          updatedAt: new Date(),
+          ...(isActive === undefined ? {} : { isActive }),
+        },
+        // `isActive` appears in exactly one of the two operators: an upsert
+        // that names it in both fails with a path-conflict error.
         $setOnInsert: {
           joinedAt: new Date(),
           createdAt: new Date(),
           tenantId: normalizeTenantId(tenantId),
           userId: normalizeTenantId(userId.toString()),
+          ...(isActive === undefined ? { isActive: true } : {}),
         },
       },
       { upsert: true }
