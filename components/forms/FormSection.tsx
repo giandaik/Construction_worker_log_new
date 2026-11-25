@@ -1,11 +1,34 @@
+import { isNativeBundle } from "@/lib/native-mode"
+
 interface FormSectionProps {
-  step: number;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
+  step: number
+  title: string
+  description?: string
+  children: React.ReactNode
 }
 
+/**
+ * Web: numbered card section.
+ * Native: the 13 pt uppercase header sits *above* a grouped inset card, which is
+ * the iOS form grammar — no step numbers, no box inside a box.
+ */
 export function FormSection({ step, title, description, children }: FormSectionProps) {
+  if (isNativeBundle()) {
+    return (
+      <section className="mt-5 first:mt-2">
+        <div className="mb-1.5 px-4">
+          <h3 className="t-footnote font-medium uppercase tracking-[0.04em] text-[color:var(--ios-ink2)]">
+            {title}
+          </h3>
+          {description ? <p className="t-caption t-secondary mt-0.5">{description}</p> : null}
+        </div>
+        <div className="mx-4 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
+          <div className="divide-y divide-[color:var(--ios-sep)]">{children}</div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section
       className="animate-fade-up rounded-md border bg-card p-4 sm:p-6"
@@ -22,5 +45,5 @@ export function FormSection({ step, title, description, children }: FormSectionP
       </div>
       <div className="space-y-4">{children}</div>
     </section>
-  );
+  )
 }

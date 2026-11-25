@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { WorkLogForm } from '@/components/WorkLogForm'
 import { getWorkLogStatusFromSignatures } from '@/lib/signatureUtils'
 import { apiFetch } from '@/lib/apiClient'
+import { isNativeBundle } from '@/lib/native-mode'
 
 function NewWorkLogFormContent() {
   const router = useRouter()
@@ -33,16 +34,20 @@ function NewWorkLogFormContent() {
   }
 
   return (
-    <div className="container mx-auto px-3 py-4 sm:px-4">
+    <div className={isNativeBundle() ? "" : "container mx-auto px-3 py-4 sm:px-4"}>
       <Toaster />
-      <Card>
-        <CardHeader>
-          <CardTitle>New Work Log Entry</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkLogForm onSubmit={handleSubmit} initialProject={initialProject} />
-        </CardContent>
-      </Card>
+      {isNativeBundle() ? (
+        <WorkLogForm onSubmit={handleSubmit} initialProject={initialProject} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>New Work Log Entry</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WorkLogForm onSubmit={handleSubmit} initialProject={initialProject} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

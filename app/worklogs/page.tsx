@@ -16,10 +16,51 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, Plus } from "lucide-react";
-import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
+import { FORM_STATUS, FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
 import { apiFetch } from "@/lib/apiClient";
+import { isNativeBundle } from "@/lib/native-mode";
+import {
+  Btn,
+  LargeTitle,
+  Pill,
+  Row,
+  Section,
+  Skeleton as NativeSkeleton,
+} from "@/components/native/ui";
+import { SearchField, Segmented } from "@/components/native/controls";
 
 const ALL_PROJECTS = "all";
+
+/* ---------- Native (Capacitor) presentation helpers ---------- */
+
+type NativePeriod = "month" | "recent" | "all";
+
+const NATIVE_PERIODS: { value: NativePeriod; label: string }[] = [
+  { value: "month", label: "This month" },
+  { value: "recent", label: "30 days" },
+  { value: "all", label: "All" },
+];
+
+/** dd/mm/yyyy, the form the site diary uses. */
+function logDate(value?: string): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+/** Short Greek label for the pill — the full signed label does not fit a 390 pt row. */
+function nativeStatusLabel(status?: string): string {
+  if (status === FORM_STATUS.SIGNED) return "Αναμονή";
+  return FORM_STATUS_LABELS[status as keyof typeof FORM_STATUS_LABELS] ?? "N/A";
+}
+
+function nativeStatusTone(status?: string): "ok" | "warn" | "plan" | "draft" {
+  if (status === FORM_STATUS.COMPLETED) return "ok";
+  if (status === FORM_STATUS.SIGNED) return "warn";
+  if (status === FORM_STATUS.PENDING) return "draft";
+  return "draft";
+}
 
 interface WorkLog {
   _id: string;
@@ -50,6 +91,12 @@ function WorkLogsPageContent() {
   const [toDate, setToDate] = useState<string>(toParam);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Native-only, presentation state: the search field and period segment narrow
+  // the rows that were already fetched. No URL, query or API involvement.
+  const [nativeQuery, setNativeQuery] = useState("");
+  const [nativePeriod, setNativePeriod] = useState<NativePeriod>(
+    projectIdParam || fromParam || toParam ? "all" : "month"
+  );
 
   useEffect(() => {
     const fetchWorkLogs = async () => {
@@ -143,6 +190,42 @@ function WorkLogsPageContent() {
     });
   }, [workLogs, filterProjectId, fromDate, toDate, hasFilters]);
 
+  /**
+   * Native list = the rows the page already resolved (project + URL date range),
+   * narrowed further by the period segment and the search field. Client-side
+   * only, so `?project=` keeps working exactly as it does on the web.
+   */
+  const nativeLogs = useMemo(() => {
+    let from: Date | null = null;
+    if (nativePeriod === "month") {
+      const now = new Date();
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (nativePeriod === "recent") {
+      const now = new Date();
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+    }
+
+    const query = nativeQuery.trim().toLowerCase();
+
+    return filteredLogs.filter((log) => {
+      if (from) {
+        const entryDate = log.date ? new Date(log.date) : null;
+        if (!entryDate || entryDate < from) return false;
+      }
+      if (query) {
+        const haystack = [
+          projectNameMap[log.project] ?? "",
+          log.workDescription ?? "",
+          logDate(log.date),
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+  }, [filteredLogs, nativePeriod, nativeQuery, projectNameMap]);
+
   const handleApplyFilters = () => {
     const params = new URLSearchParams();
     if (filterProjectId) params.set('project', filterProjectId);
@@ -159,6 +242,122 @@ function WorkLogsPageContent() {
     setToDate('');
     router.push('/worklogs');
   };
+
+  /* ------------------------------------------------------------------ *
+   * Native presentation (Capacitor WebView). Same data, same handlers;
+   * only the chrome and the grouping change. The web branch below is the
+   * unchanged responsive page.
+   * ------------------------------------------------------------------ */
+  if (isNativeBundle()) {
+    if (isLoading) {
+      return (
+        <div className="pb-4">
+          <LargeTitle>Logs</LargeTitle>
+          <NativeSkeleton rows={5} />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="pb-4">
+          <LargeTitle>Logs</LargeTitle>
+          <Section title="Could not load logs">
+            <div className="px-4 py-8 text-center">
+              <p className="t-subhead t-secondary">{error}</p>
+              <div className="mt-4 flex justify-center">
+                <Btn variant="secondary" onClick={() => window.location.reload()}>
+                  Retry
+                </Btn>
+              </div>
+            </div>
+          </Section>
+        </div>
+      );
+    }
+
+    const activeProjectName = filterProjectId ? project?.name ?? getProjectName(filterProjectId) : "";
+    const periodTitle =
+      nativePeriod === "month"
+        ? new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+        : nativePeriod === "recent"
+          ? "Last 30 days"
+          : "All logs";
+
+    return (
+      <div className="pb-4">
+        <LargeTitle
+          sub={`${nativeLogs.length} ${nativeLogs.length === 1 ? "log" : "logs"}${
+            activeProjectName ? ` · ${activeProjectName}` : ` · ${projects.length} sites`
+          }`}
+        >
+          Logs
+        </LargeTitle>
+
+        <SearchField
+          value={nativeQuery}
+          onChange={setNativeQuery}
+          placeholder="Site, work or date"
+        />
+
+        <Segmented options={NATIVE_PERIODS} value={nativePeriod} onChange={setNativePeriod} />
+
+        {nativeLogs.length === 0 ? (
+          <Section title={periodTitle}>
+            <div className="px-4 py-8 text-center">
+              <p className="t-headline">No logs in this period</p>
+              <p className="t-subhead t-secondary mt-1">
+                Nothing was recorded for this filter. Widen the period, or start today&apos;s log.
+              </p>
+              <div className="mt-4 flex justify-center">
+                <Btn variant="secondary" href="/logs/new">
+                  Start today&apos;s log
+                </Btn>
+              </div>
+            </div>
+          </Section>
+        ) : (
+          <Section
+            title={periodTitle}
+            footer={`${nativeLogs.length} of ${filteredLogs.length} logs shown`}
+            action={
+              filterProjectId ? (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="ios-tap -my-2 flex items-center text-[15px] font-semibold text-[color:var(--ios-tint)]"
+                >
+                  All sites
+                </button>
+              ) : undefined
+            }
+          >
+            {nativeLogs.map((log) => (
+              <Row
+                key={log._id}
+                href={`/worklogs/${log._id}`}
+                title={<span className="font-semibold">{getProjectName(log.project)}</span>}
+                subtitle={
+                  <span className="block truncate text-[15px] leading-5">
+                    {log.workDescription || "No description"}
+                  </span>
+                }
+                trailing={
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <Pill tone={nativeStatusTone(log.status)}>{nativeStatusLabel(log.status)}</Pill>
+                    <span className="t-footnote tabular-nums text-[color:var(--ios-ink2)]">
+                      {logDate(log.date)}
+                    </span>
+                  </span>
+                }
+                chevron
+              />
+            ))}
+          </Section>
+        )}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

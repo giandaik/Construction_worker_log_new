@@ -8,6 +8,8 @@ import type { Project, WorkLog } from "@/types/shared"
 import { WorkerActionRow } from "@/components/WorkerActionRow"
 import { getAuthUser, resolveRepositoryContext } from "@/utils/auth"
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
+import { LargeTitle, Section, Row, Stat, Btn } from "@/components/native/ui"
+import { isNativeBundle } from "@/lib/native-mode"
 
 const RECENT_LOGS_SHOWN = 6
 
@@ -116,6 +118,87 @@ export default async function HomePage() {
   const lastEntry = workLogs[0]?.date
     ? new Date(workLogs[0].date).toLocaleDateString()
     : '—';
+
+  if (isNativeBundle()) {
+    const today = new Date().toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+    const entryDate = (value: Date | string) => new Date(value).toLocaleDateString("en-GB")
+    const nativeLastEntry = workLogs[0]?.date ? entryDate(workLogs[0].date) : null
+
+    return (
+      <div className="pb-4">
+        <LargeTitle sub={today}>Today</LargeTitle>
+
+        {isWorker && authUser ? (
+          <div className="mx-4 mt-2">
+            <WorkerActionRow userId={authUser.userId} tenantId={authUser.tenantId!} />
+          </div>
+        ) : (
+          <Section>
+            <div className="flex items-stretch">
+              <Stat value={String(totalLogs)} label="Work logs" />
+              <span aria-hidden className="my-3 w-[0.5px] shrink-0 bg-[color:var(--ios-sep)]" />
+              <Stat value={String(projects.length)} label="Projects" />
+            </div>
+            {nativeLastEntry && (
+              <>
+                <div aria-hidden className="mx-4 h-[0.5px] bg-[color:var(--ios-sep)]" />
+                <p className="t-footnote t-secondary px-4 py-2.5">Last entry {nativeLastEntry}</p>
+              </>
+            )}
+          </Section>
+        )}
+
+        <Section
+          title="Recent logs"
+          action={
+            recentLogs.length > 0 ? (
+              <Link
+                href="/worklogs"
+                className="ios-tap t-footnote inline-flex items-center font-semibold text-[color:var(--ios-ink)]"
+              >
+                All
+              </Link>
+            ) : null
+          }
+        >
+          {recentLogs.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="t-body t-secondary">No work logs yet.</p>
+              <Btn href="/logs/new">Start today&apos;s log</Btn>
+            </div>
+          ) : (
+            recentLogs.map((log) => (
+              <Row
+                key={log._id}
+                href={`/worklogs/${log._id}`}
+                chevron
+                title={
+                  <span className="font-semibold">
+                    {projectNames.get(log.project) ?? 'Unknown project'}
+                  </span>
+                }
+                subtitle={
+                  <span className="block truncate">
+                    {entryDate(log.date)} · {log.workDescription || '—'}
+                  </span>
+                }
+              />
+            ))
+          )}
+        </Section>
+
+        {!isWorker && (
+          <div className="mx-4 mt-5">
+            <PendingSubmissions initialData={{ projects, workLogs }} />
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

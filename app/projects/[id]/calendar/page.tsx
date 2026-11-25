@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,8 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
+import { isNativeBundle } from "@/lib/native-mode";
+import { Row, Section, Skeleton as NativeSkeleton } from "@/components/native/ui";
+import { Sheet } from "@/components/native/controls";
+import { useRouteId } from "@/lib/native-route";
 
 interface ProjectSummary {
   _id: string;
@@ -28,6 +32,8 @@ interface DayCount {
 }
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** Native grid is Monday-first, as the approved calendar design is. */
+const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
 
 function currentMonth(): string {
   const now = new Date();
@@ -53,16 +59,27 @@ function dayKey(month: string, day: number): string {
   return `${month}-${String(day).padStart(2, "0")}`;
 }
 
+/** "Tuesday 24 November" — locale pinned so the native panel header is stable. */
+function longDayLabel(month: string, day: number): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(year, monthNumber - 1, day).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 export default function ProjectCalendarPage() {
-  const params = useParams();
   const router = useRouter();
-  const projectId = params.id as string;
+  const projectId = useRouteId();
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [month, setMonth] = useState<string>(currentMonth());
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(() => new Date().getDate());
+  const [sitePickerOpen, setSitePickerOpen] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -79,6 +96,8 @@ export default function ProjectCalendarPage() {
   }, []);
 
   useEffect(() => {
+    // Native shell resolves the id from `?id=` after mount.
+    if (!projectId) return;
     const fetchCounts = async () => {
       try {
         setIsLoading(true);
@@ -118,6 +137,196 @@ export default function ProjectCalendarPage() {
   }, [month]);
 
   const todayKey = dayKey(currentMonth(), new Date().getDate());
+
+  if (isNativeBundle()) {
+    const loggedDays = Object.values(counts).filter((count) => count > 0).length;
+    const selected =
+      selectedDay !== null && selectedDay <= daysInMonth ? selectedDay : null;
+    const selectedKey = selected !== null ? dayKey(month, selected) : null;
+    const selectedCount = selectedKey ? counts[selectedKey] ?? 0 : 0;
+    const mondayFirstBlanks = (leadingBlanks + 6) % 7;
+    const [gridYear, gridMonth] = month.split("-").map(Number);
+    const previousMonthDays = new Date(gridYear, gridMonth - 1, 0).getDate();
+    const totalCells = Math.ceil((mondayFirstBlanks + daysInMonth) / 7) * 7;
+    const trailingDays = totalCells - mondayFirstBlanks - daysInMonth;
+
+    const stepMonth = (delta: number) => {
+      setMonth(shiftMonth(month, delta));
+      setSelectedDay(null);
+    };
+
+    return (
+      <div className="pb-8">
+        <Section title="Site">
+          <Row
+            onClick={() => setSitePickerOpen(true)}
+            chevron
+            title={projectName ?? "Choose a site"}
+            subtitle={projects.length > 1 ? "Tap to switch site" : undefined}
+          />
+        </Section>
+
+        <div className="mt-5 flex items-start gap-2 px-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="t-title2 tabular-nums">{monthLabel(month)}</h1>
+            <p className="t-footnote t-secondary mt-0.5">
+              {isLoading
+                ? "Loading logs…"
+                : `${loggedDays} logged day${loggedDays === 1 ? "" : "s"}`}
+            </p>
+          </div>
+          <div className="-mr-2 flex shrink-0">
+            <button
+              type="button"
+              onClick={() => stepMonth(-1)}
+              aria-label="Previous month"
+              className="ios-tap flex items-center justify-center text-[color:var(--ios-tint)]"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.3} />
+            </button>
+            <button
+              type="button"
+              onClick={() => stepMonth(1)}
+              aria-label="Next month"
+              className="ios-tap flex items-center justify-center text-[color:var(--ios-tint)]"
+            >
+              <ChevronRight className="h-5 w-5" strokeWidth={2.3} />
+            </button>
+          </div>
+        </div>
+
+        {error ? (
+          <p className="t-footnote mt-4 px-4 text-[#c0392b]">{error}</p>
+        ) : isLoading ? (
+          <NativeSkeleton rows={3} />
+        ) : (
+          <>
+            <div className="mx-4 mt-3 grid grid-cols-7" aria-hidden>
+              {WEEKDAY_INITIALS.map((label, index) => (
+                <div
+                  key={`${label}-${index}`}
+                  className="t-caption pb-1 text-center font-semibold uppercase text-[color:var(--ios-ink2)]"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            <div className="mx-4 grid grid-cols-7" role="group" aria-label={monthLabel(month)}>
+              {Array.from({ length: mondayFirstBlanks }).map((_, index) => (
+                <div
+                  key={`lead-${index}`}
+                  aria-hidden
+                  className="flex h-11 items-center justify-center"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center text-[15px] leading-none text-[color:var(--ios-ink2)] opacity-40">
+                    {previousMonthDays - mondayFirstBlanks + index + 1}
+                  </span>
+                </div>
+              ))}
+
+              {Array.from({ length: daysInMonth }).map((_, index) => {
+                const day = index + 1;
+                const key = dayKey(month, day);
+                const count = counts[key] ?? 0;
+                const isToday = key === todayKey;
+                const isSelected = selected === day;
+                const logText = count > 0 ? ` — ${count} log${count === 1 ? "" : "s"}` : "";
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedDay(day)}
+                    aria-pressed={isSelected}
+                    aria-label={`${longDayLabel(month, day)}${logText}`}
+                    className="flex h-11 items-center justify-center"
+                  >
+                    <span
+                      className={`flex h-10 w-10 flex-col items-center justify-center rounded-full text-[15px] leading-none tabular-nums ${
+                        isSelected
+                          ? `bg-[color:var(--ios-accent)] font-semibold text-[#111]${
+                              isToday ? " ring-[1.5px] ring-[color:var(--ios-ink)]" : ""
+                            }`
+                          : isToday
+                            ? "font-semibold ring-[1.5px] ring-[color:var(--ios-ink)]"
+                            : "text-[color:var(--ios-ink)]"
+                      }`}
+                    >
+                      {day}
+                      {count > 0 && !isSelected ? (
+                        <span
+                          aria-hidden
+                          className="mt-[2px] h-1.5 w-1.5 rounded-full bg-[color:var(--ios-accent)]"
+                        />
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {Array.from({ length: trailingDays }).map((_, index) => (
+                <div
+                  key={`trail-${index}`}
+                  aria-hidden
+                  className="flex h-11 items-center justify-center"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center text-[15px] leading-none text-[color:var(--ios-ink2)] opacity-40">
+                    {index + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!isLoading && !error && selected !== null && selectedKey ? (
+          <Section title={longDayLabel(month, selected)}>
+            {selectedCount > 0 ? (
+              <Row
+                href={`/worklogs?project=${projectId}&from=${selectedKey}&to=${selectedKey}`}
+                chevron
+                title={`${selectedCount} log${selectedCount === 1 ? "" : "s"} on file`}
+                subtitle="Open this day in Logs"
+              />
+            ) : (
+              <Row
+                title="No logs on this day"
+                subtitle="Pick a day with a dot, or add today's log."
+              />
+            )}
+          </Section>
+        ) : !isLoading && !error ? (
+          <p className="t-footnote t-secondary mt-5 px-4">Pick a day to see its logs.</p>
+        ) : null}
+
+        <Sheet open={sitePickerOpen} onOpenChange={setSitePickerOpen} title="Site">
+          <div className="overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
+            {projects.map((project) => (
+              <Row
+                key={project._id}
+                onClick={() => {
+                  setSitePickerOpen(false);
+                  if (project._id !== projectId) {
+                    router.push(`/projects/${project._id}/calendar`);
+                  }
+                }}
+                title={project.name}
+                trailing={
+                  project._id === projectId ? (
+                    <Check className="h-4 w-4 text-[color:var(--ios-tint)]" aria-hidden />
+                  ) : undefined
+                }
+              />
+            ))}
+            {projects.length === 0 && (
+              <Row title="No sites on file" subtitle="Sites appear here once they are created." />
+            )}
+          </div>
+        </Sheet>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">

@@ -1,0 +1,26 @@
+name: AppUITests
+options:
+  minimumXcodeGenVersion: "2.38"
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  AppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.constructionlog.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        CODE_SIGNING_ALLOWED: NO
+        TEST_TARGET_NAME: ""
+schemes:
+  AppUITests:
+    build:
+      targets:
+        AppUITests: all
+    test:
+      targets:
+        - AppUITests

@@ -12,13 +12,19 @@
  * is a no-op on web, which is what makes it safe to call unconditionally.
  */
 
+import { isNativeShell, nativePlugin } from './native-bridge';
+
 const TOKEN_KEY = 'cw_jwt_token';
 
 /**
  * True only inside a real native Capacitor shell. Safe on web and during SSR:
- * a failed import or a missing global resolves to false rather than throwing.
+ * a missing global resolves to false rather than throwing.
+ *
+ * Reads the injected bridge synchronously — see `native-bridge.ts` for why a
+ * dynamic `import('@capacitor/core')` is not usable inside the WebView.
  */
 export async function isMobileApp(): Promise<boolean> {
+  if (isNativeShell()) return true;
   try {
     const { Capacitor } = await import('@capacitor/core');
     return Capacitor.isNativePlatform();
@@ -32,6 +38,9 @@ export async function isMobileApp(): Promise<boolean> {
  * Callers treat null as "no token storage on this platform".
  */
 async function getPreferences() {
+  const injected = nativePlugin('Preferences');
+  if (injected) return injected;
+
   if (!(await isMobileApp())) return null;
 
   try {

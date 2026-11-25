@@ -25,6 +25,25 @@ export const metadata = {
   description: 'Track and manage construction projects and daily work logs',
 }
 
+/**
+ * `viewportFit: 'cover'` is what makes `env(safe-area-inset-*)` report real
+ * numbers inside the Capacitor WebView. Without it the native shell draws its
+ * 44 pt navigation bar underneath the status bar.
+ */
+const isNativeBundle = (process.env.NEXT_PUBLIC_API_BASE_URL || '').length > 0
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Zoom stays available on the web — disabling it is an accessibility
+  // violation there. Inside the Capacitor shell it is what stops a stray
+  // pinch from breaking the fixed 44 pt chrome.
+  maximumScale: isNativeBundle ? 1 : undefined,
+  userScalable: isNativeBundle ? false : undefined,
+  viewportFit: 'cover' as const,
+  themeColor: '#ffffff',
+}
+
 export default function RootLayout({
   children,
 }: {

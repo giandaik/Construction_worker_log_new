@@ -6,13 +6,12 @@
  * the server `params` promise, and gates on the client.
  */
 
-import { useParams } from "next/navigation";
 import { EditProjectForm } from "@/components/admin/EditProjectForm";
 import { MobileAdminGate } from "@/components/mobile/MobileAdminGate";
+import { useRouteId } from "@/lib/native-route";
 
 export default function EditProjectPage() {
-  const params = useParams();
-  const projectId = typeof params?.id === "string" ? params.id : "";
+  const projectId = useRouteId();
 
   return (
     <MobileAdminGate>

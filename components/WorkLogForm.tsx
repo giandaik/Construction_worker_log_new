@@ -19,6 +19,7 @@ import { Check, MapPin } from 'lucide-react';
 import { useProjectCatalog } from '@/hooks/useProjectCatalog';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 import { apiFetch } from '@/lib/apiClient';
+import { isNativeBundle } from '@/lib/native-mode';
 
 const DUPLICATE_WORKLOG_MESSAGE = 'A work log already exists for this project on the selected day.';
 
@@ -288,6 +289,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
     }
   };
 
+  const wordCount = (formData.workDescription || '').trim().split(/\s+/).filter(Boolean).length;
+
   const topAlerts = (
     <>
       {!isOnline && (
@@ -315,7 +318,10 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      className={isNativeBundle() ? 'ios-form pb-32' : 'space-y-6'}
+    >
       {topAlerts}
      
       {prefilledFrom && (
@@ -568,9 +574,27 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       />
       </FormSection>
 
-      <Button type="submit" size="lg" className="w-full">
-        Submit Work Log
-      </Button>
+      {isNativeBundle() ? (
+        <div className="fixed inset-x-0 z-30 mx-auto max-w-md border-t bg-[color:var(--ios-card)]/95 px-4 pb-3 pt-2 backdrop-blur-xl ios-above-tabbar">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="t-caption t-secondary">
+              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+            </span>
+            <span className="t-caption t-secondary">Draft saved on this device</span>
+          </div>
+          <button
+            type="submit"
+            className="ios-tap flex min-h-[44px] w-full items-center justify-center rounded-[12px] bg-[color:var(--ios-accent)] text-[17px] font-semibold text-[#111] disabled:opacity-40"
+            disabled={!formData.workDescription?.trim()}
+          >
+            Save log
+          </button>
+        </div>
+      ) : (
+        <Button type="submit" size="lg" className="w-full">
+          Submit Work Log
+        </Button>
+      )}
     </form>
   );
 });

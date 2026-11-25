@@ -126,6 +126,39 @@ describe('apiFetch on mobile (cross-origin API)', () => {
   });
 });
 
+describe('apiFetch inside the native shell', () => {
+  it('goes through the injected CapacitorHttp plugin instead of fetch', async () => {
+    storedToken.current = 'stored.jwt.token';
+    const calls: any[] = [];
+    const bridge = {
+      isNativePlatform: () => true,
+      Plugins: {
+        CapacitorHttp: {
+          request: async (options: any) => {
+            calls.push(options);
+            return { status: 200, headers: { 'content-type': 'application/json' }, data: { ok: true } };
+          },
+        },
+        Preferences: { get: async () => ({ value: 'stored.jwt.token' }) },
+      },
+    };
+    vi.stubGlobal('Capacitor', bridge);
+    vi.resetModules();
+    const { apiFetch } = await (async () => {
+      process.env.NEXT_PUBLIC_API_BASE_URL = MOBILE_BASE;
+      return import('@/lib/apiClient');
+    })();
+
+    const res = await apiFetch('/api/me');
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${MOBILE_BASE}/api/me`);
+    expect(new Headers(calls[0].headers).get('Authorization')).toBe('Bearer stored.jwt.token');
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(res.json()).resolves.toEqual({ ok: true });
+  });
+});
+
 describe('lib/mobile-auth on a non-native platform', () => {
   it('is a safe no-op, so web and SSR can call it unconditionally', async () => {
     // Setting a token makes the file-level mock answer true/'a.jwt.token', so

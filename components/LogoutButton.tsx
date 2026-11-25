@@ -7,7 +7,7 @@ import { LogOut } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { clearMobileToken } from "@/lib/mobile-auth";
 
-export function LogoutButton() {
+export function LogoutButton({ row = false }: { row?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +25,21 @@ export function LogoutButton() {
       setLoading(false);
       router.push("/login");
     }
+  }
+
+  if (row) {
+    return (
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={loading}
+        className="ios-tap flex w-full items-center justify-center gap-2 rounded-xl border text-[17px] font-semibold text-red-600"
+        style={{ borderColor: "var(--ios-sep)" }}
+      >
+        <LogOut className="h-5 w-5" />
+        {loading ? "Signing out…" : "Sign out"}
+      </button>
+    );
   }
 
   return (

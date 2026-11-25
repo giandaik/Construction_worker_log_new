@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {FileDown, Pencil, Trash, FileText, FileType2, CheckCircle, XCircle} from "lucide-react";
+import {FileDown, Pencil, Trash, FileText, FileType2, CheckCircle, XCircle, MoreHorizontal} from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 import { SignatureSection } from "@/components/SignatureSection";
@@ -27,6 +27,55 @@ import type { Signature } from "@/types/shared";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { apiFetch } from "@/lib/apiClient";
+import { isNativeBundle } from "@/lib/native-mode";
+import {
+  Btn,
+  LargeTitle,
+  Pill,
+  Row,
+  Section,
+  Skeleton as NativeSkeleton,
+} from "@/components/native/ui";
+import { Sheet } from "@/components/native/controls";
+import { useRouteId } from "@/lib/native-route";
+
+/* ---------- Native (Capacitor) presentation helpers ---------- */
+
+/** "Tuesday 24 November 2026" — the date line under the native large title. */
+function longDate(value?: string): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** Short Greek label for the pill — the full signed label does not fit a 390 pt row. */
+function nativeStatusLabel(status?: string): string {
+  if (status === FORM_STATUS.SIGNED) return "Αναμονή";
+  return FORM_STATUS_LABELS[status as keyof typeof FORM_STATUS_LABELS] ?? "N/A";
+}
+
+function nativeStatusTone(status?: string): "ok" | "warn" | "plan" | "draft" {
+  if (status === FORM_STATUS.COMPLETED) return "ok";
+  if (status === FORM_STATUS.SIGNED) return "warn";
+  if (status === FORM_STATUS.PENDING) return "draft";
+  return "draft";
+}
+
+/** A grouped property row: 15 pt secondary label, 17 pt value, wrap-safe. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Row
+      title={<span className="t-subhead t-secondary">{label}</span>}
+      trailing={<span className="max-w-[62%] text-right">{children}</span>}
+    />
+  );
+}
 
 const WEATHER_LABEL_MAP: Record<string, { label: string; Icon: typeof WEATHER_OPTIONS[number]['icon'] }> =
   Object.fromEntries(WEATHER_OPTIONS.map(({ key, label, icon }) => [key, { label, Icon: icon }]));
@@ -90,9 +139,8 @@ interface ProjectDwgFile {
 }
 
 export default function WorkLogDetailPage() {
-  const params = useParams();
   const router = useRouter();
-  const { id } = params;
+  const id = useRouteId();
   const { user } = useCurrentUser();
 
   const [workLog, setWorkLog] = useState<WorkLog | null>(null);
@@ -103,6 +151,7 @@ export default function WorkLogDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [rejectionComment, setRejectionComment] = useState('');
 
   const projectRole = useProjectRole(
@@ -112,6 +161,8 @@ export default function WorkLogDetailPage() {
   );
 
   useEffect(() => {
+    // Native shell resolves the id from `?id=` after mount — don't fetch `/api/worklogs/`.
+    if (!id) return;
     const fetchWorkLog = async () => {
       try {
         setIsLoading(true);
@@ -269,6 +320,40 @@ export default function WorkLogDetailPage() {
     }
   };
 
+  /* ------------------------------------------------------------------ *
+   * Native presentation (Capacitor WebView). Same fetch, same handlers,
+   * grouped iOS sections instead of a desktop card. The web branch below
+   * is untouched.
+   * ------------------------------------------------------------------ */
+  if (isNativeBundle()) {
+    if (isLoading) {
+      return (
+        <div className="pb-4">
+          <LargeTitle sub="Loading…">Log</LargeTitle>
+          <NativeSkeleton rows={4} />
+        </div>
+      );
+    }
+
+    if (error || !workLog) {
+      return (
+        <div className="pb-4">
+          <LargeTitle>Log</LargeTitle>
+          <Section title="Not available">
+            <div className="px-4 py-8 text-center">
+              <p className="t-subhead t-secondary">{error || "Work log not found"}</p>
+              <div className="mt-4 flex justify-center">
+                <Btn variant="secondary" onClick={() => router.back()}>
+                  Go back
+                </Btn>
+              </div>
+            </div>
+          </Section>
+        </div>
+      );
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -305,6 +390,342 @@ export default function WorkLogDetailPage() {
   const isCompleted = workLog.status === FORM_STATUS.COMPLETED;
   const isOwnerReviewMode =
     workLog.status === FORM_STATUS.SIGNED && projectRole === 'owner';
+
+  if (isNativeBundle()) {
+    const projectTitle = workLog.projectName || workLog.project || "Work log";
+    const crewTotal = (workLog.personnel ?? []).reduce(
+      (sum, person) => sum + (Number(person.count) || 0),
+      0
+    );
+    const weather = workLog.weather ? WEATHER_LABEL_MAP[workLog.weather] : undefined;
+    const images = workLog.images ?? [];
+    const drawings = workLog.dwgRefs ?? [];
+    const signed = workLog.signatures ?? [];
+
+    return (
+      <>
+        <div className="pb-[92px]">
+          <LargeTitle
+            sub={
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <span>{longDate(workLog.date)}</span>
+                <Pill tone={nativeStatusTone(workLog.status)}>
+                  {nativeStatusLabel(workLog.status)}
+                </Pill>
+              </span>
+            }
+          >
+            {projectTitle}
+          </LargeTitle>
+
+          <Section title="Date & site">
+            <Field label="Date">{longDate(workLog.date)}</Field>
+            <Field label="Site">{projectTitle}</Field>
+            {workLog.projectLocation ? (
+              <Field label="Location">{workLog.projectLocation}</Field>
+            ) : null}
+            <Field label="Author">{workLog.authorName || workLog.author || "Unknown"}</Field>
+          </Section>
+
+          {workLog.weather || typeof workLog.temperature === "number" ? (
+            <Section title="Conditions">
+              {workLog.weather ? (
+                <Field label="Weather">
+                  {weather ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <weather.Icon className="h-4 w-4" aria-hidden />
+                      <span>{weather.label}</span>
+                    </span>
+                  ) : (
+                    workLog.weather
+                  )}
+                </Field>
+              ) : null}
+              {typeof workLog.temperature === "number" ? (
+                <Field label="Temperature">{workLog.temperature} °C</Field>
+              ) : null}
+            </Section>
+          ) : null}
+
+          <Section title="Work done">
+            <div className="px-4 py-3">
+              <p className="t-body whitespace-pre-wrap">
+                {workLog.workDescription || "No description"}
+              </p>
+            </div>
+            {workLog.notes ? (
+              <>
+                <div className="ml-4 h-[0.5px] bg-[color:var(--ios-sep)]" />
+                <div className="px-4 py-3">
+                  <div className="t-subhead t-secondary">Notes</div>
+                  <p className="t-body mt-1 whitespace-pre-wrap">{workLog.notes}</p>
+                </div>
+              </>
+            ) : null}
+          </Section>
+
+          {workLog.personnel && workLog.personnel.length > 0 ? (
+            <Section title={`Crew · ${crewTotal}`}>
+              {workLog.personnel.map((person, index) => (
+                <Row
+                  key={index}
+                  title={<span className="font-semibold">{person.role || "N/A"}</span>}
+                  subtitle={person.workDetails || undefined}
+                  trailing={
+                    <span className="t-body shrink-0 tabular-nums text-[color:var(--ios-ink2)]">
+                      ×{person.count}
+                    </span>
+                  }
+                />
+              ))}
+            </Section>
+          ) : null}
+
+          {workLog.equipment && workLog.equipment.length > 0 ? (
+            <Section title={`Equipment · ${workLog.equipment.length}`}>
+              {workLog.equipment.map((item, index) => (
+                <Row
+                  key={index}
+                  title={item.type || "N/A"}
+                  trailing={
+                    <span className="t-body shrink-0 tabular-nums text-[color:var(--ios-ink2)]">
+                      {item.count} × · {item.hours} h
+                    </span>
+                  }
+                />
+              ))}
+            </Section>
+          ) : null}
+
+          {workLog.materials && workLog.materials.length > 0 ? (
+            <Section title={`Materials · ${workLog.materials.length}`}>
+              {workLog.materials.map((material, index) => (
+                <Row
+                  key={index}
+                  title={material.name || "N/A"}
+                  trailing={
+                    <span className="t-body shrink-0 tabular-nums text-[color:var(--ios-ink2)]">
+                      {material.quantity} {material.unit}
+                    </span>
+                  }
+                />
+              ))}
+            </Section>
+          ) : null}
+
+          {images.length > 0 ? (
+            <Section title={`Photos · ${images.length}`}>
+              <div className="grid grid-cols-3 gap-1 p-2">
+                {images.map((src, index) => (
+                  <a
+                    key={index}
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative block aspect-square overflow-hidden rounded-[6px] bg-[rgba(120,120,128,.12)]"
+                  >
+                    <Image
+                      src={src}
+                      alt={`Photo ${index + 1}`}
+                      fill
+                      sizes="(max-width: 430px) 30vw, 120px"
+                      className="object-cover"
+                    />
+                  </a>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {drawings.length > 0 ? (
+            <Section title={`Drawings · ${drawings.length}`}>
+              {drawings.map((url) => {
+                const meta = projectDwgFiles.find((file) => file.url === url);
+                const filename = meta?.filename ?? url.split("/").pop() ?? "drawing.dwg";
+                return (
+                  <Row
+                    key={url}
+                    title={<span className="block truncate">{filename}</span>}
+                    subtitle={meta ? undefined : "No longer available"}
+                    trailing={
+                      <span className="flex shrink-0 items-center gap-1">
+                        {meta?.pdfUrl ? (
+                          <a
+                            href={meta.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ios-tap inline-flex items-center px-1 text-[15px] font-semibold text-[color:var(--ios-tint)]"
+                          >
+                            PDF
+                          </a>
+                        ) : null}
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ios-tap inline-flex items-center px-1 text-[15px] font-semibold text-[color:var(--ios-tint)]"
+                        >
+                          DWG
+                        </a>
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </Section>
+          ) : null}
+
+          {workLog.rejectionComment ? (
+            <Section title="Rejection comment">
+              <div className="px-4 py-3">
+                <p className="t-body whitespace-pre-wrap">{workLog.rejectionComment}</p>
+              </div>
+            </Section>
+          ) : null}
+
+          <Section title="Signatures">
+            {isOwnerReviewMode ? (
+              <div className="px-3 py-3">
+                <SignatureSection
+                  signatures={signatures}
+                  onChange={setSignatures}
+                  projectOwnerUserId={projectInfo?.ownerUserId}
+                  projectContractorUserId={projectInfo?.contractorUserId}
+                  allowDraftSignatureRemoval={false}
+                />
+              </div>
+            ) : signed.length > 0 ? (
+              signed.map((signature, index) => (
+                <Row
+                  key={index}
+                  title={<span className="font-semibold">{signature.signedBy}</span>}
+                  subtitle={`${signature.projectRole || "N/A"} · ${new Date(
+                    signature.signedAt
+                  ).toLocaleString()}`}
+                >
+                  <img
+                    src={signature.data}
+                    alt={`Signature by ${signature.signedBy}`}
+                    className="mt-2 h-auto max-h-32 w-auto max-w-full"
+                  />
+                </Row>
+              ))
+            ) : (
+              <div className="px-4 py-3">
+                <p className="t-subhead t-secondary">Not signed yet.</p>
+              </div>
+            )}
+          </Section>
+
+          <p className="t-footnote t-secondary mt-4 px-4">
+            Created{" "}
+            {workLog.createdAt ? new Date(workLog.createdAt).toLocaleString() : "unknown"}
+          </p>
+        </div>
+
+        <div
+          className="ios-above-tabbar fixed inset-x-0 z-30 border-t bg-[color:var(--ios-card)]/95 backdrop-blur-xl"
+          style={{ borderColor: "var(--ios-sep)" }}
+        >
+          <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2">
+            <div className="min-w-0 flex-1">
+              {isOwnerReviewMode ? (
+                <Btn
+                  block
+                  onClick={handleApproveAndSign}
+                  disabled={isSubmitting || !hasOwnerSignature}
+                >
+                  <CheckCircle className="h-5 w-5" /> Approve &amp; sign
+                </Btn>
+              ) : !isCompleted ? (
+                <Btn block href={`/worklogs/${id}/edit`}>
+                  <Pencil className="h-5 w-5" /> Edit
+                </Btn>
+              ) : (
+                <Btn block variant="secondary" onClick={handleExportPDF}>
+                  <FileDown className="h-5 w-5" /> Export PDF
+                </Btn>
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label="More actions"
+              onClick={() => setShowActions(true)}
+              className="ios-tap flex shrink-0 items-center justify-center rounded-[12px] bg-[rgba(118,118,128,.14)] px-3 text-[color:var(--ios-ink)]"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <Sheet open={showActions} onOpenChange={setShowActions} title="Log actions">
+          <div className="mb-3 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
+            <Row
+              title="Export PDF"
+              onClick={() => {
+                setShowActions(false);
+                void handleExportPDF();
+              }}
+            />
+            {!isCompleted && !isOwnerReviewMode ? (
+              <Row
+                title={<span className="text-destructive">Delete log</span>}
+                onClick={() => {
+                  setShowActions(false);
+                  void handleDelete();
+                }}
+              />
+            ) : null}
+            {isOwnerReviewMode ? (
+              <Row
+                title={<span className="text-destructive">Reject log</span>}
+                onClick={() => {
+                  setShowActions(false);
+                  setShowRejectDialog(true);
+                }}
+              />
+            ) : null}
+          </div>
+        </Sheet>
+
+        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Work Log</DialogTitle>
+              <DialogDescription>
+                Provide a comment explaining why this work log is being rejected. It will be
+                returned to draft status for the contractor to revise.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={rejectionComment}
+              onChange={(e) => setRejectionComment(e.target.value)}
+              placeholder="Rejection comment..."
+              rows={4}
+            />
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowRejectDialog(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={isSubmitting || !rejectionComment.trim()}
+              >
+                Reject
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Toaster />
+      </>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">

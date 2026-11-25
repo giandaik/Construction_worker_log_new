@@ -18,6 +18,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
 import { toGreekUpperCase } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiClient";
+import { isNativeBundle } from "@/lib/native-mode";
+import {
+  Btn,
+  LargeTitle,
+  Pill,
+  Row,
+  Section,
+  Skeleton as NativeSkeleton,
+} from "@/components/native/ui";
+import { SearchField, Segmented } from "@/components/native/controls";
 
 interface Project {
   _id: string;
@@ -56,6 +66,57 @@ function compareProjects(a: Project, b: Project, sortKey: SortKey): number {
   return b.lastLogDate.localeCompare(a.lastLogDate);
 }
 
+/* ---------- Native presentation helpers (Capacitor bundle only) ---------- */
+
+type NativeFilter = "all" | "active" | "planned";
+
+const NATIVE_FILTERS: { value: NativeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "planned", label: "Planned" },
+];
+
+const STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  "in-progress": "In progress",
+  active: "Active",
+  completed: "Completed",
+  "on-hold": "On hold",
+};
+
+function statusLabel(status?: string): string {
+  if (!status) return "No status";
+  return STATUS_LABELS[status] ?? status;
+}
+
+function statusTone(status?: string): "ok" | "warn" | "plan" | "draft" {
+  switch (status) {
+    case "completed":
+      return "ok";
+    case "in-progress":
+    case "active":
+      return "warn";
+    case "planned":
+      return "plan";
+    default:
+      return "draft";
+  }
+}
+
+/** "24PEP021 - IALONET" → code "24PEP021", name "IALONET". Names without a code stay whole. */
+function splitCode(name: string): { code: string; name?: string } {
+  const match = name.match(/^([0-9A-Za-z][0-9A-Za-z._/-]*)\s+[-–—]\s+(.+)$/);
+  if (!match) return { code: name };
+  return { code: match[1], name: match[2] };
+}
+
+function logMeta(project: Project): string {
+  if (!project.worklogCount) return "No logs yet";
+  const count = `${project.worklogCount} log${project.worklogCount === 1 ? "" : "s"}`;
+  if (!project.lastLogDate) return count;
+  return `${count} · last ${new Date(project.lastLogDate).toLocaleDateString("en-GB")}`;
+}
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -64,6 +125,7 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES);
   const [sortKey, setSortKey] = useState<SortKey>("activity");
+  const [nativeFilter, setNativeFilter] = useState<NativeFilter>("all");
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -112,7 +174,47 @@ export default function ProjectsPage() {
       .sort((a, b) => compareProjects(a, b, sortKey));
   }, [projects, searchTerm, statusFilter, sortKey]);
 
+  const nativeProjects = useMemo(() => {
+    if (nativeFilter === "planned") {
+      return visibleProjects.filter((project) => project.status === "planned");
+    }
+    if (nativeFilter === "active") {
+      return visibleProjects.filter(
+        (project) => project.status === "in-progress" || project.status === "active"
+      );
+    }
+    return visibleProjects;
+  }, [visibleProjects, nativeFilter]);
+
+  /** Grouped cards, ordered the way the design board groups sites. */
+  const nativeGroups = useMemo(() => {
+    const order = ["in-progress", "active", "planned", "completed", "on-hold"];
+    const groups = new Map<string, Project[]>();
+    nativeProjects.forEach((project) => {
+      const key = project.status ?? "";
+      groups.set(key, [...(groups.get(key) ?? []), project]);
+    });
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      const ai = order.indexOf(a);
+      const bi = order.indexOf(b);
+      return (ai === -1 ? order.length : ai) - (bi === -1 ? order.length : bi);
+    });
+  }, [nativeProjects]);
+
+  const totalLogs = useMemo(
+    () => projects.reduce((sum, project) => sum + (project.worklogCount || 0), 0),
+    [projects]
+  );
+
   if (isLoading) {
+    if (isNativeBundle()) {
+      return (
+        <div className="pb-6">
+          <LargeTitle>Sites</LargeTitle>
+          <NativeSkeleton rows={6} />
+        </div>
+      );
+    }
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="flex justify-between items-center mb-6">
@@ -124,6 +226,102 @@ export default function ProjectsPage() {
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
         </div>
+      </div>
+    );
+  }
+
+  if (isNativeBundle()) {
+    const siteCount = `${projects.length} site${projects.length === 1 ? "" : "s"}`;
+    const logCount = `${totalLogs} log${totalLogs === 1 ? "" : "s"}`;
+    const nothingVisible = !error && nativeProjects.length === 0;
+
+    return (
+      <div className="pb-6">
+        <LargeTitle sub={`${siteCount} · ${logCount}`}>Sites</LargeTitle>
+
+        <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search sites" />
+        <Segmented options={NATIVE_FILTERS} value={nativeFilter} onChange={setNativeFilter} />
+
+        {error && (
+          <Section title="Could not load">
+            <div className="px-4 py-7 text-center">
+              <p className="t-footnote text-[#c0392b]">{error}</p>
+              <div className="mt-3 flex justify-center">
+                <Btn variant="secondary" onClick={() => window.location.reload()}>
+                  Retry
+                </Btn>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {nothingVisible && (
+          <Section>
+            <div className="px-4 py-7 text-center">
+              <p className="t-subhead">
+                {projects.length === 0 ? "No sites on file" : "No sites match"}
+              </p>
+              <p className="t-footnote t-secondary mt-1">
+                {projects.length === 0
+                  ? "Sites appear here once they are created."
+                  : "Try another search or filter."}
+              </p>
+              {projects.length > 0 && (
+                <div className="mt-3 flex justify-center">
+                  <Btn
+                    variant="secondary"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setNativeFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </Btn>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {nativeGroups.map(([status, group]) => (
+          <Section
+            key={status || "none"}
+            title={`${statusLabel(status || undefined)} · ${group.length}`}
+          >
+            {group.map((project) => {
+              const { code, name } = splitCode(project.name);
+              return (
+                <Row
+                  key={project._id}
+                  href={`/projects/${project._id}`}
+                  chevron
+                  trailing={<Pill tone={statusTone(project.status)}>{statusLabel(project.status)}</Pill>}
+                >
+                  <div className="t-body truncate font-semibold leading-[22px]">{toGreekUpperCase(code)}</div>
+                  {name ? (
+                    <div className="t-subhead truncate leading-[20px] text-[color:var(--ios-ink2)]">{name}</div>
+                  ) : null}
+                  <div className="t-footnote mt-0.5 flex min-w-0 items-center gap-1 text-[color:var(--ios-ink2)]">
+                    {project.location ? (
+                      <>
+                        <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                        <span className="truncate">{project.location}</span>
+                        <span aria-hidden>·</span>
+                      </>
+                    ) : null}
+                    <span className="shrink-0">{logMeta(project)}</span>
+                  </div>
+                </Row>
+              );
+            })}
+          </Section>
+        ))}
+
+        {!error && projects.length > 0 ? (
+          <p className="t-footnote t-secondary mt-4 px-4">
+            {siteCount} on file. Archived sites stay readable from the office.
+          </p>
+        ) : null}
       </div>
     );
   }
