@@ -68,3 +68,9 @@ scripts/mt-verify/results.jsonl
 scripts/mt-verify/fixture.json
 # quarantined build artefacts (mv-aside, never committed)
 *.stale-*
+
+# Android release signing — the keystore and its passwords never enter git.
+android/keystore.properties
+*.keystore
+*.jks
+!android/keystore.properties.example

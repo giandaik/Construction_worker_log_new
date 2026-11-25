@@ -1,0 +1,133 @@
+name: Mobile
+
+# Proves what this repo cannot prove on a machine without a native toolchain:
+# the static export builds, the committed Xcode/Gradle projects compile against
+# it, and a signed AAB is produced when the signing secrets are present.
+#
+# The iOS job signs nothing — TestFlight uploads stay manual so a release is a
+# deliberate act, not a merge side effect.
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'utils/**'
+      - 'public/**'
+      - 'mobile/**'
+      - 'scripts/**'
+      - 'capacitor.config.ts'
+      - 'next.config.mobile.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'ios/**'
+      - 'android/**'
+      - '.github/workflows/mobile.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Syntactically valid origin: this build is never shipped, it only proves the
+  # export compiles with a base URL inlined.
+  NEXT_PUBLIC_API_BASE_URL: https://mobile-ci.invalid
+  # Capacitor 8 emits `gradlew` expecting JDK 17+; the project targets 21.
+  JAVA_VERSION: '21'
+  NODE_VERSION: '22'
+
+jobs:
+  android:
+    name: Export + debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - run: npm ci
+      - run: npm run version:check
+      - run: npm run build:mobile
+      - run: npx cap sync android
+      - run: cd android && ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  android-release:
+    name: Signed AAB (needs signing secrets)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - run: npm ci
+      - run: npm run version:check
+      - run: npm run build:mobile
+      - run: npx cap sync android
+      - name: Restore the upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set"; exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          cat > android/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+      - run: cd android && ./gradlew --no-daemon bundleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS simulator build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build:mobile
+      - run: npx cap sync ios
+      - run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build

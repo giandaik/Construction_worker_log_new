@@ -1,6 +1,6 @@
 {
   "name": "construction-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,10 +14,13 @@
     "test:all": "vitest run && npm run build",
     "lint": "eslint .",
     "a11y": "node scripts/a11y-audit.cjs --strict",
-    "a11y:install-hook": "ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit && echo 'pre-commit hook installed'"
+    "a11y:install-hook": "ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit && echo 'pre-commit hook installed'",
+    "version:set": "node scripts/set-version.mjs",
+    "version:check": "node scripts/set-version.mjs --check"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/camera": "^8.2.1",
     "@capacitor/cli": "^8.4.2",
     "@capacitor/core": "^8.4.2",

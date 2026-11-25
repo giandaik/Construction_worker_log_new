@@ -7,6 +7,7 @@ import { Breadcrumbs } from "./Breadcrumbs"
 import { NavBar } from "@/components/native/NavBar"
 import { TabBar } from "@/components/native/TabBar"
 import { NativeRouteBridge } from "@/components/native/NativeRouteBridge"
+import { AndroidBackButton } from "@/components/native/AndroidBackButton"
 
 const PUBLIC_PATHS = ["/login", "/signup", "/sample-log", "/"]
 
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <NativeRouteBridge>
         <div className="ios-surface min-h-dvh">
+          <AndroidBackButton />
           <NavBar />
           <div className="ios-tabbar-space mx-auto max-w-md">{children}</div>
           <TabBar />
