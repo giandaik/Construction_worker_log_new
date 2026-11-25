@@ -61,3 +61,10 @@ docs/commercialization-plan.md
 # PDF sheet build artifacts (font download cache, rendered previews)
 .pdf-font-cache/
 .pdf-preview/
+
+# multi-tenant verification run output (regenerate with scripts/mt-verify)
+scripts/mt-verify/report-*.json
+scripts/mt-verify/results.jsonl
+scripts/mt-verify/fixture.json
+# quarantined build artefacts (mv-aside, never committed)
+*.stale-*
