@@ -79,6 +79,19 @@ function buildMatchesSources(): boolean {
   return buildMtime >= newestSourceMtime();
 }
 
+/**
+ * True only for `next build` output.
+ *
+ * A `next dev` compile writes `.next` too — chunks unminified, nothing split —
+ * and no BUILD_ID. Sizing it proves nothing about what ships, so every test
+ * below refuses to.
+ */
+function isProductionBuild(): boolean {
+  if (!existsSync(buildDir)) return false;
+  if (!existsSync(join(buildDir, 'BUILD_ID'))) return false;
+  return !existsSync(join(buildDir, 'static', 'development'));
+}
+
 /** Client chunks whose content matches `marker` — i.e. a code-split artifact. */
 function findChunksContaining(marker: RegExp): string[] {
   if (!existsSync(clientChunksDir)) return [];
@@ -96,8 +109,8 @@ function findChunksContaining(marker: RegExp): string[] {
 describe('Performance: Bundle Size Optimization', () => {
   describe('Dynamic Import - PDF Export', () => {
     it('ships the PDF exporter (jspdf) in a chunk of its own', () => {
-      if (!existsSync(clientChunksDir)) {
-        console.warn('Build directory not found. Run "npm run build" first.');
+      if (!isProductionBuild() || !existsSync(clientChunksDir)) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
@@ -113,8 +126,8 @@ describe('Performance: Bundle Size Optimization', () => {
     });
 
     it('does not load the PDF exporter eagerly on the worklog detail route', () => {
-      if (!existsSync(clientChunksDir)) {
-        console.warn('Build directory not found. Run "npm run build" first.');
+      if (!isProductionBuild() || !existsSync(clientChunksDir)) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
@@ -138,8 +151,8 @@ describe('Performance: Bundle Size Optimization', () => {
     it('keeps the /worklogs/[id] route bundle small', () => {
       const worklogIdDir = join(serverDir, 'worklogs', '[id]');
 
-      if (!existsSync(worklogIdDir)) {
-        console.warn('Build directory not found. Run "npm run build" first.');
+      if (!isProductionBuild() || !existsSync(worklogIdDir)) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
@@ -162,8 +175,8 @@ describe('Performance: Bundle Size Optimization', () => {
     it('should have reasonable total bundle size', () => {
       const chunks = currentBuildChunks();
 
-      if (!chunks) {
-        console.warn('Build manifest not found. Run "npm run build" first.');
+      if (!chunks || !isProductionBuild()) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
@@ -191,8 +204,8 @@ describe('Performance: Bundle Size Optimization', () => {
     it('should have React Compiler optimizations applied', () => {
       const buildManifest = join(buildDir, 'build-manifest.json');
 
-      if (!existsSync(buildManifest)) {
-        console.warn('Build manifest not found. Run "npm run build" first.');
+      if (!isProductionBuild() || !existsSync(buildManifest)) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
@@ -213,8 +226,8 @@ describe('Performance: Bundle Size Optimization', () => {
     it('should have separate chunks for different routes', () => {
       const pagesDir = join(buildDir, 'server', 'app');
 
-      if (!existsSync(pagesDir)) {
-        console.warn('Build directory not found. Run "npm run build" first.');
+      if (!isProductionBuild() || !existsSync(pagesDir)) {
+        console.warn('Skipping: no production build in .next. Run "npm run build".');
         return;
       }
 
