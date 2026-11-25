@@ -115,5 +115,18 @@ const resultsPath = RESULTS;
 /** Read a JSON fixture file written by the setup step. */
 export function fixture(name) {
   const p = new URL(`./${name}.json`, import.meta.url).pathname;
-  return existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null;
+  if (!existsSync(p)) return null;
+  const data = JSON.parse(readFileSync(p, 'utf8'));
+  // A fixture is only valid for the database it was dumped from. Seeding
+  // cwl_mt_test while the dev server serves cwl_mt_journey produces a run that
+  // looks green or red for reasons that have nothing to do with the app.
+  // MT_DB_NAME wins over the URI's own database name, exactly as setup.mjs and
+  // the seed treat it.
+  const target = process.env.MT_DB_NAME || new URL(DB_URI).pathname.slice(1);
+  if (data.db && data.db !== target) {
+    throw new Error(
+      `fixture.json was dumped from "${data.db}" but this run targets "${target}" — re-run setup.mjs against the same MT_DB_URI as the server`,
+    );
+  }
+  return data;
 }

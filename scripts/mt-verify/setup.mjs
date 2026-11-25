@@ -10,6 +10,10 @@ const db = c.db(process.env.MT_DB_NAME || 'cwl_mt_test');
 
 const tenants = await db.collection('tenants').find({}).toArray();
 const users = await db.collection('users').find({}).toArray();
+if (users.length === 0) {
+  throw new Error(`no users in "${db.databaseName}" — seed that database first (MT_DB_URI must match the server's MONGODB_URI)`);
+}
+console.log(`dumped ${db.databaseName}: ${tenants.length} tenants, ${users.length} users`);
 const memberships = await db.collection('user_tenant_memberships').find({}).toArray();
 const projects = await db.collection('projects').find({}).toArray();
 const worklogs = await db.collection('worklogs').find({}).toArray();
@@ -18,6 +22,8 @@ const bySlug = Object.fromEntries(tenants.map((t) => [t.slug, t._id.toString()])
 const byEmail = Object.fromEntries(users.map((u) => [u.email, u._id.toString()]));
 
 const fixture = {
+  db: db.databaseName,
+  at: new Date().toISOString(),
   tenants: bySlug,
   users: byEmail,
   memberships: memberships.map((m) => ({
