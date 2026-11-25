@@ -16,7 +16,9 @@
     "a11y": "node scripts/a11y-audit.cjs --strict",
     "a11y:install-hook": "ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit && echo 'pre-commit hook installed'",
     "version:set": "node scripts/set-version.mjs",
-    "version:check": "node scripts/set-version.mjs --check"
+    "version:check": "node scripts/set-version.mjs --check",
+    "dist:android": "node scripts/dist-firebase.mjs android/app/build/outputs/apk/debug/app-debug.apk --platform android",
+    "dist:ios": "node scripts/dist-firebase.mjs build/App.ipa --platform ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

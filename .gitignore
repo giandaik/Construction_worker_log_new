@@ -74,3 +74,7 @@ android/keystore.properties
 *.keystore
 *.jks
 !android/keystore.properties.example
+
+# Firebase App Distribution app ids (not secrets, but per-environment)
+.firebase
+.env.firebase

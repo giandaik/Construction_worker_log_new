@@ -64,13 +64,42 @@ with the debug key, and points at the production backend.
 Good for five testers and a week. Bad for anything longer: no updates, no crash reports, no
 auto-upgrade.
 
-### Firebase App Distribution (free, still no store account)
+### Firebase App Distribution (free, no store account)
 
-1. Firebase console → new project → **App Distribution**.
-2. `npm i -g firebase-tools && firebase login`
-3. `firebase appdistribution:distribute app-debug.apk --app <firebase-app-id> --groups testers`
-4. Testers get an email, install the App Tester app, tap Install. Updates arrive as new
-   distributions.
+Set up once:
+
+1. Firebase console → **Add project** (call it `construction-log`) → inside it, **Add app →
+   Android**, package name `com.constructionlog.app`. Copy the **App ID**
+   (`1:…:android:…`) — that is what the script needs, not the API key.
+2. **App Distribution → Testers & Groups →** create group `testers`, add emails.
+3. Project settings → Service accounts → **Generate new private key** → a `.json` file.
+4. Locally: `npx firebase-tools@14 login` (browser, once), then
+   ```bash
+   printf 'FIREBASE_APP_ID_ANDROID=1:…:android:…\n' > .env.firebase   # gitignored
+   ```
+5. In CI: repo settings → Secrets → `FIREBASE_APP_ID_ANDROID` (the id) and
+   `FIREBASE_SERVICE_ACCOUNT` (the whole JSON file, pasted).
+
+Every release after that:
+
+```bash
+npm run build:mobile && npx cap sync android
+cd android && ./gradlew assembleDebug && cd ..
+npm run dist:android -- --notes "Back button, signed-in flow"
+```
+
+or **Actions → Mobile → Run workflow**, which builds the debug APK and distributes it in one go.
+Testers get an email, install the **App Tester** app once, then tap Install on each build.
+Uploads land at <https://console.firebase.google.com/project/_/appdistribution>.
+
+Notes:
+
+- Firebase wants an **APK**, not an `.aab`. Debug-signed is fine and is what the CI job ships;
+  a release-signed APK needs `android/keystore.properties` first.
+- iOS works too (`npm run dist:ios -- build/App.ipa`) but the `.ipa` must already be **Ad Hoc**
+  signed with every tester's UDID in the profile. Firebase removes the "email me the file" step,
+  not the UDID step — TestFlight is less work for anyone outside the team.
+- Groups are managed in the console; no tester email ever goes into this repository.
 
 ### Google Play internal testing (the real answer for ongoing testers)
 
