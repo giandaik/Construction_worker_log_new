@@ -10,6 +10,7 @@ import { RepositoryFactory } from "@/lib/repositories";
 import { PLATFORM_ROLES, isSuperAdminRole } from '@/lib/constants/roles';
 import { consumeRateLimit, getClientIp, resetRateLimit } from "@/lib/rateLimit";
 import { DUMMY_PASSWORD_HASH } from "@/lib/constants/security";
+import { acceptTenantInvitation, TenantInvitationError } from "@/lib/tenant/invitations";
 
 /**
  * Credentials must be strings before they reach MongoDB.
@@ -21,6 +22,7 @@ import { DUMMY_PASSWORD_HASH } from "@/lib/constants/security";
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string(),
+  inviteToken: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
 
 /** Both failure paths return exactly this — never "no such user". */
@@ -61,7 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, inviteToken } = parsed.data;
 
     /**
      * Two independent buckets: the IP bucket stops one host spraying many
@@ -104,6 +106,44 @@ export async function POST(request: Request) {
     resetRateLimit(emailKey);
 
     const jwtSecret = validateJWTSecret();
+
+    if (inviteToken) {
+      if (isSuperAdminRole(user.platformRole)) {
+        return NextResponse.json(
+          { error: "Platform administrators cannot join an organisation" },
+          { status: 403 },
+        );
+      }
+
+      const membership = await acceptTenantInvitation(
+        inviteToken,
+        email,
+        user._id.toString(),
+      );
+      const token = await buildToken(
+        {
+          userId: user._id.toString(),
+          name: user.name,
+          role: membership.tenantRole,
+          tenantId: membership.tenantId,
+        },
+        jwtSecret,
+      );
+      const response = NextResponse.json({
+        message: "Logged in successfully",
+        token,
+        user: {
+          _id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: membership.tenantRole,
+          tenantId: membership.tenantId,
+        },
+        redirect: "/app",
+      });
+      setSessionCookie(response, token);
+      return response;
+    }
 
     // Super-admin: no tenant context needed
     if (isSuperAdminRole(user.platformRole)) {
@@ -211,6 +251,9 @@ export async function POST(request: Request) {
     setSessionCookie(response, selectorToken);
     return response;
   } catch (error) {
+    if (error instanceof TenantInvitationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Error during login:", error);
     return NextResponse.json({ error: "Failed to login" }, { status: 500 });
   }

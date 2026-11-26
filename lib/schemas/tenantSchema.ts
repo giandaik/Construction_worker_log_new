@@ -31,6 +31,11 @@ export const membershipUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+export const tenantInvitationSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).email('Valid email is required'),
+  tenantRole: z.enum(['ADMIN', 'MANAGER', 'WORKER']).default('WORKER'),
+});
+
 /**
  * Body of POST /api/platform/tenants/[id]/impersonate.
  *

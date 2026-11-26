@@ -26,10 +26,11 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      const inviteToken = new URLSearchParams(window.location.search).get("invite");
       const res = await apiFetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(inviteToken ? { inviteToken } : {}) }),
       });
 
       const data = await res.json().catch(() => ({}));

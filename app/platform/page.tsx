@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, Users, ShieldCheck } from 'lucide-react';
+import { Building2, Users, ShieldCheck, ClipboardList } from 'lucide-react';
 import { getAuthUser, isSuperAdmin } from '@/utils/auth';
 import { RepositoryFactory } from '@/lib/repositories';
+import { countPendingSignupRequests } from '@/lib/tenant/signupRequests';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -10,9 +11,10 @@ export default async function PlatformPage() {
   const user = await getAuthUser();
   if (!user || !isSuperAdmin(user)) redirect('/');
 
-  const [tenants, users] = await Promise.all([
+  const [tenants, users, pendingSignupRequests] = await Promise.all([
     RepositoryFactory.withTenantRepository((r) => r.findAll({} as any, { sort: { name: 1 } })),
     RepositoryFactory.withUserRepository((r) => r.findPlatformSuperAdmins()),
+    countPendingSignupRequests(),
   ]);
 
   const activeTenants = tenants.filter((t) => t.status === 'active').length;
@@ -25,12 +27,13 @@ export default async function PlatformPage() {
           <p className="text-sm text-muted-foreground">Manage tenants, users, and platform settings</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild><Link href="/platform/signup-requests">Signup Requests</Link></Button>
           <Button variant="outline" asChild><Link href="/platform/users">Platform Users</Link></Button>
           <Button asChild><Link href="/platform/tenants/new">New Tenant</Link></Button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
@@ -60,6 +63,19 @@ export default async function PlatformPage() {
           <CardContent>
             <div className="text-2xl font-bold">Super Admin</div>
             <p className="text-xs text-muted-foreground">{user.name}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pending Signup Requests</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingSignupRequests}</div>
+            <Button variant="link" asChild className="px-0">
+              <Link href="/platform/signup-requests">Review requests</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

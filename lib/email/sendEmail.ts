@@ -188,3 +188,107 @@ export const sendRejectWorkLogEmail = async (
     text: template.text,
   });
 };
+
+export async function sendTenantInvitationEmail(payload: {
+  email: string;
+  tenantName: string;
+  inviterName: string;
+  tenantRole: string;
+  inviteUrl: string;
+}): Promise<boolean> {
+  const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character] ?? character);
+  const roleLabel = payload.tenantRole.toLowerCase();
+  const tenantName = escapeHtml(payload.tenantName);
+  const inviterName = escapeHtml(payload.inviterName);
+  const inviteUrl = escapeHtml(payload.inviteUrl);
+  const subject = `Invitation to join ${payload.tenantName} on Sitely`;
+  const text = `${payload.inviterName} invited you to join ${payload.tenantName} as a ${roleLabel}.\n\nAccept the invitation: ${payload.inviteUrl}\n\nThis link expires in 7 days and can only be used once.`;
+
+  return sendSmtpEmail({
+    from: getSenderEmail(),
+    to: payload.email,
+    subject,
+    text,
+    html: `<p>${inviterName} invited you to join <strong>${tenantName}</strong> on Sitely as a ${escapeHtml(roleLabel)}.</p><p><a href="${inviteUrl}">Accept invitation</a></p><p>This link expires in 7 days and can only be used once.</p>`,
+  });
+}
+
+export async function sendSignupRequestNotificationEmail(payload: {
+  recipients: string[];
+  requestId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  organizationName: string;
+  message?: string;
+}): Promise<boolean> {
+  if (payload.recipients.length === 0) {
+    console.error('[SMTP] Cannot notify about an access request: no platform super-admin email addresses are configured.');
+    return false;
+  }
+
+  const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character] ?? character);
+  const fullName = `${payload.firstName} ${payload.lastName}`;
+  const message = payload.message?.trim() || '(No message provided)';
+  const subject = `Account access request from ${fullName}`;
+  const text = [
+    'A new account invitation request is waiting for review.',
+    '',
+    `Name: ${fullName}`,
+    `Email: ${payload.email}`,
+    `Organisation: ${payload.organizationName}`,
+    `Message: ${message}`,
+    `Request ID: ${payload.requestId}`,
+    '',
+    'Review it in Platform Administration > Signup Requests.',
+  ].join('\n');
+
+  return sendSmtpEmail({
+    from: getSenderEmail(),
+    to: payload.recipients,
+    subject,
+    text,
+    html: `<p>A new account invitation request is waiting for review.</p><dl><dt>Name</dt><dd>${escapeHtml(fullName)}</dd><dt>Email</dt><dd>${escapeHtml(payload.email)}</dd><dt>Organisation</dt><dd>${escapeHtml(payload.organizationName)}</dd><dt>Message</dt><dd>${escapeHtml(message)}</dd><dt>Request ID</dt><dd>${escapeHtml(payload.requestId)}</dd></dl><p>Review it in Platform Administration &rarr; Signup Requests.</p>`,
+  });
+}
+
+export async function sendSignupRequestRejectedEmail(payload: {
+  email: string;
+  firstName: string;
+  organizationName: string;
+  reason?: string;
+}): Promise<boolean> {
+  const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character] ?? character);
+  const reason = payload.reason?.trim();
+  const subject = 'Update on your account access request';
+  const text = `Hello ${payload.firstName},\n\nYour request to join ${payload.organizationName} was not approved.${reason ? `\n\nNote from the review team: ${reason}` : ''}\n\nIf you believe this was a mistake, contact your organisation administrator.`;
+
+  return sendSmtpEmail({
+    from: getSenderEmail(),
+    to: payload.email,
+    subject,
+    text,
+    html: `<p>Hello ${escapeHtml(payload.firstName)},</p><p>Your request to join <strong>${escapeHtml(payload.organizationName)}</strong> was not approved.</p>${reason ? `<p>Note from the review team: ${escapeHtml(reason)}</p>` : ''}<p>If you believe this was a mistake, contact your organisation administrator.</p>`,
+  });
+}

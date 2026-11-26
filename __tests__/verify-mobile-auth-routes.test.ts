@@ -131,7 +131,7 @@ describe('POST /api/login', () => {
 });
 
 describe('POST /api/signup', () => {
-  it('returns a token, since signup logs the new user straight in', async () => {
+  it('refuses account creation without an invitation', async () => {
     const { POST } = await import('@/app/api/signup/route');
 
     const res = await POST(
@@ -143,14 +143,10 @@ describe('POST /api/signup', () => {
     );
     const body = await res.json();
 
-    expect(res.status).toBe(201);
-    expect(typeof body.token).toBe('string');
-
-    const { payload } = await jwtVerify(
-      body.token,
-      new TextEncoder().encode(JWT_SECRET),
-    );
-    // Public signup always forces the worker role.
-    expect(payload.role).toBe('user');
+    expect(res.status).toBe(400);
+    expect(body.token).toBeUndefined();
+    expect(await mongoose.connection.collection('users').countDocuments({
+      email: 'mobile-signup@example.com',
+    })).toBe(0);
   });
 });

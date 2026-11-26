@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   "/sample-log",
   "/api/login",
   "/api/signup",
+  "/api/signup-requests",
   "/api/logout",
   "/_next",
   "/favicon.ico",

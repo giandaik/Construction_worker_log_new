@@ -1,10 +1,8 @@
+import { NextResponse } from "next/server";
 import { ApiError } from "@/lib/api/errorHandling";
-import { readJsonBody } from '@/lib/api/errorHandling';
-import { userSchema } from "@/lib/schemas/userSchema";
 import { RepositoryFactory } from "@/lib/repositories";
-import { getAuthUser, isAdmin, isSuperAdmin, requireTenantId } from "@/utils/auth";
-import { canAssignRole, resolveTenantRole } from "@/lib/tenant/roleHierarchy";
-import { hash } from "bcryptjs";
+import { getLegacyUserRole } from "@/lib/tenant/invitations";
+import { getAuthUser, requireTenantId } from "@/utils/auth";
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +17,12 @@ export async function GET(request: Request) {
     const users = await Promise.all(
       memberships
         .filter((membership) => membership.isActive)
-        .map((membership) => userRepo.findById(membership.userId.toString())),
+        .map(async (membership) => {
+          const account = await userRepo.findById(membership.userId.toString());
+          return account
+            ? { ...account, role: getLegacyUserRole(membership.tenantRole) }
+            : null;
+        }),
     );
 
     return ApiError.success(
@@ -32,65 +35,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const authUser = await getAuthUser(request);
-
-    // Only admins/managers can create users
-    if (!authUser || !isAdmin(authUser)) {
-      return ApiError.forbidden('Only administrators can create users');
-    }
-
-    const userData = await readJsonBody(request);
-
-    // Validate user data with Zod schema
-    const validatedData = userSchema.safeParse(userData);
-    if (!validatedData.success) {
-      return ApiError.badRequest(
-        validatedData.error.issues.map(issue => issue.message).join(', ')
-      );
-    }
-
-    return await RepositoryFactory.withUserRepository(async (userRepo) => {
-      const { password, ...rest } = validatedData.data;
-      const requestedRole = rest.role ?? 'user';
-
-      // A manager is an admin as far as `isAdmin` is concerned, so without
-      // this they could create an account that outranks their own.
-      if (!isSuperAdmin(authUser)) {
-        const creatorRole = await resolveTenantRole(authUser);
-        if (!canAssignRole(creatorRole, requestedRole)) {
-          return ApiError.forbidden(
-            `Your role cannot create a user with the ${requestedRole} role`,
-          );
-        }
-      }
-
-      const newUser = {
-        ...rest,
-        password: await hash(password, 12),
-        role: rest.role || 'user',
-      };
-
-      const user = await userRepo.create(newUser as any);
-
-      // Automatically add the new user to the creating admin's tenant
-      if (authUser.tenantId) {
-        const roleMap: Record<string, 'admin' | 'manager' | 'worker'> = {
-          admin: 'admin',
-          manager: 'manager',
-          user: 'worker',
-        };
-        await RepositoryFactory.getMembershipRepository().upsertMembership(
-          user._id!.toString(),
-          authUser.tenantId,
-          roleMap[requestedRole] ?? 'worker'
-        );
-      }
-
-      return ApiError.success(user, 201);
-    });
-  } catch (error) {
-    return ApiError.handle(error);
-  }
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Direct account creation is disabled. Use the tenant invitation flow.' },
+    { status: 405, headers: { Allow: 'GET' } },
+  );
 }

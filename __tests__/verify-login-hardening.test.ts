@@ -18,6 +18,7 @@ import { middleware } from '@/middleware';
 import { clearAllRateLimits } from '@/lib/rateLimit';
 import { DUMMY_PASSWORD_HASH, PASSWORD_HASH_COST } from '@/lib/constants/security';
 import { SESSION_COOKIE_NAME } from '@/lib/constants/constants';
+import { hashInvitationToken } from '@/lib/tenant/invitations';
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters-long';
 const PASSWORD = 'correct-horse-battery-staple';
@@ -83,6 +84,7 @@ beforeEach(async () => {
   await mongoose.connection.collection('users').deleteMany({});
   await mongoose.connection.collection('tenants').deleteMany({});
   await mongoose.connection.collection('user_tenant_memberships').deleteMany({});
+  await mongoose.connection.collection('tenant_invitations').deleteMany({});
 });
 
 describe('H1 — login rejects NoSQL operator injection', () => {
@@ -241,17 +243,38 @@ describe('M1 — login rate limiting', () => {
 
   it('rate-limits signup per IP', async () => {
     const ip = '192.0.2.10';
+    const tenantId = new mongoose.Types.ObjectId();
+    const inviterId = new mongoose.Types.ObjectId();
+    await mongoose.connection.collection('tenants').insertOne({
+      _id: tenantId,
+      name: 'Signup Test',
+      slug: 'signup-test',
+      status: 'active',
+    });
 
     const codes: number[] = [];
     for (let attempt = 0; attempt < 6; attempt += 1) {
+      const email = `probe${attempt}@spam.test`;
+      const inviteToken = attempt.toString(16).padStart(64, '0');
+      await mongoose.connection.collection('tenant_invitations').insertOne({
+        tokenHash: hashInvitationToken(inviteToken),
+        email,
+        tenantId,
+        tenantRole: 'WORKER',
+        invitedBy: inviterId,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60_000),
+        status: 'pending',
+      });
       const response = await signup(
         new Request('http://localhost/api/signup', {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
           body: JSON.stringify({
             name: `Probe ${attempt}`,
-            email: `probe${attempt}@spam.test`,
+            email,
             password: 'probe-password-123',
+            inviteToken,
           }),
         }),
       );

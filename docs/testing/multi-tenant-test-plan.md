@@ -63,7 +63,7 @@ Legend: 🟢 happy path · 🔺 edge · 🔴 security/negative
 4. Ίδιο userId δύο φορές → upsert (όχι duplicate membership)
 
 **UC-2.4 🔺 Role hierarchy (post-fix M2)**
-1. Nick (WORKER) → POST /api/users → 403
+1. Nick (WORKER) → POST /api/tenant/invitations → 403
 2. Nick PROMOTED σε MANAGER → φτιάχνει user με role «admin» → 403 «Your role cannot create…»
 3. Alice (ADMIN) → φτιάχνει MANAGER → 200· φτιάχνει ADMIN → 200 (επιτρέπεται, admin ≥ admin)
 

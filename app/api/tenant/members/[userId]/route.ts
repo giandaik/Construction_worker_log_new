@@ -22,12 +22,15 @@ export async function PUT(
       return ApiError.badRequest(parsed.error.issues.map((i) => i.message).join(', '));
     }
 
-    // upsertMembership creates what it cannot find, so PUT is a second way
-    // into the tenant: it has to refuse an outsider exactly as POST does.
+    // Keep this endpoint for existing member administration, not onboarding.
     const refusal = await membershipRefusalResponse(userId, tenantId);
     if (refusal) return refusal;
 
-    await RepositoryFactory.getMembershipRepository().upsertMembership(
+    const membershipRepository = RepositoryFactory.getMembershipRepository();
+    const membership = await membershipRepository.findMembership(userId, tenantId);
+    if (!membership) return ApiError.notFound('Membership');
+
+    await membershipRepository.upsertMembership(
       userId,
       tenantId,
       parsed.data.tenantRole,

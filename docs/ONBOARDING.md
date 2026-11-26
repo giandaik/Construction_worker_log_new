@@ -43,6 +43,7 @@ Next.js App Router pages and API routes. Pages are mostly `"use client"` because
 ### 2. Auth boundary (`middleware.ts`, `utils/auth.ts`)
 - `middleware.ts` gates all routes except login/signup/static. Verifies `cw_session` cookie via `jose`.
 - `utils/auth.ts` exports `getAuthUser()`, `setSessionCookie()`, `clearSessionCookie()`, `isAdmin()`, `canModify()`. **`isAdmin` returns true for both `admin` and `manager` roles** — used as the supervisor gate.
+- Public signup starts with an access request: first name, last name, email, organisation name, and an optional note. The public form does not reveal tenant names or create an account. Platform SuperAdmins review requests at `/platform/signup-requests`, choose an active tenant and role, and approve or reject. Approval sends the existing single-use, seven-day invitation email; the recipient then signs up with the invited email (or signs in if they already have an account). Tenant membership and role come from that invitation, never from public input. Request notifications go to the configured SuperAdmin user accounts; decisions are audited and retained for 180 days, while pending requests remain until handled.
 
 ### 3. Data layer (`lib/models/`, `lib/schemas/`, `lib/repositories/`)
 Three concentric layers:
@@ -84,7 +85,7 @@ shadcn-generated components: `button`, `card`, `dialog`, `input`, `label`, `sele
 - `SyncManager.tsx` listens for `online`/`offline` events and triggers replay
 
 ### 8. Email (`lib/email/`)
-- `sendEmail.ts` — Gmail SMTP transport, two functions: `sendSignatureNotificationEmail`, `sendWorkLogCompletedEmail`
+- `sendEmail.ts` — Gmail SMTP transport, signature/completion notifications, tenant invitations, and signup-request notifications/rejections
 - `lib/email/templates/` — HTML/text templates (signature notification, completion)
 - Completion email attaches a generated PDF via `createWorkLogPdfAttachment` from `app/worklogs/[id]/exportToPDF.ts`
 
@@ -132,11 +133,19 @@ All routes are gated by `getAuthUser()` unless noted.
 
 | Method | Path | Purpose | Role |
 |---|---|---|---|
-| POST | `/api/login` | Issue JWT, set `cw_session` cookie | public |
+| POST | `/api/login` | Issue JWT, set `cw_session` cookie; optionally accept an invitation after password verification | public |
 | POST | `/api/logout` | Clear session cookie | any |
 | GET | `/api/me` | Current user | any |
 | GET | `/api/auth/me` | Alias of `/api/me` | any |
-| GET/POST | `/api/users` | List users / create user (⚠ password hashing is unsalted SHA-256 — see Gotchas) | admin |
+| POST | `/api/signup-requests` | Submit a rate-limited invitation request; notifies platform SuperAdmins | public |
+| POST | `/api/signup` | Create account and tenant membership from a valid invitation | public |
+| GET | `/api/users` | List members of the active tenant | tenant member |
+| POST | `/api/tenant/invitations` | Send a role-limited invitation to join the active tenant | admin/manager |
+| POST | `/api/users` | Disabled; direct account creation is replaced by invitations | — |
+| POST | `/api/tenant/members` | Disabled; tenant membership requires invitation acceptance | — |
+| PUT | `/api/tenant/members/[userId]` | Update the role/status of an existing member; does not create memberships | admin/manager |
+| GET | `/api/platform/signup-requests` | List pending invitation requests | SuperAdmin |
+| POST | `/api/platform/signup-requests/[id]` | Approve (select tenant/role and send invite) or reject a request | SuperAdmin |
 | GET/POST | `/api/projects` | List/create projects | any/admin |
 | GET | `/api/projects/[id]` | Project detail (includes `dwgFiles`) | any |
 | GET | `/api/projects/default` | Bootstrap default project | any |
@@ -238,6 +247,7 @@ npm run test:all     # vitest run + next build (the CI check)
 | `GMAIL_SMTP_PORT` | optional | defaults to `465` |
 | `RESEND_FROM_EMAIL` | optional | from-address; falls back to `GMAIL_USER` |
 | `RESEND_NOTIFICATION_RECIPIENT(S)` | optional | comma-separated CC list |
+| `NEXT_PUBLIC_APP_URL` | required in production for invitations | trusted public origin used in invitation links |
 
 ---
 

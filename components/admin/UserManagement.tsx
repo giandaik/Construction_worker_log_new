@@ -42,10 +42,8 @@ export function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("admin");
+  const [role, setRole] = useState<Role>("user");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -74,32 +72,26 @@ export function UserManagement() {
     setFormError(null);
     setSuccess(null);
 
-    if (password.length < 8) {
-      setFormError("Password must be at least 8 characters");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const res = await apiFetch("/api/users", {
+      const tenantRole = role === "admin" ? "ADMIN" : role === "manager" ? "MANAGER" : "WORKER";
+      const res = await apiFetch("/api/tenant/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ email, tenantRole }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to create user");
+        throw new Error(data.error || "Failed to send invitation");
       }
 
-      setSuccess(`Created ${role} account for ${email}`);
-      setName("");
+      setSuccess(`Invitation sent to ${email}`);
       setEmail("");
-      setPassword("");
-      setRole("admin");
+      setRole("user");
       await loadUsers();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to create user");
+      setFormError(err instanceof Error ? err.message : "Failed to send invitation");
     } finally {
       setSubmitting(false);
     }
@@ -109,20 +101,10 @@ export function UserManagement() {
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Create user</CardTitle>
+          <CardTitle>Invite a member</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                autoComplete="off"
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -132,18 +114,6 @@ export function UserManagement() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="off"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="new-password"
               />
             </div>
             <div className="space-y-2">
@@ -172,7 +142,7 @@ export function UserManagement() {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Creating..." : "Create user"}
+              {submitting ? "Sending invitation..." : "Send invitation"}
             </Button>
           </form>
         </CardContent>
@@ -180,7 +150,7 @@ export function UserManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Existing users</CardTitle>
+          <CardTitle>Current members</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}

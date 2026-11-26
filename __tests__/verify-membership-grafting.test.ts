@@ -84,41 +84,8 @@ function membershipsOf(userId: string) {
     .toArray();
 }
 
-describe('H3 — POST /api/tenant/members refuses to graft outsiders', () => {
-  it('refuses a user who is an active member of another tenant', async () => {
-    const { POST } = await import('@/app/api/tenant/members/route');
-    const betaAdmin = await seedUser({ name: 'Bob', role: 'admin' });
-    await seedMembership(betaAdmin, BETA);
-
-    const response = await POST(
-      jsonRequest('http://localhost/api/tenant/members', 'POST', alphaAdminToken, {
-        userId: betaAdmin,
-        tenantRole: 'ADMIN',
-      }),
-    );
-
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toMatch(/another organisation/i);
-    expect(await membershipsOf(betaAdmin)).toHaveLength(1);
-  });
-
-  it('refuses the platform super-admin', async () => {
-    const { POST } = await import('@/app/api/tenant/members/route');
-    const superAdmin = await seedUser({ name: 'Root', platformRole: 'SUPER_ADMIN' });
-
-    const response = await POST(
-      jsonRequest('http://localhost/api/tenant/members', 'POST', alphaAdminToken, {
-        userId: superAdmin,
-        tenantRole: 'ADMIN',
-      }),
-    );
-
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toMatch(/Platform administrators/i);
-    expect(await membershipsOf(superAdmin)).toHaveLength(0);
-  });
-
-  it('still adds a user who belongs to no tenant', async () => {
+describe('H3 — POST /api/tenant/members requires invitation acceptance', () => {
+  it('does not directly add a user who has no tenant membership', async () => {
     const { POST } = await import('@/app/api/tenant/members/route');
     const newcomer = await seedUser({ name: 'Nick' });
 
@@ -129,11 +96,13 @@ describe('H3 — POST /api/tenant/members refuses to graft outsiders', () => {
       }),
     );
 
-    expect(response.status).toBe(201);
-    expect(await membershipsOf(newcomer)).toHaveLength(1);
+    expect(response.status).toBe(405);
+    expect(response.headers.get('allow')).toBe('GET');
+    expect((await response.json()).error).toMatch(/accept an invitation/i);
+    expect(await membershipsOf(newcomer)).toHaveLength(0);
   });
 
-  it('reports an unknown user as not found', async () => {
+  it('rejects unknown-user requests through the disabled endpoint', async () => {
     const { POST } = await import('@/app/api/tenant/members/route');
 
     const response = await POST(
@@ -143,7 +112,7 @@ describe('H3 — POST /api/tenant/members refuses to graft outsiders', () => {
       }),
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(405);
   });
 });
 
@@ -213,6 +182,24 @@ describe('H3 — PUT /api/tenant/members/[userId] is not a second way in', () =>
     const memberships = await membershipsOf(worker);
     expect(memberships).toHaveLength(1);
     expect(memberships[0].tenantRole).toBe('MANAGER');
+  });
+
+  it('does not create a membership when updating an unrelated account', async () => {
+    const { PUT } = await import('@/app/api/tenant/members/[userId]/route');
+    const newcomer = await seedUser({ name: 'Nick' });
+
+    const response = await PUT(
+      jsonRequest(
+        `http://localhost/api/tenant/members/${newcomer}`,
+        'PUT',
+        alphaAdminToken,
+        { tenantRole: 'WORKER' },
+      ),
+      { params: Promise.resolve({ userId: newcomer }) },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await membershipsOf(newcomer)).toHaveLength(0);
   });
 });
 
