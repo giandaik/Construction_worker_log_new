@@ -22,6 +22,7 @@ import { peekCached } from "@/lib/apiCache";
 import { isNativeBundle } from "@/lib/native-mode";
 import {
   Btn,
+  Empty,
   LargeTitle,
   Pill,
   Row,
@@ -41,6 +42,13 @@ const NATIVE_PERIODS: { value: NativePeriod; label: string }[] = [
   { value: "recent", label: "30 days" },
   { value: "all", label: "All" },
 ];
+
+/** The glyph a period's header carries: a month, a rolling window, everything. */
+function periodIcon(period: NativePeriod): "calendar" | "clock" | "logs" {
+  if (period === "month") return "calendar";
+  if (period === "recent") return "clock";
+  return "logs";
+}
 
 /** dd/mm/yyyy, the form the site diary uses. */
 function logDate(value?: string): string {
@@ -289,7 +297,7 @@ function WorkLogsPageContent() {
       return (
         <div className="pb-4">
           <LargeTitle>Logs</LargeTitle>
-          <Section title="Could not load logs">
+          <Section title="Could not load logs" icon="cloudOff">
             <div className="px-4 py-8 text-center">
               <p className="t-subhead t-secondary">{error}</p>
               <div className="mt-4 flex justify-center">
@@ -330,22 +338,21 @@ function WorkLogsPageContent() {
         <Segmented options={NATIVE_PERIODS} value={nativePeriod} onChange={setNativePeriod} />
 
         {nativeLogs.length === 0 ? (
-          <Section title={periodTitle}>
-            <div className="px-4 py-8 text-center">
-              <p className="t-headline">No logs in this period</p>
-              <p className="t-subhead t-secondary mt-1">
-                Nothing was recorded for this filter. Widen the period, or start today&apos;s log.
-              </p>
-              <div className="mt-4 flex justify-center">
-                <Btn variant="secondary" href="/logs/new">
-                  Start today&apos;s log
-                </Btn>
-              </div>
-            </div>
+          <Section title={periodTitle} icon={periodIcon(nativePeriod)}>
+            <Empty
+              icon="doc"
+              title="No logs in this period"
+              text="Nothing was recorded for this filter. Widen the period, or start today's log."
+            >
+              <Btn variant="secondary" href="/logs/new">
+                Start today&apos;s log
+              </Btn>
+            </Empty>
           </Section>
         ) : (
           <Section
             title={periodTitle}
+            icon={periodIcon(nativePeriod)}
             footer={`${nativeLogs.length} of ${filteredLogs.length} logs shown`}
             action={
               filterProjectId ? (

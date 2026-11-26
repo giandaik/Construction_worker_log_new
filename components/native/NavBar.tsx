@@ -3,14 +3,15 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
-import { ChevronLeft, Plus } from "lucide-react"
 
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { isPlatformUser } from "@/components/layout/navConfig"
 import { useSafeInset } from "./useSafeInset"
+import { Glyph, type GlyphName } from "./icons"
 
 interface RouteChrome {
   title: string
+  icon?: GlyphName
   back?: boolean
   newLog?: boolean
 }
@@ -21,18 +22,23 @@ export function chromeFor(pathname: string): RouteChrome {
   // one thing the iOS grammar never does.
   if (pathname === "/app") return { title: "", newLog: true }
   if (pathname === "/worklogs") return { title: "", newLog: true }
-  if (pathname === "/logs/new") return { title: "New log", back: true }
-  if (/^\/worklogs\/[^/]+\/edit$/.test(pathname)) return { title: "Edit log", back: true }
-  if (/^\/worklogs\/[^/]+$/.test(pathname)) return { title: "Work log", back: true }
-  if (/^\/projects\/shell(\/calendar)?$/.test(pathname)) return { title: pathname.endsWith("calendar") ? "Calendar" : "Site", back: true }
+  if (pathname === "/logs/new") return { title: "New log", icon: "pen", back: true }
+  if (/^\/worklogs\/[^/]+\/edit$/.test(pathname)) return { title: "Edit log", icon: "pen", back: true }
+  if (/^\/worklogs\/[^/]+$/.test(pathname)) return { title: "Work log", icon: "doc", back: true }
+  if (/^\/projects\/shell(\/calendar)?$/.test(pathname))
+    return {
+      title: pathname.endsWith("calendar") ? "Calendar" : "Site",
+      icon: pathname.endsWith("calendar") ? "calendar" : "pin",
+      back: true,
+    }
   if (pathname === "/projects") return { title: "", newLog: true }
-  if (/^\/projects\/[^/]+\/calendar$/.test(pathname)) return { title: "Calendar", back: true }
-  if (/^\/projects\/[^/]+\/edit$/.test(pathname)) return { title: "Edit site", back: true }
-  if (/^\/projects\/[^/]+$/.test(pathname)) return { title: "Site", back: true }
-  if (pathname === "/admin/users") return { title: "Admin", back: true }
-  if (pathname === "/admin/projects/new") return { title: "New site", back: true }
-  if (pathname === "/select-tenant") return { title: "Choose workspace" }
-  if (pathname.startsWith("/platform")) return { title: "Platform", back: pathname !== "/platform" }
+  if (/^\/projects\/[^/]+\/calendar$/.test(pathname)) return { title: "Calendar", icon: "calendar", back: true }
+  if (/^\/projects\/[^/]+\/edit$/.test(pathname)) return { title: "Edit site", icon: "pen", back: true }
+  if (/^\/projects\/[^/]+$/.test(pathname)) return { title: "Site", icon: "pin", back: true }
+  if (pathname === "/admin/users") return { title: "Admin", icon: "shield", back: true }
+  if (pathname === "/admin/projects/new") return { title: "New site", icon: "pin", back: true }
+  if (pathname === "/select-tenant") return { title: "Choose workspace", icon: "cube" }
+  if (pathname.startsWith("/platform")) return { title: "Platform", icon: "shield", back: pathname !== "/platform" }
   return { title: "Construction Log" }
 }
 
@@ -63,14 +69,15 @@ export function NavBar() {
             aria-label="Back"
             className="ios-tap -ml-1 flex items-center pr-2 text-[color:var(--ios-tint)]"
           >
-            <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
+            <Glyph name="chevLeft" size={22} />
           </button>
         ) : (
           <span className="w-11" />
         )}
 
-        <h1 className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold leading-[22px]">
-          {chrome.title}
+        <h1 className="pointer-events-none absolute inset-x-0 flex items-center justify-center gap-1.5 text-[17px] font-semibold leading-[22px]">
+          {chrome.icon ? <Glyph name={chrome.icon} size={17} className="shrink-0" /> : null}
+          <span>{chrome.title}</span>
         </h1>
 
         {showNewLog ? (
@@ -79,7 +86,7 @@ export function NavBar() {
             aria-label="New log"
             className="ios-tap ml-auto flex items-center gap-1 pr-1 text-[color:var(--ios-tint)]"
           >
-            <Plus className="h-6 w-6" strokeWidth={2.4} />
+            <Glyph name="plus" size={22} strokeWidth={2} />
           </Link>
         ) : (
           <span className="ml-auto w-11" />

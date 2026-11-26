@@ -3,26 +3,26 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FileText, FolderOpen, House, Plus, User } from "lucide-react"
 
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { isAdminRole, isPlatformUser } from "@/components/layout/navConfig"
 import { prefetchJson } from "@/lib/cachedApi"
 import { AccountSheet } from "./AccountSheet"
+import { Glyph, type GlyphName } from "./icons"
 
 interface TabItem {
   href: string
   label: string
-  icon: typeof House
+  icon: GlyphName
   match: (path: string) => boolean
   isAction?: boolean
 }
 
 const TABS: TabItem[] = [
-  { href: "/app", label: "Home", icon: House, match: (p) => p === "/app" },
-  { href: "/worklogs", label: "Logs", icon: FileText, match: (p) => p.startsWith("/worklogs") },
-  { href: "/logs/new", label: "New", icon: Plus, match: (p) => p.startsWith("/logs/new"), isAction: true },
-  { href: "/projects", label: "Sites", icon: FolderOpen, match: (p) => p.startsWith("/projects") },
+  { href: "/app", label: "Home", icon: "home", match: (p) => p === "/app" },
+  { href: "/worklogs", label: "Logs", icon: "logs", match: (p) => p.startsWith("/worklogs") },
+  { href: "/logs/new", label: "New", icon: "plus", match: (p) => p.startsWith("/logs/new"), isAction: true },
+  { href: "/projects", label: "Sites", icon: "sites", match: (p) => p.startsWith("/projects") },
 ]
 
 /**
@@ -69,7 +69,6 @@ export function TabBar() {
       <div className="ios-tabbar-row mx-auto max-w-md">
         {TABS.map((tab) => {
           const active = tab.match(pathname)
-          const Icon = tab.icon
 
           if (tab.isAction) {
             return (
@@ -80,7 +79,7 @@ export function TabBar() {
                 className="ios-tabbar-item ios-tabbar-new"
               >
                 <span className="ios-tabbar-chip">
-                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                  <Glyph name={tab.icon} size={20} strokeWidth={2} />
                 </span>
                 <span className="ios-tabbar-label">{tab.label}</span>
               </Link>
@@ -95,7 +94,7 @@ export function TabBar() {
               className="ios-tabbar-item"
             >
               <span className="ios-tabbar-chip">
-                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.2 : 1.8} />
+                <Glyph name={tab.icon} size={21} strokeWidth={active ? 2 : 1.7} />
               </span>
               <span className="ios-tabbar-label">{tab.label}</span>
             </Link>
@@ -108,7 +107,7 @@ export function TabBar() {
             trigger={
               <button type="button" aria-label="Account" className="ios-tabbar-item">
                 <span className="ios-tabbar-chip">
-                  <User className="h-[21px] w-[21px]" strokeWidth={1.8} />
+                  <Glyph name="profile" size={21} />
                 </span>
                 <span className="ios-tabbar-label">Account</span>
               </button>

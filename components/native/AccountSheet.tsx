@@ -3,11 +3,11 @@
 import Link from "next/link"
 import Image from "next/image"
 import * as Dialog from "@radix-ui/react-dialog"
-import { ChevronRight, ShieldCheck, X } from "lucide-react"
 import { useState } from "react"
 
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { LogoutButton } from "@/components/LogoutButton"
+import { Glyph } from "./icons"
 
 /**
  * Account presented as a native sheet (slides from the bottom, grabber, grouped
@@ -52,7 +52,7 @@ export function AccountSheet({
                 aria-label="Close"
                 className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--ios-surface)]"
               >
-                <X className="h-4 w-4" />
+                <Glyph name="x" size={16} />
               </button>
             </Dialog.Close>
           </div>
@@ -72,9 +72,9 @@ export function AccountSheet({
                   className="flex min-h-[44px] items-center justify-between px-4"
                 >
                   <span className="t-body flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5" /> Users
+                    <Glyph name="users" size={19} /> Users
                   </span>
-                  <ChevronRight className="h-5 w-5 text-[color:var(--ios-ink2)]" />
+                  <Glyph name="chevRight" size={16} className="text-[#8A8A8E]" />
                 </Link>
               </>
             )}

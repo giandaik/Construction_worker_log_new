@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isNativeBundle } from '@/lib/native-mode';
 import { Btn } from '@/components/native/ui';
+import { Glyph } from "@/components/native/icons";
 
 interface ArrayFieldProps<T> {
   title: string;
@@ -60,6 +61,7 @@ export function ArrayField<T>({
               <span className="t-footnote t-secondary">{items.length}</span>
             ) : null}
             <Btn variant="plain" onClick={onAdd} disabled={addDisabled}>
+              <Glyph name="plus" size={17} />
               {addButtonText}
             </Btn>
           </div>

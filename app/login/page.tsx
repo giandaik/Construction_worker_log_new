@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Box, ShieldCheck } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
 import { Btn } from "@/components/native/ui";
+import { Glyph } from "@/components/native/icons";
 import { apiFetch } from "@/lib/apiClient";
 import { setMobileToken } from "@/lib/mobile-auth";
 import { isNativeBundle } from "@/lib/native-mode";
@@ -72,7 +73,7 @@ export default function LoginPage() {
             aria-hidden
             className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] bg-[color:var(--ios-accent)] text-[#111] shadow-sm"
           >
-            <Box className="h-[30px] w-[30px]" strokeWidth={1.7} />
+            <Glyph name="cube" size={30} />
           </div>
           <p className="t-title2 mt-3.5">sitely</p>
           <p className="t-subhead t-secondary mt-1 max-w-[26ch]">
@@ -149,7 +150,7 @@ export default function LoginPage() {
           </p>
 
           <p className="t-footnote t-secondary mt-auto flex items-start gap-2 pt-6">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.7} aria-hidden />
+            <Glyph name="shield" size={16} className="mt-0.5 shrink-0" />
             <span>
               Logs are signed on the device and synced to the office. Entries written offline
               upload when signal returns.

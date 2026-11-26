@@ -185,6 +185,7 @@ export default function ProjectDetailPage() {
 
         <Section
           title="Logs"
+          icon="logs"
           action={
             <Link
               href={`/worklogs?project=${project._id}`}
@@ -205,6 +206,7 @@ export default function ProjectDetailPage() {
         {hasDetails && (
           <Section
             title="Details"
+            icon="doc"
             action={
               canManageDwgs ? (
                 <Link
@@ -240,7 +242,7 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        <Section title="Drawings">
+        <Section title="Drawings" icon="pen">
           <div className="p-4">
             <DwgUpload
               projectId={project._id}
@@ -252,7 +254,7 @@ export default function ProjectDetailPage() {
         </Section>
 
         {canManageDwgs && (
-          <Section title="Κατάλογος Επιλογών">
+          <Section title="Κατάλογος Επιλογών" icon="sliders">
             <div className="p-4">
               <ProjectCatalogManager
                 projectId={project._id}

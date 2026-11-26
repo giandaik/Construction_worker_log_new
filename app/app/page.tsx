@@ -8,7 +8,7 @@ import type { Project, WorkLog } from "@/types/shared"
 import { WorkerActionRow } from "@/components/WorkerActionRow"
 import { getAuthUser, resolveRepositoryContext } from "@/utils/auth"
 import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
-import { LargeTitle, Section, Row, Stat, Btn } from "@/components/native/ui"
+import { LargeTitle, Section, Row, Stat, Btn, Empty } from "@/components/native/ui"
 import { isNativeBundle } from "@/lib/native-mode"
 
 const RECENT_LOGS_SHOWN = 6
@@ -139,9 +139,9 @@ export default async function HomePage() {
         ) : (
           <Section>
             <div className="flex items-stretch">
-              <Stat value={String(totalLogs)} label="Work logs" />
+              <Stat value={String(totalLogs)} label="Work logs" icon="logs" />
               <span aria-hidden className="my-3 w-[0.5px] shrink-0 bg-[color:var(--ios-sep)]" />
-              <Stat value={String(projects.length)} label="Projects" />
+              <Stat value={String(projects.length)} label="Projects" icon="sites" />
             </div>
             {nativeLastEntry && (
               <>
@@ -154,6 +154,7 @@ export default async function HomePage() {
 
         <Section
           title="Recent logs"
+          icon="logs"
           action={
             recentLogs.length > 0 ? (
               <Link
@@ -166,10 +167,13 @@ export default async function HomePage() {
           }
         >
           {recentLogs.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="t-body t-secondary">No work logs yet.</p>
+            <Empty
+              icon="doc"
+              title="No work logs yet"
+              text="Nothing is recorded on this account. Start with today's site."
+            >
               <Btn href="/logs/new">Start today&apos;s log</Btn>
-            </div>
+            </Empty>
           ) : (
             recentLogs.map((log) => (
               <Row

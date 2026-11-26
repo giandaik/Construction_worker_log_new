@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Btn, LargeTitle, Row, Section, Skeleton, Stat } from "@/components/native/ui"
+import { Btn, Empty, LargeTitle, Row, Section, Skeleton, Stat } from "@/components/native/ui"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import type { Project, WorkLog } from "@/types/shared"
@@ -86,13 +86,14 @@ export default function MobileHomePage() {
         <>
           <Section footer={workLogs.length > 0 ? `Last entry ${lastEntry}` : undefined}>
             <div className="flex divide-x divide-[color:var(--ios-sep)]">
-              <Stat value={String(workLogs.length)} label="Work logs" />
-              <Stat value={String(projects.length)} label="Sites" />
+              <Stat value={String(workLogs.length)} label="Work logs" icon="logs" />
+              <Stat value={String(projects.length)} label="Sites" icon="sites" />
             </div>
           </Section>
 
           <Section
             title="Recent logs"
+            icon="logs"
             action={
               <Link href="/worklogs" className="t-footnote text-[color:var(--ios-tint)]">
                 All logs
@@ -100,12 +101,13 @@ export default function MobileHomePage() {
             }
           >
             {recentLogs.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <p className="t-subhead t-secondary">No work logs yet.</p>
-                <div className="mt-3 flex justify-center">
-                  <Btn href="/logs/new">Start today&#39;s log</Btn>
-                </div>
-              </div>
+              <Empty
+                icon="doc"
+                title="No work logs yet"
+                text="Nothing is recorded on this account. Start with today's site."
+              >
+                <Btn href="/logs/new">Start today&#39;s log</Btn>
+              </Empty>
             ) : (
               recentLogs.map((log) => (
                 <Row

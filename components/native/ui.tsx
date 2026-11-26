@@ -8,7 +8,8 @@
  */
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
+
+import { Glyph, type GlyphName } from "./icons"
 
 export const CARD_RADIUS = 10
 
@@ -26,11 +27,13 @@ export function LargeTitle({ children, sub }: { children: ReactNode; sub?: React
 export function Section({
   title,
   footer,
+  icon,
   children,
   action,
 }: {
   title?: ReactNode
   footer?: ReactNode
+  icon?: GlyphName
   children: ReactNode
   action?: ReactNode
 }) {
@@ -38,8 +41,9 @@ export function Section({
     <section className="mt-5 first:mt-3">
       {title ? (
         <div className="mb-1.5 flex items-end justify-between px-4">
-          <h2 className="t-footnote font-medium uppercase tracking-[0.04em] text-[color:var(--ios-ink2)]">
-            {title}
+          <h2 className="t-footnote flex items-center gap-1.5 font-medium uppercase tracking-[0.04em] text-[color:var(--ios-ink2)]">
+            {icon ? <Glyph name={icon} size={14} className="shrink-0" /> : null}
+            <span>{title}</span>
           </h2>
           {action}
         </div>
@@ -86,7 +90,7 @@ export function Row({
       </div>
       {value ? <div className="t-body t-secondary shrink-0">{value}</div> : null}
       {trailing}
-      {chevron ? <ChevronRight className="h-4 w-4 shrink-0 text-[#8A8A8E]" /> : null}
+      {chevron ? <Glyph name="chevRight" size={16} className="shrink-0 text-[#8A8A8E]" /> : null}
     </div>
   )
 
@@ -173,11 +177,42 @@ export function Btn({
 }
 
 /** Two-up stat, as the Home card shows "47 work logs · 11 projects". */
-export function Stat({ value, label }: { value: ReactNode; label: ReactNode }) {
+export function Stat({ value, label, icon }: { value: ReactNode; label: ReactNode; icon?: GlyphName }) {
   return (
     <div className="flex-1 px-4 py-3">
       <div className="t-title2">{value}</div>
-      <div className="t-footnote t-secondary mt-0.5">{label}</div>
+      <div className="t-footnote t-secondary mt-0.5 flex items-center gap-1.5">
+        {icon ? <Glyph name={icon} size={14} className="shrink-0" /> : null}
+        <span>{label}</span>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Empty state, as the design draws it (`assets/app.css` → `.empty .e-glyph`):
+ * a 56 pt tinted tile holding a 26 pt glyph, a 17 pt line, one 15 pt sentence
+ * and a single action. Screens were printing a bare sentence in a card.
+ */
+export function Empty({
+  icon,
+  title,
+  text,
+  children,
+}: {
+  icon: GlyphName
+  title?: ReactNode
+  text?: ReactNode
+  children?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 px-6 py-9 text-center">
+      <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-[16px] bg-[rgba(120,120,128,.14)] text-[color:var(--ios-ink2)]">
+        <Glyph name={icon} size={26} />
+      </span>
+      {title ? <p className="t-headline">{title}</p> : null}
+      {text ? <p className="t-subhead t-secondary max-w-[30ch]">{text}</p> : null}
+      {children ? <div className="mt-2">{children}</div> : null}
     </div>
   )
 }

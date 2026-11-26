@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {FileDown, Pencil, Trash, FileText, FileType2, CheckCircle, XCircle, MoreHorizontal} from "lucide-react";
+import { Glyph } from "@/components/native/icons";
 import { FORM_STATUS, FORM_STATUS_CLASSES, FORM_STATUS_LABELS, LABELS } from "@/lib/constants/constantValues";
 import { WEATHER_OPTIONS } from "@/components/forms/WeatherPicker";
 import { SignatureSection } from "@/components/SignatureSection";
@@ -339,7 +340,7 @@ export default function WorkLogDetailPage() {
       return (
         <div className="pb-4">
           <LargeTitle>Log</LargeTitle>
-          <Section title="Not available">
+          <Section title="Not available" icon="cloudOff">
             <div className="px-4 py-8 text-center">
               <p className="t-subhead t-secondary">{error || "Work log not found"}</p>
               <div className="mt-4 flex justify-center">
@@ -418,7 +419,7 @@ export default function WorkLogDetailPage() {
             {projectTitle}
           </LargeTitle>
 
-          <Section title="Date & site">
+          <Section title="Date & site" icon="calendar">
             <Field label="Date">{longDate(workLog.date)}</Field>
             <Field label="Site">{projectTitle}</Field>
             {workLog.projectLocation ? (
@@ -428,7 +429,7 @@ export default function WorkLogDetailPage() {
           </Section>
 
           {workLog.weather || typeof workLog.temperature === "number" ? (
-            <Section title="Conditions">
+            <Section title="Conditions" icon="weather">
               {workLog.weather ? (
                 <Field label="Weather">
                   {weather ? (
@@ -447,7 +448,7 @@ export default function WorkLogDetailPage() {
             </Section>
           ) : null}
 
-          <Section title="Work done">
+          <Section title="Work done" icon="pen">
             <div className="px-4 py-3">
               <p className="t-body whitespace-pre-wrap">
                 {workLog.workDescription || "No description"}
@@ -465,7 +466,7 @@ export default function WorkLogDetailPage() {
           </Section>
 
           {workLog.personnel && workLog.personnel.length > 0 ? (
-            <Section title={`Crew · ${crewTotal}`}>
+            <Section title={`Crew · ${crewTotal}`} icon="users">
               {workLog.personnel.map((person, index) => (
                 <Row
                   key={index}
@@ -482,7 +483,7 @@ export default function WorkLogDetailPage() {
           ) : null}
 
           {workLog.equipment && workLog.equipment.length > 0 ? (
-            <Section title={`Equipment · ${workLog.equipment.length}`}>
+            <Section title={`Equipment · ${workLog.equipment.length}`} icon="truck">
               {workLog.equipment.map((item, index) => (
                 <Row
                   key={index}
@@ -498,7 +499,7 @@ export default function WorkLogDetailPage() {
           ) : null}
 
           {workLog.materials && workLog.materials.length > 0 ? (
-            <Section title={`Materials · ${workLog.materials.length}`}>
+            <Section title={`Materials · ${workLog.materials.length}`} icon="box">
               {workLog.materials.map((material, index) => (
                 <Row
                   key={index}
@@ -514,7 +515,7 @@ export default function WorkLogDetailPage() {
           ) : null}
 
           {images.length > 0 ? (
-            <Section title={`Photos · ${images.length}`}>
+            <Section title={`Photos · ${images.length}`} icon="camera">
               <div className="grid grid-cols-3 gap-1 p-2">
                 {images.map((src, index) => (
                   <a
@@ -538,7 +539,7 @@ export default function WorkLogDetailPage() {
           ) : null}
 
           {drawings.length > 0 ? (
-            <Section title={`Drawings · ${drawings.length}`}>
+            <Section title={`Drawings · ${drawings.length}`} icon="pen">
               {drawings.map((url) => {
                 const meta = projectDwgFiles.find((file) => file.url === url);
                 const filename = meta?.filename ?? url.split("/").pop() ?? "drawing.dwg";
@@ -576,14 +577,14 @@ export default function WorkLogDetailPage() {
           ) : null}
 
           {workLog.rejectionComment ? (
-            <Section title="Rejection comment">
+            <Section title="Rejection comment" icon="x">
               <div className="px-4 py-3">
                 <p className="t-body whitespace-pre-wrap">{workLog.rejectionComment}</p>
               </div>
             </Section>
           ) : null}
 
-          <Section title="Signatures">
+          <Section title="Signatures" icon="shield">
             {isOwnerReviewMode ? (
               <div className="px-3 py-3">
                 <SignatureSection
@@ -611,8 +612,9 @@ export default function WorkLogDetailPage() {
                 </Row>
               ))
             ) : (
-              <div className="px-4 py-3">
-                <p className="t-subhead t-secondary">Not signed yet.</p>
+              <div className="flex items-center gap-2 px-4 py-3 text-[color:var(--ios-ink2)]">
+                <Glyph name="shield" size={18} className="shrink-0" />
+                <p className="t-subhead">Not signed yet.</p>
               </div>
             )}
           </Section>
@@ -635,15 +637,15 @@ export default function WorkLogDetailPage() {
                   onClick={handleApproveAndSign}
                   disabled={isSubmitting || !hasOwnerSignature}
                 >
-                  <CheckCircle className="h-5 w-5" /> Approve &amp; sign
+                  <Glyph name="check" size={19} /> Approve &amp; sign
                 </Btn>
               ) : !isCompleted ? (
                 <Btn block href={`/worklogs/${id}/edit`}>
-                  <Pencil className="h-5 w-5" /> Edit
+                  <Glyph name="pen" size={19} /> Edit
                 </Btn>
               ) : (
                 <Btn block variant="secondary" onClick={handleExportPDF}>
-                  <FileDown className="h-5 w-5" /> Export PDF
+                  <Glyph name="doc" size={19} /> Export PDF
                 </Btn>
               )}
             </div>
@@ -662,6 +664,7 @@ export default function WorkLogDetailPage() {
           <div className="mb-3 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
             <Row
               title="Export PDF"
+              leading={<Glyph name="doc" size={19} />}
               onClick={() => {
                 setShowActions(false);
                 void handleExportPDF();
@@ -670,6 +673,7 @@ export default function WorkLogDetailPage() {
             {!isCompleted && !isOwnerReviewMode ? (
               <Row
                 title={<span className="text-destructive">Delete log</span>}
+                leading={<Glyph name="x" size={19} />}
                 onClick={() => {
                   setShowActions(false);
                   void handleDelete();
@@ -679,6 +683,7 @@ export default function WorkLogDetailPage() {
             {isOwnerReviewMode ? (
               <Row
                 title={<span className="text-destructive">Reject log</span>}
+                leading={<Glyph name="x" size={19} />}
                 onClick={() => {
                   setShowActions(false);
                   setShowRejectDialog(true);

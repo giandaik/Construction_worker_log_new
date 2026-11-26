@@ -157,7 +157,7 @@ export default function ProjectCalendarPage() {
 
     return (
       <div className="pb-8">
-        <Section title="Site">
+        <Section title="Site" icon="pin">
           <Row
             onClick={() => setSitePickerOpen(true)}
             chevron
@@ -281,7 +281,7 @@ export default function ProjectCalendarPage() {
         )}
 
         {!isLoading && !error && selected !== null && selectedKey ? (
-          <Section title={longDayLabel(month, selected)}>
+          <Section title={longDayLabel(month, selected)} icon="calendar">
             {selectedCount > 0 ? (
               <Row
                 href={`/worklogs?project=${projectId}&from=${selectedKey}&to=${selectedKey}`}

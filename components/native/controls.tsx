@@ -1,8 +1,9 @@
 "use client"
 
 import * as Dialog from "@radix-ui/react-dialog"
-import { Search, X } from "lucide-react"
 import type { ReactNode } from "react"
+
+import { Glyph } from "./icons"
 
 /** 36 pt rounded search field with a clear button — native search, not an input box. */
 export function SearchField({
@@ -16,7 +17,7 @@ export function SearchField({
 }) {
   return (
     <div className="mx-4 mb-2 flex min-h-[36px] items-center gap-2 rounded-[10px] bg-[rgba(118,118,128,.12)] px-2.5">
-      <Search className="h-4 w-4 text-[color:var(--ios-ink2)]" />
+      <Glyph name="search" size={16} className="shrink-0 text-[color:var(--ios-ink2)]" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -32,7 +33,7 @@ export function SearchField({
           onClick={() => onChange("")}
           className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(120,120,128,.28)]"
         >
-          <X className="h-3 w-3" />
+          <Glyph name="x" size={12} />
         </button>
       ) : null}
     </div>

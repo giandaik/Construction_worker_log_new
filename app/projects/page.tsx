@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
+import { Glyph } from "@/components/native/icons";
 import { toGreekUpperCase } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiClient";
 import { isNativeBundle } from "@/lib/native-mode";
@@ -23,6 +24,7 @@ import {
   Btn,
   LargeTitle,
   Pill,
+  Empty,
   Row,
   Section,
   Skeleton as NativeSkeleton,
@@ -243,7 +245,7 @@ export default function ProjectsPage() {
         <Segmented options={NATIVE_FILTERS} value={nativeFilter} onChange={setNativeFilter} />
 
         {error && (
-          <Section title="Could not load">
+          <Section title="Could not load" icon="cloudOff">
             <div className="px-4 py-7 text-center">
               <p className="t-footnote text-[#c0392b]">{error}</p>
               <div className="mt-3 flex justify-center">
@@ -257,29 +259,27 @@ export default function ProjectsPage() {
 
         {nothingVisible && (
           <Section>
-            <div className="px-4 py-7 text-center">
-              <p className="t-subhead">
-                {projects.length === 0 ? "No sites on file" : "No sites match"}
-              </p>
-              <p className="t-footnote t-secondary mt-1">
-                {projects.length === 0
+            <Empty
+              icon="sites"
+              title={projects.length === 0 ? "No sites on file" : "No sites match"}
+              text={
+                projects.length === 0
                   ? "Sites appear here once they are created."
-                  : "Try another search or filter."}
-              </p>
+                  : "Try another search or filter."
+              }
+            >
               {projects.length > 0 && (
-                <div className="mt-3 flex justify-center">
-                  <Btn
-                    variant="secondary"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setNativeFilter("all");
-                    }}
-                  >
-                    Clear filters
-                  </Btn>
-                </div>
+                <Btn
+                  variant="secondary"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setNativeFilter("all");
+                  }}
+                >
+                  Clear filters
+                </Btn>
               )}
-            </div>
+            </Empty>
           </Section>
         )}
 
@@ -287,6 +287,7 @@ export default function ProjectsPage() {
           <Section
             key={status || "none"}
             title={`${statusLabel(status || undefined)} · ${group.length}`}
+            icon="sites"
           >
             {group.map((project) => {
               const { code, name } = splitCode(project.name);
@@ -304,7 +305,7 @@ export default function ProjectsPage() {
                   <div className="t-footnote mt-0.5 flex min-w-0 items-center gap-1 text-[color:var(--ios-ink2)]">
                     {project.location ? (
                       <>
-                        <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                        <Glyph name="pin" size={13} className="shrink-0" />
                         <span className="truncate">{project.location}</span>
                         <span aria-hidden>·</span>
                       </>

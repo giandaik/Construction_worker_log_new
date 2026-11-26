@@ -407,7 +407,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         </div>
       )}
 
-      <FormSection step={1} title="Details" description="Date, project, conditions, and the day's work">
+      <FormSection step={1} icon="doc" title="Details" description="Date, project, conditions, and the day's work">
       <FormField label="Date" labelGr="Ημερομηνία" htmlFor="date" required size="lg">
         <input
           type="date"
@@ -463,7 +463,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       </FormField>
       </FormSection>
 
-      <FormSection step={2} title="Resources" description="Personnel, equipment, and materials on site">
+      <FormSection step={2} icon="users" title="Resources" description="Personnel, equipment, and materials on site">
       <ArrayField
         title="Personnel"
         titleGr="Προσωπικό"
@@ -585,7 +585,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       />
       </FormSection>
 
-      <FormSection step={3} title="Attachments" description="Site photos and referenced drawings">
+      <FormSection step={3} icon="camera" title="Attachments" description="Site photos and referenced drawings">
       <PhotoUpload
         value={formData.images}
         onChange={updateImages}
@@ -598,7 +598,7 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       />
       </FormSection>
 
-      <FormSection step={4} title="Signatures" description="Sign off the day's record">
+      <FormSection step={4} icon="shield" title="Signatures" description="Sign off the day's record">
       <SignatureSection
         signatures={formData.signatures || []}
         onChange={updateSignatures}
