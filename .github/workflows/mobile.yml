@@ -65,6 +65,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+      # Maven Central answers 429 to a cold dependency resolution often enough
+      # that the debug job died on it; a warm cache removes the request volume.
+      - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
       - run: npm run version:check
       - run: npm run build:mobile
@@ -91,6 +94,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+      # Maven Central answers 429 to a cold dependency resolution often enough
+      # that the debug job died on it; a warm cache removes the request volume.
+      - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
       - run: npm run version:check
       - run: npm run build:mobile
@@ -124,6 +130,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+      # Maven Central answers 429 to a cold dependency resolution often enough
+      # that the debug job died on it; a warm cache removes the request volume.
+      - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
       - run: npm run version:check
       - run: npm run build:mobile
