@@ -66,7 +66,7 @@ export function TabBar() {
       className="shrink-0 border-t bg-[color:var(--ios-card)]"
       style={{ borderColor: "var(--ios-sep)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="mx-auto flex h-[49px] max-w-md items-stretch justify-around px-1">
+      <div className="ios-tabbar-row mx-auto max-w-md">
         {TABS.map((tab) => {
           const active = tab.match(pathname)
           const Icon = tab.icon
@@ -77,15 +77,12 @@ export function TabBar() {
                 key={tab.href}
                 href={tab.href}
                 aria-label="New log"
-                className="ios-tap flex flex-1 flex-col items-center justify-center"
+                className="ios-tabbar-item ios-tabbar-new"
               >
-                <span
-                  className="flex h-8 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "var(--ios-accent)", color: "#111" }}
-                >
-                  <Icon className="h-5 w-5" strokeWidth={2.5} />
+                <span className="ios-tabbar-chip">
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
                 </span>
-                <span className="t-caption mt-0.5 text-[color:var(--ios-ink2)]">{tab.label}</span>
+                <span className="ios-tabbar-label">{tab.label}</span>
               </Link>
             )
           }
@@ -95,11 +92,12 @@ export function TabBar() {
               key={tab.href}
               href={tab.href}
               aria-current={active ? "page" : undefined}
-              className="ios-tap flex flex-1 flex-col items-center justify-center gap-0.5"
-              style={{ color: active ? "var(--ios-tint)" : "var(--ios-ink2)" }}
+              className="ios-tabbar-item"
             >
-              <Icon className="h-[25px] w-[25px]" strokeWidth={active ? 2.2 : 1.8} />
-              <span className="t-caption">{tab.label}</span>
+              <span className="ios-tabbar-chip">
+                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.2 : 1.8} />
+              </span>
+              <span className="ios-tabbar-label">{tab.label}</span>
             </Link>
           )
         })}
@@ -108,13 +106,11 @@ export function TabBar() {
           <AccountSheet
             admin={admin}
             trigger={
-              <button
-                type="button"
-                aria-label="Account"
-                className="ios-tap flex flex-1 flex-col items-center justify-center gap-0.5 text-[color:var(--ios-ink2)]"
-              >
-                <User className="h-[25px] w-[25px]" strokeWidth={1.8} />
-                <span className="t-caption">Account</span>
+              <button type="button" aria-label="Account" className="ios-tabbar-item">
+                <span className="ios-tabbar-chip">
+                  <User className="h-[21px] w-[21px]" strokeWidth={1.8} />
+                </span>
+                <span className="ios-tabbar-label">Account</span>
               </button>
             }
           />
