@@ -1,145 +1,316 @@
-"use client"
-
-/**
- * Mobile-only replacement for `app/app/page.tsx`.
- *
- * The web dashboard is a server component that queries MongoDB directly and
- * reads the session cookie via `getAuthUser()`. Neither works in a static
- * export, so the mobile shell renders the same dashboard from the JSON API.
- *
- * `scripts/build-mobile.mjs` copies this over `app/app/page.tsx` for the
- * duration of the mobile build and restores the original afterwards.
- */
-
-import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Btn, LargeTitle, Row, Section, Skeleton, Stat } from "@/components/native/ui"
+import { redirect } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { FileText, Plus, FolderOpen, ArrowRight } from "lucide-react"
 import { PendingSubmissions } from "@/components/PendingSubmissions"
-import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { RepositoryFactory } from "@/lib/repositories"
 import type { Project, WorkLog } from "@/types/shared"
-import { apiFetch } from "@/lib/apiClient"
+import { WorkerActionRow } from "@/components/WorkerActionRow"
+import { getAuthUser, resolveRepositoryContext } from "@/utils/auth"
+import { FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues"
+import { LargeTitle, Section, Row, Stat, Btn } from "@/components/native/ui"
+import { isNativeBundle } from "@/lib/native-mode"
 
 const RECENT_LOGS_SHOWN = 6
 
-interface DashboardProject extends Omit<Project, "_id"> {
-  _id: string
-}
-
-interface DashboardWorkLog extends Omit<WorkLog, "_id" | "project"> {
+interface DashboardWorkLog extends Omit<WorkLog, '_id' | 'project'> {
   _id: string
   project: string
   status?: string
 }
 
-export default function MobileHomePage() {
-  const { user } = useCurrentUser()
-  const [projects, setProjects] = useState<DashboardProject[]>([])
-  const [workLogs, setWorkLogs] = useState<DashboardWorkLog[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+interface DashboardProject extends Omit<Project, '_id'> {
+  _id: string
+}
 
-  useEffect(() => {
-    let isActive = true
+async function getInitialData(tenantId: ReturnType<typeof resolveRepositoryContext>) {
+  try {
+    const data = await RepositoryFactory.withRepositories(
+      async ({ projects: projectRepo, workLogs: workLogRepo }) => {
+        const [projects, workLogs, totalLogs] = await Promise.all([
+          projectRepo.findSummary(),
+          workLogRepo.findRecent(50),
+          workLogRepo.count(),
+        ]);
 
-    async function loadDashboard() {
-      try {
-        const [projectsRes, workLogsRes] = await Promise.all([
-          apiFetch("/api/projects"),
-          apiFetch("/api/worklogs"),
-        ])
+        return { projects, workLogs, totalLogs };
+      },
+      tenantId,
+    );
 
-        if (!isActive) return
+    const typedProjects: DashboardProject[] = data.projects.map(project => ({
+      _id: String(project._id),
+      name: project.name,
+      description: project.description
+    }));
 
-        if (projectsRes.ok) setProjects(await projectsRes.json())
-        if (workLogsRes.ok) setWorkLogs(await workLogsRes.json())
-      } catch (error) {
-        console.error("Error loading dashboard:", error)
-      } finally {
-        if (isActive) setIsLoading(false)
-      }
-    }
+    const typedWorkLogs: DashboardWorkLog[] = data.workLogs.map(log => ({
+      _id: String(log._id),
+      date: new Date(log.date),
+      project: log.project?.toString() || '',
+      author: log.author?.toString() || '',
+      workDescription: log.workDescription || '',
+      personnel: log.personnel || [],
+      equipment: log.equipment || [],
+      materials: log.materials || [],
+      weather: log.weather,
+      temperature: log.temperature,
+      notes: log.notes,
+      status: log.status,
+      createdAt: log.createdAt,
+      updatedAt: log.updatedAt
+    }));
 
-    loadDashboard()
-    return () => {
-      isActive = false
-    }
-  }, [])
+    return {
+      projects: typedProjects,
+      workLogs: typedWorkLogs,
+      totalLogs: data.totalLogs,
+    };
+  } catch (error) {
+    console.error("Error fetching initial data:", error);
+    return {
+      projects: [],
+      workLogs: [],
+      totalLogs: 0,
+    };
+  }
+}
 
-  const isWorker = user?.role === "user"
-  const recentLogs = workLogs.slice(0, RECENT_LOGS_SHOWN)
-  const projectNames = new Map(projects.map((p) => [p._id, p.name]))
-  const lastEntry = workLogs[0]?.date
-    ? new Date(workLogs[0].date).toLocaleDateString("en-GB")
-    : "—"
-  const today = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date())
+function StatCard({ label, value, hint, href }: { label: string; value: string; hint?: string; href?: string }) {
+  const body = (
+    <>
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-3xl font-bold">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-md border bg-card p-4 transition-shadow hover:shadow-md hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {body}
+      </Link>
+    )
+  }
 
   return (
-    <div className="safe-b pb-6">
-      <LargeTitle sub={today}>Today</LargeTitle>
+    <div className="rounded-md border bg-card p-4 transition-shadow hover:shadow-md">
+      {body}
+    </div>
+  )
+}
 
-      {isLoading ? (
-        <Skeleton rows={4} />
-      ) : (
-        <>
-          <Section footer={workLogs.length > 0 ? `Last entry ${lastEntry}` : undefined}>
-            <div className="flex divide-x divide-[color:var(--ios-sep)]">
-              <Stat value={String(workLogs.length)} label="Work logs" />
-              <Stat value={String(projects.length)} label="Sites" />
+export default async function HomePage() {
+  const authUser = await getAuthUser();
+  if (!authUser) {
+    redirect("/login");
+  }
+
+  const initialData = await getInitialData(resolveRepositoryContext(authUser));
+  const isWorker = authUser?.role === 'user';
+
+  const { projects, workLogs, totalLogs } = initialData;
+  const recentLogs = workLogs.slice(0, RECENT_LOGS_SHOWN);
+  const projectNames = new Map(projects.map((p) => [p._id, p.name]));
+  const lastEntry = workLogs[0]?.date
+    ? new Date(workLogs[0].date).toLocaleDateString()
+    : '—';
+
+  if (isNativeBundle()) {
+    const today = new Date().toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+    const entryDate = (value: Date | string) => new Date(value).toLocaleDateString("en-GB")
+    const nativeLastEntry = workLogs[0]?.date ? entryDate(workLogs[0].date) : null
+
+    return (
+      <div className="pb-4">
+        <LargeTitle sub={today}>Today</LargeTitle>
+
+        {isWorker && authUser ? (
+          <div className="mx-4 mt-2">
+            <WorkerActionRow userId={authUser.userId} tenantId={authUser.tenantId!} />
+          </div>
+        ) : (
+          <Section>
+            <div className="flex items-stretch">
+              <Stat value={String(totalLogs)} label="Work logs" />
+              <span aria-hidden className="my-3 w-[0.5px] shrink-0 bg-[color:var(--ios-sep)]" />
+              <Stat value={String(projects.length)} label="Projects" />
             </div>
-          </Section>
-
-          <Section
-            title="Recent logs"
-            action={
-              <Link href="/worklogs" className="t-footnote text-[color:var(--ios-tint)]">
-                All logs
-              </Link>
-            }
-          >
-            {recentLogs.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <p className="t-subhead t-secondary">No work logs yet.</p>
-                <div className="mt-3 flex justify-center">
-                  <Btn href="/logs/new">Start today&#39;s log</Btn>
-                </div>
-              </div>
-            ) : (
-              recentLogs.map((log) => (
-                <Row
-                  key={log._id}
-                  href={`/worklogs/${log._id}`}
-                  title={
-                    <span className="font-semibold">
-                      {projectNames.get(log.project) ?? "Unknown site"}
-                    </span>
-                  }
-                  subtitle={
-                    <span className="block truncate">
-                      {`${new Date(log.date).toLocaleDateString("en-GB")} · ${
-                        log.workDescription || "No description"
-                      }`}
-                    </span>
-                  }
-                  chevron
-                />
-              ))
+            {nativeLastEntry && (
+              <>
+                <div aria-hidden className="mx-4 h-[0.5px] bg-[color:var(--ios-sep)]" />
+                <p className="t-footnote t-secondary px-4 py-2.5">Last entry {nativeLastEntry}</p>
+              </>
             )}
           </Section>
+        )}
 
-          {isWorker ? (
-            <div className="px-4 pt-5">
-              <Btn block href="/logs/new">
-                Log today&#39;s work
-              </Btn>
+        <Section
+          title="Recent logs"
+          action={
+            recentLogs.length > 0 ? (
+              <Link
+                href="/worklogs"
+                className="ios-tap t-footnote inline-flex items-center font-semibold text-[color:var(--ios-ink)]"
+              >
+                All
+              </Link>
+            ) : null
+          }
+        >
+          {recentLogs.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="t-body t-secondary">No work logs yet.</p>
+              <Btn href="/logs/new">Start today&apos;s log</Btn>
             </div>
-          ) : null}
+          ) : (
+            recentLogs.map((log) => (
+              <Row
+                key={log._id}
+                href={`/worklogs/${log._id}`}
+                chevron
+                title={
+                  <span className="font-semibold">
+                    {projectNames.get(log.project) ?? 'Unknown project'}
+                  </span>
+                }
+                subtitle={
+                  <span className="block truncate">
+                    {entryDate(log.date)} · {log.workDescription || '—'}
+                  </span>
+                }
+              />
+            ))
+          )}
+        </Section>
 
-          <PendingSubmissions initialData={{ projects, workLogs }} />
-        </>
-      )}
+        {!isWorker && (
+          <PendingSubmissions className="mx-4 mt-5" initialData={{ projects, workLogs }} />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <main className="container flex-1 px-4 py-8 md:px-6">
+        {isWorker && authUser ? (
+          <WorkerActionRow userId={authUser.userId} tenantId={authUser.tenantId!} />
+        ) : (
+          <section className="animate-fade-up grid gap-4 sm:grid-cols-3">
+            <StatCard label="Work logs" value={String(totalLogs)} hint={`Last entry ${lastEntry}`} href="/worklogs" />
+            <StatCard label="Projects" value={String(projects.length)} href="/projects" />
+            <StatCard
+              label="Quick start"
+              value="New log"
+              hint="Record today's work in minutes"
+              href="/logs/new"
+            />
+          </section>
+        )}
+
+        <section className="mt-10 grid gap-8 lg:grid-cols-3">
+          <div className="animate-fade-up lg:col-span-2" style={{ animationDelay: '80ms' }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold uppercase">Recent work logs</h2>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/worklogs">
+                  All logs <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            {recentLogs.length === 0 ? (
+              <div className="rounded-md border border-dashed bg-card p-10 text-center">
+                <FileText className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                <p className="mt-3 text-muted-foreground">No work logs yet.</p>
+                <Button className="mt-4" asChild>
+                  <Link href="/logs/new">
+                    <Plus className="mr-2 h-4 w-4" /> Create the first one
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="divide-y rounded-md border bg-card">
+                {recentLogs.map((log) => (
+                  <li key={log._id}>
+                    <Link
+                      href={`/worklogs/${log._id}`}
+                      className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-accent/50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">
+                          {projectNames.get(log.project) ?? 'Unknown project'}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {log.workDescription}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        {log.status && (
+                          <span
+                            className={`status-badge hidden sm:inline-flex ${
+                              FORM_STATUS_CLASSES[log.status as keyof typeof FORM_STATUS_CLASSES] ?? 'status-unknown'
+                            }`}
+                          >
+                            {FORM_STATUS_LABELS[log.status as keyof typeof FORM_STATUS_LABELS] ?? 'N/A'}
+                          </span>
+                        )}
+                        <span className="text-sm tabular-nums text-muted-foreground">
+                          {new Date(log.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="animate-fade-up space-y-8" style={{ animationDelay: '160ms' }}>
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold uppercase">Projects</h2>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/projects">
+                    All <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              {projects.length === 0 ? (
+                <div className="rounded-md border border-dashed bg-card p-8 text-center">
+                  <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                  <p className="mt-3 text-muted-foreground">No projects yet.</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {projects.slice(0, 5).map((project) => (
+                    <li key={project._id}>
+                      <Link
+                        href={`/projects/${project._id}`}
+                        className="block rounded-md border bg-card px-4 py-3 transition-colors hover:bg-accent/50"
+                      >
+                        <p className="truncate font-medium">{project.name}</p>
+                        {project.description && (
+                          <p className="truncate text-sm text-muted-foreground">{project.description}</p>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <PendingSubmissions initialData={{ projects, workLogs }} />
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
