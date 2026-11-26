@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { ObjectId } from 'mongodb';
-import type { Collection, Document } from 'mongodb';
+import type { Document } from 'mongodb';
 
 import { DatabaseUtils } from '@/lib/api/database';
 import type { TenantRole } from '@/lib/models/UserTenantMembership';
@@ -32,9 +32,9 @@ export interface SignupRequest extends Document {
 
 let indexesReady: Promise<void> | null = null;
 
-async function getSignupRequestCollection(): Promise<Collection<SignupRequest>> {
+async function getSignupRequestCollection() {
   await DatabaseUtils.connect();
-  const collection = DatabaseUtils.getCollection('signup_requests') as Collection<SignupRequest>;
+  const collection = DatabaseUtils.getCollection('signup_requests');
 
   if (!indexesReady) {
     indexesReady = Promise.all([
@@ -61,7 +61,7 @@ export async function createOrGetPendingSignupRequest(
 ): Promise<SignupRequest> {
   const collection = await getSignupRequestCollection();
   const existing = await collection.findOne({ email: input.email, status: 'pending' });
-  if (existing) return existing;
+  if (existing) return existing as SignupRequest;
 
   const now = new Date();
   const request: SignupRequest = {
@@ -72,12 +72,12 @@ export async function createOrGetPendingSignupRequest(
   };
 
   try {
-    await collection.insertOne(request);
+    await collection.insertOne({ ...request });
     return request;
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
       const racedRequest = await collection.findOne({ email: input.email, status: 'pending' });
-      if (racedRequest) return racedRequest;
+      if (racedRequest) return racedRequest as SignupRequest;
     }
     throw error;
   }
@@ -93,7 +93,8 @@ export async function markSignupRequestNotificationSent(id: ObjectId): Promise<v
 
 export async function listPendingSignupRequests(): Promise<SignupRequest[]> {
   const collection = await getSignupRequestCollection();
-  return collection.find({ status: 'pending' }).sort({ createdAt: -1 }).toArray();
+  const requests = await collection.find({ status: 'pending' }).sort({ createdAt: -1 }).toArray();
+  return requests.map((request) => request as SignupRequest);
 }
 
 export async function countPendingSignupRequests(): Promise<number> {
@@ -103,7 +104,8 @@ export async function countPendingSignupRequests(): Promise<number> {
 
 export async function findPendingSignupRequestById(id: ObjectId): Promise<SignupRequest | null> {
   const collection = await getSignupRequestCollection();
-  return collection.findOne({ _id: id, status: 'pending' });
+  const request = await collection.findOne({ _id: id, status: 'pending' });
+  return request as SignupRequest | null;
 }
 
 export async function claimPendingSignupRequest(
@@ -133,7 +135,7 @@ export async function claimPendingSignupRequest(
   if (updated.modifiedCount !== 1) return null;
 
   const request = await collection.findOne({ _id: id, claimId });
-  return request ? { request, claimId } : null;
+  return request ? { request: request as SignupRequest, claimId } : null;
 }
 
 export async function releaseSignupRequestClaim(id: ObjectId, claimId: string): Promise<void> {

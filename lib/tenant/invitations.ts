@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { ObjectId } from 'mongodb';
-import type { Collection, Document } from 'mongodb';
+import type { Document } from 'mongodb';
 
 import { DatabaseUtils } from '@/lib/api/database';
 import type { TenantRole } from '@/lib/models/UserTenantMembership';
@@ -44,9 +44,9 @@ export class TenantInvitationError extends Error {
 
 let indexesReady: Promise<void> | null = null;
 
-async function getInvitationCollection(): Promise<Collection<TenantInvitation>> {
+async function getInvitationCollection() {
   await DatabaseUtils.connect();
-  const collection = DatabaseUtils.getCollection('tenant_invitations') as Collection<TenantInvitation>;
+  const collection = DatabaseUtils.getCollection('tenant_invitations');
 
   if (!indexesReady) {
     indexesReady = Promise.all([
@@ -127,12 +127,13 @@ export async function findPendingInvitation(
   email: string,
 ): Promise<TenantInvitation | null> {
   const collection = await getInvitationCollection();
-  return collection.findOne({
+  const invitation = await collection.findOne({
     tokenHash: hashInvitationToken(token),
     email: email.trim().toLowerCase(),
     status: 'pending',
     expiresAt: { $gt: new Date() },
   });
+  return invitation as TenantInvitation | null;
 }
 
 export async function hasPendingTenantInvitation(email: string, tenantId: string): Promise<boolean> {
@@ -169,7 +170,7 @@ async function claimInvitation(
   if (updated.modifiedCount !== 1) return null;
 
   const invitation = await collection.findOne({ tokenHash: hashInvitationToken(token), claimId });
-  return invitation ? { invitation, claimId } : null;
+  return invitation ? { invitation: invitation as TenantInvitation, claimId } : null;
 }
 
 async function releaseInvitationClaim(tokenHash: string, claimId: string): Promise<void> {
