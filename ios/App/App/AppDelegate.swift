@@ -47,3 +47,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+// Capacitor 8 ships no scene delegate, and iOS 26+ terminates apps that have not adopted the
+// UIScene lifecycle ("UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption"). The
+// storyboard still owns the CAPBridgeViewController; this class only puts it in a scene-backed
+// window. Keep it in this file: it is already in the App target, so no Xcode project surgery.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
+        window.rootViewController = UIStoryboard(name: "Main", bundle: nil).instantiateInitialViewController()
+        self.window = window
+        window.makeKeyAndVisible()
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
+    }
+
+}

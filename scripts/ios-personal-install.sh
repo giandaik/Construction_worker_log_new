@@ -111,11 +111,13 @@ npm run build:mobile
 npx cap sync ios
 
 echo "building for the device…"
-# -allowProvisioningUpdates lets Xcode create/renew the 7-day profile itself.
+# Release, not Debug: a Debug build splits the binary into App + App.debug.dylib,
+# and that stub fails to start when the app is launched from the home screen
+# instead of from Xcode (it launches, then traps — "App terminated due to signal 5").
 xcodebuild \
   -project ios/App/App.xcodeproj \
   -scheme App \
-  -configuration Debug \
+  -configuration Release \
   -destination "id=$DEVICE" \
   -derivedDataPath build/ios-personal \
   -allowProvisioningUpdates \
@@ -123,7 +125,7 @@ xcodebuild \
   CODE_SIGN_STYLE=Automatic \
   build
 
-APP="build/ios-personal/Build/Products/Debug-iphoneos/App.app"
+APP="build/ios-personal/Build/Products/Release-iphoneos/App.app"
 [ -d "$APP" ] || { echo "error: expected $APP, build produced nothing" >&2; exit 1; }
 
 echo "installing…"
