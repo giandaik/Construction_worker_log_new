@@ -151,11 +151,57 @@ function restore() {
   fs.rmSync(backupRoot, { recursive: true, force: true });
 }
 
+/**
+ * Repairs a build that was killed before it could restore.
+ *
+ * The undo stack only exists in memory, so a SIGKILL — or a sandbox tearing the
+ * process down mid-build — loses it and leaves the tree staged: `app/api` and
+ * `middleware.ts` moved into `.mobile-build-backup`, the mobile dashboard
+ * overlaid on `app/app/page.tsx`, `next.config.mjs` pointing at the mobile
+ * config. The backup directory is exactly what is needed to put it all back, so
+ * every run starts by checking for one.
+ */
+function repairInterruptedBuild() {
+  if (!fs.existsSync(backupRoot)) return;
+
+  console.warn('  previous mobile build was interrupted — restoring from .mobile-build-backup');
+  for (const backupFile of listFilesRecursively(backupRoot)) {
+    const relativePath = path.relative(backupRoot, backupFile);
+    const destination = abs(relativePath);
+    fs.rmSync(destination, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.renameSync(backupFile, destination);
+    console.warn(`  restored ${relativePath}`);
+  }
+  fs.rmSync(backupRoot, { recursive: true, force: true });
+}
+
+/**
+ * Fails loudly when the tree still differs from git after restore.
+ *
+ * A silent bad restore is worse than a failed build: the next `git commit -a`
+ * ships the mobile dashboard over the web one, which is exactly how that
+ * happened once already.
+ */
+function verifyTreeRestored() {
+  const status = spawnSync('git', ['status', '--porcelain'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+  });
+  const dirty = (status.stdout || '').trim();
+  if (status.status !== 0 || !dirty) return;
+
+  console.error('\n  ⚠ the working tree differs from git after the build:');
+  for (const line of dirty.split('\n')) console.error(`      ${line}`);
+  console.error('  Restore the affected paths before committing.');
+}
+
 let restored = false;
 function restoreOnce() {
   if (restored) return;
   restored = true;
   restore();
+  verifyTreeRestored();
 }
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -209,6 +255,7 @@ console.log(`API base URL: ${apiBaseUrl.value}  (from ${apiBaseUrl.source})`);
 assertReachable(apiBaseUrl.value, apiBaseUrl.source ?? 'environment');
 
 console.log('\nStaging mobile build tree...');
+repairInterruptedBuild();
 stage();
 
 console.log('\nBuilding static export...');
