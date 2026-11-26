@@ -27,6 +27,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      android:
+        description: 'Build and distribute the Android APK to testers'
+        type: boolean
+        default: true
+      ios:
+        description: 'Build and distribute the iOS IPA to testers (needs Apple signing secrets)'
+        type: boolean
+        default: true
 
 concurrency:
   group: mobile-${{ github.ref }}
@@ -70,7 +79,7 @@ jobs:
 
   android-release:
     name: Signed AAB (needs signing secrets)
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.android }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +112,7 @@ jobs:
 
   android-firebase:
     name: Distribute signed APK to Firebase testers
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.android }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -188,3 +197,94 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+  ios-firebase:
+    name: Distribute signed IPA to Firebase testers
+    # Not every dispatch can build an IPA: an ad-hoc profile only installs on
+    # devices whose UDIDs are registered in the Apple portal, so the job checks
+    # for the signing material first and skips with a notice instead of failing
+    # red on a repo that has no Apple team yet.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ios }}
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for Apple signing material
+        id: signing
+        env:
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PROFILE_BASE64: ${{ secrets.APPLE_PROFILE_BASE64 }}
+          APPLE_PROFILE_SPECIFIER: ${{ secrets.APPLE_PROFILE_SPECIFIER }}
+        run: |
+          missing=""
+          [ -z "$APPLE_CERT_P12_BASE64" ] && missing="$missing APPLE_CERT_P12_BASE64"
+          [ -z "$APPLE_CERT_PASSWORD" ] && missing="$missing APPLE_CERT_PASSWORD"
+          [ -z "$APPLE_TEAM_ID" ] && missing="$missing APPLE_TEAM_ID"
+          [ -z "$APPLE_PROFILE_BASE64" ] && missing="$missing APPLE_PROFILE_BASE64"
+          [ -z "$APPLE_PROFILE_SPECIFIER" ] && missing="$missing APPLE_PROFILE_SPECIFIER"
+          if [ -n "$missing" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No Apple signing material ($missing) — the IPA build and upload are skipped. See DEPLOY.md → iOS testers."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.signing.outputs.ready == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - if: steps.signing.outputs.ready == 'true'
+        run: npm ci
+      - if: steps.signing.outputs.ready == 'true'
+        run: npm run version:check
+      - if: steps.signing.outputs.ready == 'true'
+        run: npm run build:mobile
+      - if: steps.signing.outputs.ready == 'true'
+        run: npx cap sync ios
+      - name: Archive and export the IPA
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PROFILE_BASE64: ${{ secrets.APPLE_PROFILE_BASE64 }}
+          APPLE_PROFILE_SPECIFIER: ${{ secrets.APPLE_PROFILE_SPECIFIER }}
+          APPLE_EXPORT_METHOD: ${{ secrets.APPLE_EXPORT_METHOD }}
+        run: bash scripts/ci-ios-ipa.sh
+      - name: Authenticate to Firebase
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT is not set — see DEPLOY.md"; exit 1
+          fi
+          printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+      - name: Resolve release notes
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          notes="${COMMIT_MESSAGE:-$(git log -1 --pretty=%s)}"
+          {
+            echo 'FIREBASE_RELEASE_NOTES<<__NOTES__'
+            echo "$notes"
+            echo '__NOTES__'
+          } >> "$GITHUB_ENV"
+          echo "release notes: $notes"
+      - name: Distribute
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          FIREBASE_APP_ID_IOS: ${{ secrets.FIREBASE_APP_ID_IOS }}
+        run: |
+          node scripts/dist-firebase.mjs build/App.ipa \
+            --platform ios --groups testers
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.ready == 'true'
+        with:
+          name: app-release-ipa
+          path: build/App.ipa
+          retention-days: 14
+

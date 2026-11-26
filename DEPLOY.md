@@ -49,6 +49,31 @@ profile for the app, Archive → Distribute → **Ad Hoc**, then either:
 
 Caveats: 100 devices per year per device type, and every new tester needs a new profile + rebuild.
 
+### Wired: ad-hoc IPA → Firebase App Distribution
+
+**The CI job exists and is inert until Apple signing material is added.** The iOS app is already
+registered in Firebase (`1:92858482408:ios:c61af26ac373b4d950935d`, secret
+`FIREBASE_APP_ID_IOS`) and `scripts/ci-ios-ipa.sh` archives, exports and hands the `.ipa` to
+`scripts/dist-firebase.mjs`. Add these six repository secrets and the next dispatch with
+`ios: true` builds and distributes:
+
+| Secret | Where it comes from |
+|---|---|
+| `APPLE_CERT_P12_BASE64` | Apple Distribution certificate exported as `.p12` from Keychain Access, then `openssl base64 -A -in cert.p12` |
+| `APPLE_CERT_PASSWORD` | the password chosen during that export |
+| `APPLE_TEAM_ID` | portal → Membership → Team ID (10 characters) |
+| `APPLE_PROFILE_BASE64` | the **Ad Hoc** profile `.mobileprovision`, base64 the same way |
+| `APPLE_PROFILE_SPECIFIER` | the profile's *Name* exactly as written in the portal |
+| `APPLE_EXPORT_METHOD` | `ad-hoc` (default) or `development` |
+
+Order matters: **register both phones' UDIDs first** (portal → Devices → +), then generate the
+profile. A profile made before a UDID was added signs a build that installs nowhere, and the
+failure surfaces only on the tester's iPhone ("Unable to Install"). Adding a tester later means a
+new profile, a new secret, and a new build — that is Apple's rule, not the pipeline's.
+
+Until then the job runs, finds the secrets empty, and posts a notice instead of failing: a red X
+would claim the iOS build is broken when it has never been attempted.
+
 ## Android
 
 The APK is already built: **Actions → Mobile → the `app-debug.apk` artifact** (14 days), or
@@ -118,6 +143,10 @@ npm run dist:android -- --notes "Back button, signed-in flow"
 or **Actions → Mobile → Run workflow** → *Distribute signed APK to Firebase testers*, which does
 all of the above. Testers get an email, install the **App Tester** app once, then tap Install on
 each build. Uploads land at <https://console.firebase.google.com/project/_/appdistribution>.
+
+Dispatch takes two switches, `android` and `ios`, so a build can go to one platform's testers
+without waking the other: `gh workflow run mobile.yml -f android=true -f ios=false`. Both default
+to true; the `android` switch also gates the signed AAB job.
 
 Notes:
 
