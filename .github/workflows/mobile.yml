@@ -138,10 +138,24 @@ jobs:
           fi
           printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+      - name: Resolve release notes
+        # On workflow_dispatch github.event.head_commit is null, so the notes used
+        # to fall back to "Build of app-release.apk at <time>" and testers could
+        # not tell which change they were installing. Fall back to the tip commit
+        # subject instead. Multiline values need the heredoc form in GITHUB_ENV.
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          notes="${COMMIT_MESSAGE:-$(git log -1 --pretty=%s)}"
+          {
+            echo 'FIREBASE_RELEASE_NOTES<<__NOTES__'
+            echo "$notes"
+            echo '__NOTES__'
+          } >> "$GITHUB_ENV"
+          echo "release notes: $notes"
       - name: Distribute
         env:
           FIREBASE_APP_ID_ANDROID: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
-          FIREBASE_RELEASE_NOTES: ${{ github.event.head_commit.message }}
         run: |
           node scripts/dist-firebase.mjs \
             android/app/build/outputs/apk/release/app-release.apk \

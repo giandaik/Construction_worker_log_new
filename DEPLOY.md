@@ -66,6 +66,22 @@ auto-upgrade.
 
 ### Firebase App Distribution (free, no store account)
 
+**Configured on 2026-11-26.** The resources below exist; the checklist under it is the
+procedure for a rebuild of the same setup.
+
+| Thing | Value |
+|---|---|
+| Firebase project | `construction-worker-log` (number `92858482408`) |
+| Android app | `1:92858482408:android:40fd71c4b14ae18850935d`, package `com.constructionlog.app` |
+| Tester group | `testers` (alias `testers`) |
+| Service account | `firebase-distribute@construction-worker-log.iam.gserviceaccount.com`, role *Firebase App Distribution Admin* |
+| Repo secrets | the six below, all present on `giandaik/Construction_worker_log_new` |
+| Upload keystore | PKCS12, alias `upload`, mirrored in Bitwarden Secrets Manager → project *CWL Android Signing* (`CWL_ANDROID_KEYSTORE_BASE64`, `CWL_ANDROID_KEYSTORE_PASSWORD`, `CWL_ANDROID_KEY_ALIAS`) |
+
+The keystore is the one thing that cannot be regenerated: every future build must be signed
+with it or testers (and later Play) refuse the update. It lives at `android/app/release.keystore`
+(gitignored) and in the vault; losing both means a new application id.
+
 Set up once:
 
 1. Firebase console → **Add project** (call it `construction-log`) → inside it, **Add app →
