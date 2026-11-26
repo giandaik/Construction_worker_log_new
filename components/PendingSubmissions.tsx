@@ -14,11 +14,14 @@ interface PendingSubmissionsProps {
     projects: Project[];
     workLogs: WorkLog[];
   };
+  /** Spacing belongs to the card, because the card can disappear entirely. */
+  className?: string;
 }
 
-export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initialData }) => {
+export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initialData, className }) => {
   const [pendingLogs, setPendingLogs] = useState<PendingWorkLogData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
@@ -38,6 +41,7 @@ export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initial
       handleError(err, 'PendingSubmissions.fetchLogs', 'Could not load pending submissions.');
     } finally {
       setIsLoading(false);
+      setHasLoaded(true);
     }
   }, [handleError]);
 
@@ -75,8 +79,17 @@ export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initial
     }
   }, [isSyncing, handleError, fetchLogs]);
 
+  /**
+   * Nothing queued means no card at all. An empty card headed "Pending
+   * Submissions" reads as a standing warning on a device with a clean queue —
+   * and because the first read is delayed a second, it also flashed on every
+   * visit before the (always empty) result arrived.
+   */
+  if (!hasLoaded) return null;
+  if (pendingLogs.length === 0 && !isSyncing && !syncStatus) return null;
+
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>Pending Submissions</CardTitle>
       </CardHeader>
@@ -85,10 +98,6 @@ export const PendingSubmissions = React.memo<PendingSubmissionsProps>(({ initial
           <div className="space-y-4">
             <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
             <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
-          </div>
-        ) : pendingLogs.length === 0 ? (
-          <div className="text-muted-foreground text-center py-8">
-            No pending submissions
           </div>
         ) : (
           <div className="space-y-4">

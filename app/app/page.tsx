@@ -192,9 +192,7 @@ export default async function HomePage() {
         </Section>
 
         {!isWorker && (
-          <div className="mx-4 mt-5">
-            <PendingSubmissions initialData={{ projects, workLogs }} />
-          </div>
+          <PendingSubmissions className="mx-4 mt-5" initialData={{ projects, workLogs }} />
         )}
       </div>
     )
