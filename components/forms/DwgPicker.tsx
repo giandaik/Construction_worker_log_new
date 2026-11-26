@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import type { DwgFile } from '@/components/forms/DwgUpload';
 import { apiFetch } from '@/lib/apiClient';
+import { isNativeBundle } from '@/lib/native-mode';
 
 interface DwgPickerProps {
   projectId: string;
@@ -60,6 +61,54 @@ export function DwgPicker({ projectId, value, onChange }: DwgPickerProps) {
       onChange([...value, url]);
     }
   };
+
+  if (isNativeBundle()) {
+    return (
+      <div>
+        <div className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="t-body">Drawings used today</div>
+            {dwgFiles.length > 0 && (
+              <div className="t-footnote t-secondary mt-0.5">
+                {value.length} of {dwgFiles.length} selected
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isLoading && <p className="t-footnote t-secondary px-4 pb-3">Loading drawings…</p>}
+        {error && <p className="t-footnote px-4 pb-3 text-red-600">{error}</p>}
+
+        {!isLoading && !error && dwgFiles.length === 0 && (
+          <p className="t-footnote t-secondary px-4 pb-3">No drawings attached to this project.</p>
+        )}
+
+        {dwgFiles.length > 0 && (
+          <div className="ios-stack">
+            {dwgFiles.map((dwg) => {
+              const checked = value.includes(dwg.url);
+              return (
+                <label
+                  key={dwg.url}
+                  className="ios-tap flex items-center gap-3 px-4 py-2.5 active:bg-black/[0.04]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(dwg.url)}
+                    aria-label={`Select ${dwg.filename}`}
+                    className="h-[22px] w-[22px] shrink-0 accent-[color:var(--ios-tint)]"
+                  />
+                  <span className="t-body min-w-0 flex-1 truncate">{dwg.filename}</span>
+                  <span className="t-footnote t-secondary shrink-0">{formatSize(dwg.size)}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

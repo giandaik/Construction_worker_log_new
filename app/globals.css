@@ -183,6 +183,26 @@
     box-shadow: inset 0 -0.5px 0 var(--ios-sep);
   }
 
+  /*
+   * Grouped-card separator: 0.5 pt, inset 16 pt from the card's left edge and
+   * flush to its right edge — the iOS list separator. Children of the card are
+   * full-width rows, so the line starts where their content starts.
+   */
+  .ios-stack > * + * {
+    position: relative;
+  }
+
+  .ios-stack > * + *::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 0;
+    height: 0.5px;
+    background: var(--ios-sep);
+    pointer-events: none;
+  }
+
   .safe-t {
     padding-top: env(safe-area-inset-top, 0px);
   }
@@ -284,6 +304,31 @@
 
   .ios-form :where(input[type="number"], input[type="date"], select) {
     min-height: 44px;
+  }
+
+  /*
+   * The row-filling rule above outranks Tailwind's `hidden` and sizes, so a
+   * checkbox became a full-width block that pushed the filename out of the
+   * card, and `<input type="file" class="hidden">` painted the WebView's
+   * "Choose files / No file chosen" control inside the row. Both are content,
+   * not rows: give them back their intrinsic box.
+   */
+  .ios-form :where(input[type="checkbox"], input[type="radio"]) {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    min-height: 0;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: var(--ios-tint);
+    /* The grouped-control rule strips the native appearance; a checkbox with
+       `appearance: none` paints as an empty transparent square. */
+    -webkit-appearance: auto;
+    appearance: auto;
+  }
+
+  .ios-form :where(input[type="file"]) {
+    display: none;
   }
 
   .ios-form ::placeholder {

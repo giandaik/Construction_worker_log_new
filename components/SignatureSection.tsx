@@ -13,6 +13,8 @@ import {
 } from '@/lib/signatureUtils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useProjectRole } from '@/hooks/useProjectRole';
+import { isNativeBundle } from '@/lib/native-mode';
+import { Btn } from '@/components/native/ui';
 
 
 interface SignatureSectionProps {
@@ -132,6 +134,90 @@ export const SignatureSection: React.FC<SignatureSectionProps> = ({
       return "The project's contractor must sign before the owner can countersign.";
     }
     return "Only the project's contractor can add the first signature.";
+  }
+
+  /*
+   * Native: the section is one grouped card, so the rows stay flush at the
+   * 16 pt inset and the empty note is a left-aligned footnote — a centred
+   * paragraph and a nested Card inside the group is web chrome.
+   */
+  if (isNativeBundle()) {
+    return (
+      <div>
+        <div className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="t-body">Signatures</div>
+          </div>
+          {canAddSignature && (
+            <Btn variant="plain" onClick={handleAddSignatureClick}>
+              Add Signature
+            </Btn>
+          )}
+        </div>
+
+        {signatures.map((sig, index) => (
+          <div key={index} className="px-4 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="t-body">{sig.signedBy}</div>
+                {sig.projectRole && (
+                  <div className="t-footnote t-secondary mt-0.5">{sig.projectRole}</div>
+                )}
+                <div className="t-footnote t-secondary mt-0.5">
+                  Signed {new Date(sig.signedAt).toLocaleString()}
+                </div>
+              </div>
+              {canUserRemoveSignature(sig) && (
+                <button
+                  type="button"
+                  onClick={() => removeSignature(index)}
+                  aria-label={`Remove signature by ${sig.signedBy}`}
+                  className="ios-tap -mr-2 flex w-11 shrink-0 items-center justify-center text-[color:var(--ios-ink2)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="mt-2 rounded-[8px] bg-[rgba(120,120,128,.10)] p-2">
+              <img
+                src={sig.data}
+                alt={`Signature by ${sig.signedBy}`}
+                className="h-auto max-h-32 max-w-full"
+              />
+            </div>
+          </div>
+        ))}
+
+        {showAddSignature && (
+          <div className="space-y-3 px-4 pb-4 pt-3">
+            <div>
+              <div className="t-footnote t-secondary">Name</div>
+              <div className="t-body py-1">{newSignatureName || '-'}</div>
+            </div>
+            <div>
+              <div className="t-footnote t-secondary">Project Role</div>
+              <div className="t-body py-1">{newSignatureRole || '-'}</div>
+            </div>
+            <SignaturePad onSave={addSignature} title="Draw Signature" />
+            <Btn
+              variant="secondary"
+              block
+              onClick={() => {
+                setShowAddSignature(false);
+                setNewSignatureName('');
+                setNewSignatureRole('');
+              }}
+            >
+              Cancel
+            </Btn>
+          </div>
+        )}
+
+        {signatures.length === 0 && !showAddSignature && (
+          <p className="t-footnote t-secondary px-4 pb-3">{getEmptyStateMessage()}</p>
+        )}
+      </div>
+    );
   }
 
   return (

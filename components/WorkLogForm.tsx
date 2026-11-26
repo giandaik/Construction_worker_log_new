@@ -16,6 +16,7 @@ import { CatalogSelect } from '@/components/forms/CatalogSelect';
 import { WeatherPicker } from '@/components/forms/WeatherPicker';
 import { ProjectPicker, StatusBadge } from '@/components/forms/ProjectPicker';
 import { Check, MapPin } from 'lucide-react';
+import { Btn, Pill } from '@/components/native/ui';
 import { useProjectCatalog } from '@/hooks/useProjectCatalog';
 import { TOAST_DURATION } from '@/lib/constants/constants';
 import { apiFetch } from '@/lib/apiClient';
@@ -347,7 +348,39 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
         </Alert>
       )}
 
-      {selectedProject && (
+      {selectedProject && isNativeBundle() && (
+        <div className="mx-4 mt-3 flex items-center gap-3 rounded-[10px] bg-[color:var(--ios-card)] px-4 py-3 ios-hairline">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="t-body min-w-0 truncate font-semibold">{selectedProject.name}</span>
+              <Pill
+                tone={
+                  selectedProject.status === 'in-progress'
+                    ? 'ok'
+                    : selectedProject.status === 'planned'
+                      ? 'plan'
+                      : selectedProject.status === 'on-hold'
+                        ? 'warn'
+                        : 'draft'
+                }
+              >
+                {String(selectedProject.status || 'draft').replace('-', ' ')}
+              </Pill>
+            </div>
+            {selectedProject.location && (
+              <p className="t-footnote t-secondary mt-0.5 flex items-center gap-1 truncate">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                {selectedProject.location}
+              </p>
+            )}
+          </div>
+          <Btn variant="plain" onClick={clearProject}>
+            Change
+          </Btn>
+        </div>
+      )}
+
+      {selectedProject && !isNativeBundle() && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-300 bg-yellow-50 p-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">

@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Btn } from '@/components/native/ui';
+import { isNativeBundle } from '@/lib/native-mode';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { isMobileApp } from '@/lib/mobile-auth';
 import {
@@ -193,6 +195,102 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
 
   const addDisabled = busy || remaining <= 0;
 
+  /**
+   * Thumbnail grid, shared by both shells. `gridClass` carries the insets that
+   * differ: web flows inside its section card, native sits inside a grouped row.
+   */
+  const photoGrid = (gridClass: string, thumbClass: string) => (
+    <div className={gridClass}>
+      {value.map((src, i) => {
+        const pending = isDataUrl(src);
+        return (
+          <div
+            key={`${i}-${src.slice(0, 32)}`}
+            className={thumbClass}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={`Photo ${i + 1}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+            {pending && (
+              <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
+                Pending
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => removeAt(i)}
+              aria-label={`Remove photo ${i + 1}`}
+              className="absolute right-1 top-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground opacity-90 hover:opacity-100"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (isNativeBundle()) {
+    return (
+      <div>
+        <div className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+          <div className="min-w-0 flex-1">
+            <span className="t-body">Photos</span>
+            <span className="t-footnote t-secondary ml-2">
+              {value.length}/{maxPhotos}
+            </span>
+            {isNative && busy && (
+              <span className="t-footnote t-secondary ml-2">Processing…</span>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {isNative ? (
+              <>
+                <Btn variant="plain" onClick={() => addFromNative('camera')} disabled={addDisabled}>
+                  Take Photo
+                </Btn>
+                <Btn variant="plain" onClick={() => addFromNative('gallery')} disabled={addDisabled}>
+                  Gallery
+                </Btn>
+              </>
+            ) : (
+              <Btn variant="plain" onClick={() => inputRef.current?.click()} disabled={addDisabled}>
+                {busy ? 'Processing…' : 'Add Photos'}
+              </Btn>
+            )}
+          </div>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+
+        {error && <p className="t-footnote px-4 pb-2 text-red-600">{error}</p>}
+
+        {value.length > 0 &&
+          photoGrid(
+            'grid grid-cols-3 gap-1.5 px-4 pb-3',
+            'group relative aspect-square overflow-hidden rounded-[8px] border border-[color:var(--ios-sep)] bg-[rgba(120,120,128,.12)]',
+          )}
+
+        {!isOnline && value.some(isDataUrl) && (
+          <p className="t-footnote t-secondary px-4 pb-3">
+            Pending photos will upload when you reconnect.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -251,40 +349,11 @@ export function PhotoUpload({ value, onChange, maxPhotos = 10 }: PhotoUploadProp
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {value.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {value.map((src, i) => {
-            const pending = isDataUrl(src);
-            return (
-              <div
-                key={`${i}-${src.slice(0, 32)}`}
-                className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/50"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={`Photo ${i + 1}`}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-                {pending && (
-                  <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
-                    Pending
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeAt(i)}
-                  aria-label={`Remove photo ${i + 1}`}
-                  className="absolute right-1 top-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground opacity-90 hover:opacity-100"
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {value.length > 0 &&
+        photoGrid(
+          'grid grid-cols-3 gap-2 sm:grid-cols-4',
+          'group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/50',
+        )}
 
       {!isOnline && value.some(isDataUrl) && (
         <p className="text-xs text-muted-foreground">

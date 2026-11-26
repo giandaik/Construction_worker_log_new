@@ -20,14 +20,15 @@ export function FormSection({ step, title, description, children }: FormSectionP
           <h3 className="t-footnote font-medium uppercase tracking-[0.04em] text-[color:var(--ios-ink2)]">
             {title}
           </h3>
-          {description ? <p className="t-caption t-secondary mt-0.5">{description}</p> : null}
+          {description ? <p className="t-footnote t-secondary mt-1">{description}</p> : null}
         </div>
-        <div className="mx-4 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
-          <div className="divide-y divide-[color:var(--ios-sep)]">{children}</div>
+        <div className="ios-stack mx-4 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
+          {children}
         </div>
       </section>
     )
   }
+
 
   return (
     <section
