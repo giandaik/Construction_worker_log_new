@@ -46,6 +46,10 @@
     --ios-sep: rgba(60, 60, 67, 0.29);
     --ios-tint: #0a84ff;
     --ios-accent: #f2c200;
+    /* Ink that sits ON the accent. The accent chip is yellow in both themes, so
+       this value is theme-invariant — it must stay dark, and it must never be
+       used for text that sits on the bar itself. */
+    --ios-accent-ink: #111111;
   }
 
   .dark {
@@ -89,6 +93,9 @@
     --ios-sep: rgba(84, 84, 88, 0.6);
     --ios-tint: #0a84ff;
     --ios-accent: #ffd60a;
+    /* On-accent ink: the chip stays yellow in the asphalt theme, so the glyph on
+       it stays dark. Label ink comes from --ios-ink, never from this token. */
+    --ios-accent-ink: #111111;
   }
 }
 
@@ -277,17 +284,18 @@
   }
 
   /* The design fills the current tab's chip with the accent
-     (`.tab.is-active .tab-ic { background: var(--accent) }`). With the raised
-     "New" action gone — it is the filled + in the nav bar now, which the brief
-     names as the alternative — the accent fill goes back where the design puts
-     it: on the chip of the current tab, with the label in ink on it. */
+     (`.tab.is-active .tab-ic { background: var(--accent) }`) and the label under
+     it takes the bar's own ink — never the on-accent ink. Using the on-accent
+     ink here put #111 on the asphalt bar (#1c1c1e): the selected label was the
+     dimmest text in the row. State is carried twice: filled chip + heaviest
+     label, and only the chip is accent. */
   .ios-tabbar-item[aria-current="page"] {
-    color: var(--ios-accent-ink, #111111);
+    color: var(--ios-ink);
   }
 
   .ios-tabbar-item[aria-current="page"] .ios-tabbar-chip {
     background-color: var(--ios-accent);
-    color: #111111;
+    color: var(--ios-accent-ink);
   }
 
   .ios-tabbar-item[aria-current="page"] .ios-tabbar-label {
@@ -296,7 +304,7 @@
 
   .ios-tabbar-new .ios-tabbar-chip {
     background-color: var(--ios-accent);
-    color: #111;
+    color: var(--ios-accent-ink);
   }
 
   /* Anything pinned above the tab bar (save bars, sticky actions). */
