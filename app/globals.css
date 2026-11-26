@@ -212,6 +212,20 @@
   }
 
   /* Tab bar: 49 pt bar + home-indicator inset, content clears it. */
+  /*
+   * Header link inside a section row ("All 6", "Open in Logs"). The design draws
+   * these as plain 13 pt text, so they must stay text-sized visually — but a text
+   * link is an 18 pt tap. The negative margin pulls the 44 pt hit area back out of
+   * the row so the header keeps its designed height.
+   */
+  .ios-head-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin: -13px 0;
+    padding: 0 2px;
+  }
+
   .ios-tabbar-space {
     padding-bottom: calc(49px + env(safe-area-inset-bottom, 0px));
   }
@@ -262,12 +276,18 @@
     letter-spacing: 0.01em;
   }
 
-  /* The design fills the current tab's chip with the accent. The product keeps a
-     raised "New" action there instead, so the accent fill stays on that one
-     control — the reason the design gives for not filling a tab in the first
-     place — and the current tab is carried by colour and weight only. */
+  /* The design fills the current tab's chip with the accent
+     (`.tab.is-active .tab-ic { background: var(--accent) }`). With the raised
+     "New" action gone — it is the filled + in the nav bar now, which the brief
+     names as the alternative — the accent fill goes back where the design puts
+     it: on the chip of the current tab, with the label in ink on it. */
   .ios-tabbar-item[aria-current="page"] {
-    color: var(--ios-tint);
+    color: var(--ios-accent-ink, #111111);
+  }
+
+  .ios-tabbar-item[aria-current="page"] .ios-tabbar-chip {
+    background-color: var(--ios-accent);
+    color: #111111;
   }
 
   .ios-tabbar-item[aria-current="page"] .ios-tabbar-label {

@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 
 import { Glyph } from "./icons"
 
-/** 36 pt rounded search field with a clear button — native search, not an input box. */
+/** Search field — 44 pt tall, as the design's `.search` is (not 36). */
 export function SearchField({
   value,
   onChange,
@@ -16,7 +16,7 @@ export function SearchField({
   placeholder?: string
 }) {
   return (
-    <div className="mx-4 mb-2 flex min-h-[36px] items-center gap-2 rounded-[10px] bg-[rgba(118,118,128,.12)] px-2.5">
+    <div className="mx-4 mb-2 flex min-h-[44px] items-center gap-2 rounded-[10px] bg-[rgba(118,118,128,.12)] px-3">
       <Glyph name="search" size={16} className="shrink-0 text-[color:var(--ios-ink2)]" />
       <input
         value={value}
@@ -40,7 +40,11 @@ export function SearchField({
   )
 }
 
-/** Segmented control: 32 pt, 6 pt inset, moving thumb. */
+/**
+ * Segmented control — the design's `.seg--filled`: 2 pt inset, 13 pt outer radius,
+ * 11 pt thumb radius, and 44 pt buttons (`min-width: 44px` too, so a two-option
+ * control still clears the target size). The 32/28 pt version measured 28 pt taps.
+ */
 export function Segmented<T extends string>({
   options,
   value,
@@ -53,7 +57,7 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className="mx-4 mb-2 flex rounded-[9px] bg-[rgba(118,118,128,.12)] p-[2px]"
+      className="mx-4 mb-2 flex gap-[2px] rounded-[13px] bg-[rgba(118,118,128,.12)] p-[2px]"
     >
       {options.map((opt) => {
         const active = opt.value === value
@@ -63,7 +67,7 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`t-footnote min-h-[28px] flex-1 rounded-[7px] font-medium ${
+            className={`min-h-[44px] min-w-[44px] flex-1 rounded-[11px] text-[15px] font-semibold leading-5 ${
               active
                 ? "bg-[color:var(--ios-card)] text-[color:var(--ios-ink)] shadow-sm"
                 : "text-[color:var(--ios-ink2)]"

@@ -30,6 +30,7 @@ import {
   Skeleton as NativeSkeleton,
 } from "@/components/native/ui";
 import { SearchField, Segmented } from "@/components/native/controls";
+import { OfflineBar } from "@/components/native/OfflineBar";
 
 const ALL_PROJECTS = "all";
 
@@ -319,6 +320,46 @@ function WorkLogsPageContent() {
           ? "Last 30 days"
           : "All logs";
 
+    /**
+     * The design groups the list by month ("November 2026") whenever the period
+     * spans more than one — a field user scans for a date, not for a week number.
+     * The month period already is one group, so it keeps its single header.
+     */
+    const monthGroups = (() => {
+      const groups = new Map<string, typeof nativeLogs>();
+      for (const log of nativeLogs) {
+        const label = log.date
+          ? new Date(log.date).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+          : "Undated";
+        const list = groups.get(label) ?? [];
+        list.push(log);
+        groups.set(label, list);
+      }
+      return Array.from(groups.entries());
+    })();
+
+    const renderLogRow = (log: (typeof nativeLogs)[number]) => (
+      <Row
+        key={log._id}
+        href={`/worklogs/${log._id}`}
+        title={<span className="font-semibold">{getProjectName(log.project)}</span>}
+        subtitle={
+          <span className="block truncate text-[15px] leading-5">
+            {log.workDescription || "No description"}
+          </span>
+        }
+        trailing={
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            <Pill tone={nativeStatusTone(log.status)}>{nativeStatusLabel(log.status)}</Pill>
+            <span className="t-footnote tabular-nums text-[color:var(--ios-ink2)]">
+              {logDate(log.date)}
+            </span>
+          </span>
+        }
+        chevron
+      />
+    );
+
     return (
       <div className="pb-4">
         <LargeTitle
@@ -328,6 +369,11 @@ function WorkLogsPageContent() {
         >
           Logs
         </LargeTitle>
+
+        <OfflineBar>
+          No signal. The list shows what is on this phone; logs written now upload when you
+          reconnect.
+        </OfflineBar>
 
         <SearchField
           value={nativeQuery}
@@ -349,7 +395,7 @@ function WorkLogsPageContent() {
               </Btn>
             </Empty>
           </Section>
-        ) : (
+        ) : nativePeriod === "month" ? (
           <Section
             title={periodTitle}
             icon={periodIcon(nativePeriod)}
@@ -366,28 +412,14 @@ function WorkLogsPageContent() {
               ) : undefined
             }
           >
-            {nativeLogs.map((log) => (
-              <Row
-                key={log._id}
-                href={`/worklogs/${log._id}`}
-                title={<span className="font-semibold">{getProjectName(log.project)}</span>}
-                subtitle={
-                  <span className="block truncate text-[15px] leading-5">
-                    {log.workDescription || "No description"}
-                  </span>
-                }
-                trailing={
-                  <span className="flex shrink-0 flex-col items-end gap-1">
-                    <Pill tone={nativeStatusTone(log.status)}>{nativeStatusLabel(log.status)}</Pill>
-                    <span className="t-footnote tabular-nums text-[color:var(--ios-ink2)]">
-                      {logDate(log.date)}
-                    </span>
-                  </span>
-                }
-                chevron
-              />
-            ))}
+            {nativeLogs.map(renderLogRow)}
           </Section>
+        ) : (
+          monthGroups.map(([label, group]) => (
+            <Section key={label} title={label} icon="calendar">
+              {group.map(renderLogRow)}
+            </Section>
+          ))
         )}
       </div>
     );

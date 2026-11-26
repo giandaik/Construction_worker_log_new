@@ -18,6 +18,10 @@ interface RouteChrome {
 
 /** One place that decides the nav bar for every route, so titles cannot drift. */
 export function chromeFor(pathname: string): RouteChrome {
+  // A static-export bundle is loaded as `/calendar.html` when the file is opened
+  // directly (simulator install, a cold WebView load), and as `/calendar` after a
+  // client-side push. Normalise so both spellings pick the same chrome.
+  pathname = pathname.replace(/\.html$/, "") || "/"
   // Tab roots carry a large title of their own — repeating it in the bar is the
   // one thing the iOS grammar never does.
   if (pathname === "/app") return { title: "", newLog: true }
@@ -32,6 +36,7 @@ export function chromeFor(pathname: string): RouteChrome {
       back: true,
     }
   if (pathname === "/projects") return { title: "", newLog: true }
+  if (pathname === "/calendar") return { title: "Calendar", icon: "calendar", newLog: true }
   if (/^\/projects\/[^/]+\/calendar$/.test(pathname)) return { title: "Calendar", icon: "calendar", back: true }
   if (/^\/projects\/[^/]+\/edit$/.test(pathname)) return { title: "Edit site", icon: "pen", back: true }
   if (/^\/projects\/[^/]+$/.test(pathname)) return { title: "Site", icon: "pin", back: true }
@@ -84,9 +89,9 @@ export function NavBar() {
           <Link
             href="/logs/new"
             aria-label="New log"
-            className="ios-tap ml-auto flex items-center gap-1 pr-1 text-[color:var(--ios-tint)]"
+            className="ios-tap ml-auto flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--ios-accent)] text-[#111] shadow-sm"
           >
-            <Glyph name="plus" size={22} strokeWidth={2} />
+            <Glyph name="plus" size={21} strokeWidth={2} />
           </Link>
         ) : (
           <span className="ml-auto w-11" />

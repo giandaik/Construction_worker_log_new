@@ -14,8 +14,10 @@ import { apiFetch } from '@/lib/apiClient';
 import { isNativeBundle } from '@/lib/native-mode';
 import { toGreekUpperCase } from '@/lib/utils';
 import { useRouteId } from "@/lib/native-route";
+import { OfflineBar } from '@/components/native/OfflineBar';
 import {
   Btn,
+  Empty,
   Pill,
   Row,
   Section,
@@ -74,6 +76,13 @@ interface Project {
   materialUnits?: string[];
 }
 
+interface SiteLog {
+  _id: string;
+  date: string;
+  workDescription?: string;
+  status?: string;
+}
+
 export default function ProjectDetailPage() {
   const id = useRouteId();
 
@@ -81,6 +90,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [siteLogs, setSiteLogs] = useState<SiteLog[]>([]);
 
   useEffect(() => {
     // The native shell resolves the id from `?id=` after mount; wait for it
@@ -100,6 +110,27 @@ export default function ProjectDetailPage() {
       }
     };
     fetchProject();
+  }, [id]);
+
+  // The design's project screen leads with "3 logs on file · last 24/11/2026" and
+  // then lists them; the previous build only offered a link to the filtered list.
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    const fetchSiteLogs = async () => {
+      try {
+        const response = await apiFetch(`/api/worklogs?project=${id}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) setSiteLogs(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchSiteLogs();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const handleDwgChange = useCallback((dwgFiles: DwgFile[]) => {
@@ -171,15 +202,30 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="mx-4 mt-2 grid grid-cols-3 gap-2">
-          <Btn variant="secondary" href={`/projects/${project._id}/calendar`}>
-            Calendar
-          </Btn>
-          <Btn variant="secondary" href={`/worklogs?project=${project._id}`}>
-            History
-          </Btn>
-          <Btn variant="primary" href={`/logs/new?project=${project._id}`}>
-            New log
+        <OfflineBar>
+          No signal. This site&rsquo;s logs open from the phone; new logs upload later.
+        </OfflineBar>
+
+        <div className="mx-4 mt-3 overflow-hidden rounded-[10px] bg-[color:var(--ios-card)] ios-hairline">
+          <div className="flex divide-x divide-[color:var(--ios-sep)]">
+            <div className="flex-1 px-4 py-3">
+              <div className="t-title2 tabular-nums">{siteLogs.length}</div>
+              <div className="t-footnote t-secondary mt-0.5">
+                log{siteLogs.length === 1 ? "" : "s"} on file
+              </div>
+            </div>
+            <div className="flex-1 px-4 py-3">
+              <div className="t-title2 tabular-nums">
+                {siteLogs[0]?.date ? formatDate(siteLogs[0].date) : '—'}
+              </div>
+              <div className="t-footnote t-secondary mt-0.5">Last log</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 pt-4">
+          <Btn block href={`/logs/new?project=${project._id}`}>
+            New log for this site
           </Btn>
         </div>
 
@@ -189,18 +235,43 @@ export default function ProjectDetailPage() {
           action={
             <Link
               href={`/worklogs?project=${project._id}`}
-              className="t-footnote font-medium text-[color:var(--ios-tint)]"
+              className="ios-head-link t-footnote font-medium text-[color:var(--ios-tint)]"
             >
               Open in Logs
             </Link>
           }
         >
-          <Row
-            href={`/worklogs?project=${project._id}`}
-            chevron
-            title="All logs for this site"
-            subtitle="Every log recorded for this site, newest first."
-          />
+          {siteLogs.length === 0 ? (
+            <Empty
+              icon="doc"
+              title="No logs for this site"
+              text="The site is on file but nothing is recorded yet. Write the first log for it."
+            >
+              <Btn variant="secondary" href={`/logs/new?project=${project._id}`}>
+                Start a log
+              </Btn>
+            </Empty>
+          ) : (
+            siteLogs.slice(0, 5).map((log) => (
+              <Row
+                key={log._id}
+                href={`/worklogs/${log._id}`}
+                chevron
+                trailing={
+                  log.status ? (
+                    <Pill tone={statusTone(log.status)}>{statusLabel(log.status)}</Pill>
+                  ) : undefined
+                }
+              >
+                <div className="t-body truncate font-semibold leading-[22px] tabular-nums">
+                  {formatDate(log.date)}
+                </div>
+                <div className="t-subhead truncate leading-5 text-[color:var(--ios-ink2)]">
+                  {log.workDescription?.split("\n")[0] || 'No description'}
+                </div>
+              </Row>
+            ))
+          )}
         </Section>
 
         {hasDetails && (

@@ -15,33 +15,36 @@ interface TabItem {
   label: string
   icon: GlyphName
   match: (path: string) => boolean
-  isAction?: boolean
 }
 
+/**
+ * The design's five sections, in its own order (`screens/*.html` → `nav.tabbar`:
+ * Home · Logs · Sites · Calendar · Profile). Five equal slots, no raised action:
+ * "New log" is the filled 44 pt + in the nav bar, which is the option the brief
+ * names as the alternative to a centre action, and the sixth slot cannot hold a
+ * calendar without breaking the 5-item grid the design draws.
+ */
 const TABS: TabItem[] = [
   { href: "/app", label: "Home", icon: "home", match: (p) => p === "/app" },
   { href: "/worklogs", label: "Logs", icon: "logs", match: (p) => p.startsWith("/worklogs") },
-  { href: "/logs/new", label: "New", icon: "plus", match: (p) => p.startsWith("/logs/new"), isAction: true },
   { href: "/projects", label: "Sites", icon: "sites", match: (p) => p.startsWith("/projects") },
+  { href: "/calendar", label: "Calendar", icon: "calendar", match: (p) => p.startsWith("/calendar") },
 ]
 
 /**
  * iOS tab bar for the Capacitor shell: 49 pt + home-indicator inset, hairline
- * top, one accent tint for the active item, and a raised centre action for the
- * only thing a field user does every day — open a new log.
- *
- * The Calendar tab from the design brief is deliberately absent: the product has
- * no global calendar route (it is per project), so the calendar lives behind
- * Sites → project, and the fifth slot carries Account instead.
+ * top, and the current tab carried by the accent-filled chip the design draws
+ * (`.tab.is-active .tab-ic`). Profile is the fifth slot and opens the account
+ * sheet in place, exactly as the design's own bar does.
  */
 export function TabBar() {
   const pathname = usePathname() || ""
   const { user } = useCurrentUser()
 
-  // Warm the two GETs the Logs tab needs while the user is still looking at
-  // whatever brought them here. Inside the WebView each of those calls costs a
-  // cross-origin round trip, and this is what turns the Logs tap into an
-  // instant paint instead of a skeleton.
+  // Warm the two GETs the Logs and Calendar tabs need while the user is still
+  // looking at whatever brought them here. Inside the WebView each of those
+  // calls costs a cross-origin round trip, and this is what turns the tap into
+  // an instant paint instead of a skeleton.
   useEffect(() => {
     const timer = setTimeout(() => {
       prefetchJson("worklogs:all", "/api/worklogs")
@@ -70,22 +73,6 @@ export function TabBar() {
         {TABS.map((tab) => {
           const active = tab.match(pathname)
 
-          if (tab.isAction) {
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                aria-label="New log"
-                className="ios-tabbar-item ios-tabbar-new"
-              >
-                <span className="ios-tabbar-chip">
-                  <Glyph name={tab.icon} size={20} strokeWidth={2} />
-                </span>
-                <span className="ios-tabbar-label">{tab.label}</span>
-              </Link>
-            )
-          }
-
           return (
             <Link
               key={tab.href}
@@ -105,11 +92,11 @@ export function TabBar() {
           <AccountSheet
             admin={admin}
             trigger={
-              <button type="button" aria-label="Account" className="ios-tabbar-item">
+              <button type="button" aria-label="Profile" className="ios-tabbar-item">
                 <span className="ios-tabbar-chip">
                   <Glyph name="profile" size={21} />
                 </span>
-                <span className="ios-tabbar-label">Account</span>
+                <span className="ios-tabbar-label">Profile</span>
               </button>
             }
           />
