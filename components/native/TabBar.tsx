@@ -7,7 +7,6 @@ import { FileText, FolderOpen, House, Plus, User } from "lucide-react"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { isAdminRole, isPlatformUser } from "@/components/layout/navConfig"
 import { AccountSheet } from "./AccountSheet"
-import { useSafeInset } from "./useSafeInset"
 
 interface TabItem {
   href: string
@@ -35,7 +34,6 @@ const TABS: TabItem[] = [
  */
 export function TabBar() {
   const pathname = usePathname() || ""
-  const safeBottom = useSafeInset("bottom")
   const { user } = useCurrentUser()
 
   const accountVisible = !isPlatformUser(user?.platformRole)
@@ -44,8 +42,15 @@ export function TabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="safe-b fixed inset-x-0 bottom-0 z-40 border-t bg-[color:var(--ios-card)]/95 backdrop-blur-xl"
-      style={{ borderColor: "var(--ios-sep)", paddingBottom: safeBottom || undefined }}
+      /*
+       * In flow, at the bottom of the shell column — not fixed. Only the middle
+       * pane scrolls, so there is nothing for the bar to drift against. The
+       * home-indicator inset comes from env() alone: the old JS-measured inset
+       * disagreed with the CSS spacer, and the two together are what pushed the
+       * bar off the bottom edge.
+       */
+      className="shrink-0 border-t bg-[color:var(--ios-card)]"
+      style={{ borderColor: "var(--ios-sep)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="mx-auto flex h-[49px] max-w-md items-stretch justify-around px-1">
         {TABS.map((tab) => {

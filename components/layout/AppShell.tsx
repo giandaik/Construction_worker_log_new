@@ -38,10 +38,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (isNativeBundle()) {
     return (
       <NativeRouteBridge>
-        <div className="ios-surface min-h-dvh">
+        {/*
+         * A real iOS shell: a viewport-height column of nav / scrolling content /
+         * tab bar. The tab bar used to be `position: fixed; bottom: 0` over a
+         * document scroller, which WKWebView re-anchors while the page bounces and
+         * while `dvh` settles — the bar visibly drifts and can end up floating
+         * above the home indicator with list rows showing underneath. In flow it
+         * cannot move: the column owns the height and only the middle pane scrolls.
+         */}
+        <div className="ios-surface flex h-[100dvh] flex-col overflow-hidden">
           <AndroidBackButton />
           <NavBar />
-          <div className="ios-tabbar-space mx-auto max-w-md">{children}</div>
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</main>
           <TabBar />
         </div>
       </NativeRouteBridge>
