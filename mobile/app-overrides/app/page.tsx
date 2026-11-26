@@ -27,6 +27,50 @@ import { apiFetch } from "@/lib/apiClient"
 
 const RECENT_LOGS_SHOWN = 6
 
+/**
+ * Last dashboard the server sent, kept so the screen has something to draw
+ * before the network answers.
+ *
+ * The shell re-opens on the same device all day; the data behind it changes
+ * when the user adds a log, which is rare compared with how often the screen is
+ * looked at. Painting the previous answer and refreshing behind it turns a
+ * ~0.6 s wait into no wait, and the refresh still lands within the same second.
+ * A payload that fails to parse is ignored — a cache miss is the safe state.
+ */
+const DASHBOARD_CACHE_KEY = "cwl.dashboard.v1"
+
+interface DashboardSnapshot {
+  projects: DashboardProject[]
+  workLogs: DashboardWorkLog[]
+  totalLogs: number
+}
+
+function readDashboardCache(): DashboardSnapshot | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<DashboardSnapshot>
+    if (!Array.isArray(parsed.projects) || !Array.isArray(parsed.workLogs)) return null
+    return {
+      projects: parsed.projects,
+      workLogs: parsed.workLogs,
+      totalLogs: typeof parsed.totalLogs === "number" ? parsed.totalLogs : parsed.workLogs.length,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeDashboardCache(snapshot: DashboardSnapshot): void {
+  try {
+    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(snapshot))
+  } catch {
+    // A full or disabled localStorage costs the next open its head start and
+    // nothing else — the fetch below is the real source of truth.
+  }
+}
+
 const STATUS_TONES: Record<string, "ok" | "warn" | "plan" | "draft"> = {
   submitted: "ok",
   completed: "ok",
@@ -54,25 +98,41 @@ interface DashboardWorkLog extends Omit<WorkLog, "_id" | "project"> {
 
 export default function MobileHomePage() {
   const { user } = useCurrentUser()
-  const [projects, setProjects] = useState<DashboardProject[]>([])
-  const [workLogs, setWorkLogs] = useState<DashboardWorkLog[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Read once, on first render: a cache hit means the first frame already has
+  // the counters and the recent list, so the skeleton is never shown for a
+  // device that has opened the screen before.
+  const [snapshot] = useState(readDashboardCache)
+  const [projects, setProjects] = useState<DashboardProject[]>(snapshot?.projects ?? [])
+  const [workLogs, setWorkLogs] = useState<DashboardWorkLog[]>(snapshot?.workLogs ?? [])
+  const [totalLogs, setTotalLogs] = useState<number>(snapshot?.totalLogs ?? (snapshot?.workLogs.length ?? 0))
+  const [isLoading, setIsLoading] = useState(snapshot === null)
 
   useEffect(() => {
     let isActive = true
 
     async function loadDashboard() {
       try {
-        const [projectsRes, workLogsRes] = await Promise.all([
-          apiFetch("/api/projects"),
-          apiFetch("/api/worklogs"),
-        ])
+        // One request, not three: the route reads the same rows in parallel
+        // behind a single auth check (see app/api/dashboard/route.ts).
+        const response = await apiFetch("/api/dashboard")
 
-        if (!isActive) return
+        if (!isActive || !response.ok) return
 
-        if (projectsRes.ok) setProjects(await projectsRes.json())
-        if (workLogsRes.ok) setWorkLogs(await workLogsRes.json())
+        const data = (await response.json()) as Partial<DashboardSnapshot>
+        if (!Array.isArray(data.projects) || !Array.isArray(data.workLogs)) return
+
+        const next: DashboardSnapshot = {
+          projects: data.projects,
+          workLogs: data.workLogs,
+          totalLogs: typeof data.totalLogs === "number" ? data.totalLogs : data.workLogs.length,
+        }
+
+        setProjects(next.projects)
+        setWorkLogs(next.workLogs)
+        setTotalLogs(next.totalLogs)
+        writeDashboardCache(next)
       } catch (error) {
+        // Offline keeps the cached screen; the offline bar already says so.
         console.error("Error loading dashboard:", error)
       } finally {
         if (isActive) setIsLoading(false)
@@ -137,7 +197,7 @@ export default function MobileHomePage() {
 
           <Section>
             <div className="flex divide-x divide-[color:var(--ios-sep)]">
-              <Stat value={String(workLogs.length)} label="Work logs" icon="logs" />
+              <Stat value={String(totalLogs)} label="Work logs" icon="logs" />
               <Stat value={String(projects.length)} label="Sites" icon="sites" />
             </div>
             <div className="mx-4 h-px bg-[color:var(--ios-sep)]" />
@@ -153,7 +213,7 @@ export default function MobileHomePage() {
             action={
               workLogs.length > 0 ? (
                 <Link href="/worklogs" className="ios-head-link t-footnote text-[color:var(--ios-tint)]">
-                  All {workLogs.length}
+                  All {totalLogs}
                 </Link>
               ) : undefined
             }

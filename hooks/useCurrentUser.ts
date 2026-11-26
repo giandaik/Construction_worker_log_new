@@ -1,7 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/apiClient';
+/**
+ * The current identity, read from the session provider instead of fetched.
+ *
+ * This hook used to call `/api/auth/me` on every mount, and it is mounted by
+ * the tab bar, the nav bar, the account sheet and the screen itself — four
+ * requests for one answer, each paying a round trip inside the WebView. The
+ * provider in `components/auth-context.tsx` already holds that answer for the
+ * session and refetches it when the token changes, so this hook is now a read.
+ */
+
+import { useCurrentUser as useSessionUser } from '@/components/auth-context';
 
 export interface CurrentUser {
   userId: string;
@@ -14,33 +23,13 @@ export interface CurrentUser {
 }
 
 export const useCurrentUser = () => {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isLoading } = useSessionUser();
 
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiFetch('/api/auth/me');
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch current user: ${response.statusText}`);
-        }
-
-        const data = await response.json();    
-        setUser(data);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch user';
-        setError(message);
-        console.error('Error fetching current user:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
-
-  return { user, isLoading, error };
+  return {
+    user: (user as CurrentUser | null) ?? null,
+    isLoading,
+    // Kept for the callers that branch on it; an identity that could not be
+    // read is `null`, which is the state they already handle.
+    error: null as string | null,
+  };
 };
