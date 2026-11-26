@@ -38,6 +38,31 @@ npm run version:check    # CI gate
      public link, a contact email.
 7. Every tester installs the **TestFlight** app and accepts the invite.
 
+### Your own iPhone, free (personal team)
+
+A free Apple Account signs through a **Personal Team** instead of the paid program: 3 devices,
+10 App IDs, 3 apps per device, and every profile expires **7 days** after it is issued — the app
+stops launching and must be re-signed. That makes it a way to carry your own build around, not a
+way to give a tester an install.
+
+```bash
+bash scripts/ios-personal-install.sh          # builds, signs, installs to the connected iPhone
+```
+
+The script reads the team id from the keychain's `Apple Development` identity, finds the phone
+through `devicectl` (simulators report `transportType: sameMachine` and are ignored), builds with
+`-allowProvisioningUpdates` so Xcode creates the 7-day profile itself, and installs the `.app`.
+Overrides: `--team <TEAMID>`, `--device <UDID>`, or `APPLE_PERSONAL_TEAM_ID` / `IOS_DEVICE_UDID`.
+
+One-time setup on the phone: plug it in, **Trust**, then Settings → Privacy & Security →
+**Developer Mode** on, restart. First launch asks you to trust the developer under
+Settings → General → VPN & Device Management.
+
+The `APPLE_*` secrets and the Firebase IPA job above are unrelated to this: they need the paid
+program (ad-hoc profiles are built on registered UDIDs and the $99 fee covers the distribution
+certificate). The fee waiver covers nonprofits, accredited schools and government entities only —
+it explicitly excludes individuals and single-person businesses.
+
 ### Ad-hoc (no TestFlight, no review)
 
 Register each tester's device UDID in the portal (Devices → +), create an **Ad Hoc** provisioning
