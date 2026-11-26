@@ -254,14 +254,31 @@ class Sheet {
   }
 
   /** Start a continuation page: the strip stays, the brand block does not. */
-  newPage(continuation: { title: string; meta: string }) {
+  newPage(continuation: { title: string; meta: string; projectName: string; dateLabel: string; status: BadgeSpec }) {
     this.doc.addPage();
     this.hazard();
-    this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
-    this.text(continuation.title, this.left, 10.5);
-    this.text(continuation.meta, this.right, 10.5, { align: 'right' });
-    this.hairline(13);
-    this.y = 20;
+    this.recordBar(continuation.projectName, continuation.dateLabel, continuation.status);
+    this.y = 31.5;
+  }
+
+  recordBar(projectName: string, dateLabel: string, status: BadgeSpec) {
+    const top = 8;
+    const h = 19;
+    this.fill(pdfColors.paper).stroke(pdfColors.rule, 0.25);
+    this.doc.roundedRect(this.left, top, this.contentW, h, 2, 2, 'FD');
+
+    const projectW = this.contentW * 0.58;
+
+    this.label('Project', this.left + 4, top + 5.2);
+    this.font(600, TYPE.title).ink(pdfColors.ink);
+    this.text(this.fitLine(projectName, projectW - 8), this.left + 4, top + 12.8);
+
+    const dateX = this.left + projectW;
+    this.label('Date', dateX, top + 5.2);
+    this.font(600, TYPE.title).ink(pdfColors.ink);
+    this.text(dateLabel, dateX, top + 12.8);
+
+    this.badgeAt(status, this.right - 4, top + 6.7);
   }
 
   /** Fail-safe page break: keeps a block of `height` mm on one page. */
@@ -446,6 +463,7 @@ class Sheet {
     columns: Array<{ label: string; width: number; align?: 'left' | 'right' }>;
     rows: string[][];
     emptyLabel?: string;
+    footerText?: string;
   }) {
     const headerH = 6.4;
     const rowH = 7;
@@ -501,97 +519,97 @@ class Sheet {
       drawRow(cells);
     });
     this.y += 3.2;
+    if (config.footerText) {
+      this.ensure(5.2, () => this.onBreak());
+      this.chipAt(config.footerText, this.right, this.y - 1);
+      this.y += 5.2;
+    }
   }
 
   async photos(sources: string[], load: (src: string) => Promise<string | null>) {
-    const frameW = (this.contentW - 6) / 2;
-    const frameH = 58;
-    const rowH = frameH + 7;
+    const frameW = this.contentW;
+    const frameH = 82;
+    const rowH = frameH + 8;
 
-    for (let index = 0; index < sources.length; index += 2) {
+    for (let index = 0; index < sources.length; index += 1) {
       this.ensure(rowH, () => this.onBreak());
       const rowTop = this.y;
-      const pair = sources.slice(index, index + 2);
+      this.fill(pdfColors.paperWarm).stroke(pdfColors.rule, 0.2);
+      this.doc.roundedRect(this.left, rowTop, frameW, frameH, 2, 2, 'FD');
 
-      for (let slot = 0; slot < pair.length; slot += 1) {
-        const x = this.left + slot * (frameW + 6);
-        this.fill(pdfColors.paperWarm).stroke(pdfColors.rule, 0.2);
-        this.doc.rect(x, rowTop, frameW, frameH, 'FD');
-
-        const dataUrl = await load(pair[slot]);
-        if (dataUrl) {
-          try {
-            const props = this.doc.getImageProperties(dataUrl);
-            const scale = Math.min((frameW - 3) / props.width, (frameH - 3) / props.height);
-            const drawW = props.width * scale;
-            const drawH = props.height * scale;
-            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
-            this.doc.addImage(
-              dataUrl, format,
-              x + (frameW - drawW) / 2, rowTop + (frameH - drawH) / 2,
-              drawW, drawH,
-            );
-          } catch {
-            this.font(400, TYPE.caption).ink(pdfColors.redInk);
-            this.text('Photo could not be embedded', x + frameW / 2, rowTop + frameH / 2, { align: 'center' });
-          }
-        } else {
-          this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
-          this.text('Photo unavailable at export', x + frameW / 2, rowTop + frameH / 2, { align: 'center' });
+      const dataUrl = await load(sources[index]);
+      if (dataUrl) {
+        try {
+          const props = this.doc.getImageProperties(dataUrl);
+          const scale = Math.min((frameW - 6) / props.width, (frameH - 6) / props.height);
+          const drawW = props.width * scale;
+          const drawH = props.height * scale;
+          const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+          this.doc.addImage(
+            dataUrl, format,
+            this.left + (frameW - drawW) / 2, rowTop + (frameH - drawH) / 2,
+            drawW, drawH,
+          );
+        } catch {
+          this.font(400, TYPE.caption).ink(pdfColors.redInk);
+          this.text('Photo could not be embedded', this.left + frameW / 2, rowTop + frameH / 2, { align: 'center' });
         }
-
+      } else {
         this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
-        this.text(`Photo ${String(index + slot + 1).padStart(2, '0')}`, x, rowTop + frameH + 4);
+        this.text('Photo unavailable at export', this.left + frameW / 2, rowTop + frameH / 2, { align: 'center' });
       }
+
+      this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
+      this.text(`Photo ${String(index + 1).padStart(2, '0')}`, this.left + 4, rowTop + frameH + 5);
       this.y = rowTop + rowH;
     }
     this.y += 1;
   }
 
   signatures(signatures: SheetSignature[], timeZone: string, locked: boolean) {
-    const boxW = (this.contentW - 6) / 2;
-    const boxH = 40;
-    const strokeH = 15;
+    const boxH = 26;
+    const strokeW = this.contentW * 0.5;
+    const leftW = this.contentW - strokeW;
 
-    for (let index = 0; index < signatures.length; index += 2) {
-      this.ensure(boxH + 12, () => this.onBreak());
+    for (let index = 0; index < signatures.length; index += 1) {
+      this.ensure(boxH + 6, () => this.onBreak());
       const top = this.y;
-      const pair = signatures.slice(index, index + 2);
+      const signature = signatures[index];
+      const party = partyLabel(signature);
+      const strokeX = this.left + leftW;
 
-      pair.forEach((signature, slot) => {
-        const x = this.left + slot * (boxW + 6);
-        const party = partyLabel(signature);
+      this.fill(pdfColors.paper).stroke(pdfColors.rule, 0.25);
+      this.doc.roundedRect(this.left, top, this.contentW, boxH, 2, 2, 'FD');
+      this.stroke(pdfColors.rule, 0.2);
+      this.doc.line(this.left + leftW, top + 2.5, this.left + leftW, top + boxH - 2.5);
 
-        this.label(party, x, top + 3.6);
-        this.font(600, 10).ink(pdfColors.ink);
-        this.text(signature.signedBy?.trim() || 'Unsigned', x, top + 9.4);
+      this.label(party, this.left + 4, top + 6);
+      this.font(600, 10).ink(pdfColors.ink);
+      this.text(signature.signedBy?.trim() || 'Unsigned', this.left + 4, top + 13);
+      this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
+      this.text(`Date: ${formatSheetDateTime(signature.signedAt, timeZone)}`, this.left + 4, top + 20);
 
-        // The stroke area is a fixed height so a photo of a signature never
-        // moves the sheet.
-        const strokeTop = top + 12;
-        this.stroke(pdfColors.rule, 0.2).doc.rect(x, strokeTop, boxW, strokeH, 'S');
-        if (signature.data) {
-          try {
-            const props = this.doc.getImageProperties(signature.data);
-            const scale = Math.min((boxW - 2) / props.width, (strokeH - 2) / props.height);
-            this.doc.addImage(
-              signature.data, signature.data.includes('image/jpeg') ? 'JPEG' : 'PNG',
-              x + (boxW - props.width * scale) / 2,
-              strokeTop + (strokeH - props.height * scale) / 2,
-              props.width * scale, props.height * scale,
-            );
-          } catch {
-            this.font(400, TYPE.caption).ink(pdfColors.redInk);
-            this.text('Signature could not be embedded', x + boxW / 2, strokeTop + strokeH / 2, { align: 'center' });
-          }
+      if (signature.data) {
+        try {
+          const props = this.doc.getImageProperties(signature.data);
+          const scale = Math.min((strokeW - 8) / props.width, (boxH - 5) / props.height);
+          this.doc.addImage(
+            signature.data, signature.data.includes('image/jpeg') ? 'JPEG' : 'PNG',
+            strokeX + (strokeW - props.width * scale) / 2,
+            top + (boxH - props.height * scale) / 2,
+            props.width * scale,
+            props.height * scale,
+          );
+        } catch {
+          this.font(400, TYPE.caption).ink(pdfColors.redInk);
+          this.text('Signature could not be embedded', strokeX + strokeW / 2, top + boxH / 2, { align: 'center' });
         }
-        this.hairline(strokeTop + strokeH, { color: pdfColors.ink, width: 0.3, x1: x, x2: x + boxW });
-
+      } else {
         this.font(400, TYPE.caption).ink(pdfColors.inkSoft);
-        this.text(`Signed ${formatSheetDateTime(signature.signedAt, timeZone)}`, x, strokeTop + strokeH + 5);
-      });
+        this.text('Unsigned', strokeX + strokeW / 2, top + boxH / 2, { align: 'center' });
+      }
 
-      this.y = top + boxH + 2;
+      this.y = top + boxH + 4;
     }
 
     if (locked) {
@@ -661,7 +679,14 @@ export async function renderWorkLogSheet(
   const sheet = new Sheet(doc);
   const projectName = workLog.projectName?.trim() || String(workLog.project ?? '').trim() || 'Untitled project';
   const dateLabel = formatSheetDate(workLog.date, timeZone);
-  const continuation = { title: 'WORK LOG', meta: `${projectName} · ${dateLabel}` };
+  const status = badgeFor(workLog.status);
+  const continuation = {
+    title: 'WORK LOG',
+    meta: `${projectName} · ${dateLabel}`,
+    projectName,
+    dateLabel,
+    status,
+  };
   sheet.onBreak = () => sheet.newPage(continuation);
 
   /* ---- page 1 header ---- */
@@ -682,7 +707,6 @@ export async function renderWorkLogSheet(
 
   /* ---- meta row ---- */
   const metaTop = sheet.y + 4;
-  const status = badgeFor(workLog.status);
   const locked = status.label === 'Signed';
 
   const dateX = sheet.left + sheet.contentW * 0.55;
@@ -758,7 +782,7 @@ export async function renderWorkLogSheet(
   /* ---- personnel ---- */
   if (workLog.personnel?.length) {
     const totalPeople = workLog.personnel.reduce((sum, row) => sum + (row.count || 0), 0);
-    sheet.heading('Personnel', 16, `${totalPeople} crew`);
+    sheet.heading('Personnel', 16);
     sheet.table({
       columns: [
         { label: 'Role', width: 55 },
@@ -770,13 +794,13 @@ export async function renderWorkLogSheet(
         String(row.count ?? 0),
         row.workDetails?.trim() || '—',
       ]),
+      footerText: `Total personnel: ${totalPeople}`,
     });
   }
 
   /* ---- equipment ---- */
   if (workLog.equipment?.length) {
-    const totalHours = workLog.equipment.reduce((sum, row) => sum + (row.hours || 0), 0);
-    sheet.heading('Equipment', 16, totalHours > 0 ? `${totalHours} h` : `${workLog.equipment.length} items`);
+    sheet.heading('Equipment', 16);
     sheet.table({
       columns: [
         { label: 'Type', width: 118 },
