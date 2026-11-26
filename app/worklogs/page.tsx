@@ -17,7 +17,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, Plus } from "lucide-react";
 import { FORM_STATUS, FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/constants/constantValues";
-import { apiFetch } from "@/lib/apiClient";
+import { fetchJsonCached } from "@/lib/cachedApi";
+import { peekCached } from "@/lib/apiCache";
 import { isNativeBundle } from "@/lib/native-mode";
 import {
   Btn,
@@ -77,19 +78,40 @@ interface Project {
 }
 
 
+/* ---------- Cache keys ---------- */
+
+/** Per-project list, so switching the filter paints the list it already has. */
+function workLogCacheKey(projectId: string): string {
+  return `worklogs:${projectId || "all"}`;
+}
+
+const PROJECTS_CACHE_KEY = "projects";
+
+/** Projects change rarely; a prefetch inside this window issues no request. */
+const PROJECTS_MAX_AGE_MS = 5 * 60_000;
+
 function WorkLogsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project') || '';
   const fromParam = searchParams.get('from') || '';
   const toParam = searchParams.get('to') || '';
-  const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  // Seeded from the cache in the initialisers: a returning visit renders its
+  // rows on the first paint instead of a full-page skeleton. The fetch below
+  // still runs and replaces them, so the list is never stale for long.
+  const [workLogs, setWorkLogs] = useState<WorkLog[]>(
+    () => peekCached<WorkLog[]>(workLogCacheKey(projectIdParam)) ?? []
+  );
+  const [projects, setProjects] = useState<Project[]>(
+    () => peekCached<Project[]>(PROJECTS_CACHE_KEY) ?? []
+  );
   const [project, setProject] = useState<Project | null>(null);
   const [filterProjectId, setFilterProjectId] = useState<string>(projectIdParam);
   const [fromDate, setFromDate] = useState<string>(fromParam);
   const [toDate, setToDate] = useState<string>(toParam);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    () => peekCached<WorkLog[]>(workLogCacheKey(projectIdParam)) === null
+  );
   const [error, setError] = useState<string | null>(null);
   // Native-only, presentation state: the search field and period segment narrow
   // the rows that were already fetched. No URL, query or API involvement.
@@ -100,27 +122,30 @@ function WorkLogsPageContent() {
 
   useEffect(() => {
     const fetchWorkLogs = async () => {
-      try {
+      const cacheKey = workLogCacheKey(filterProjectId);
+      const cached = peekCached<WorkLog[]>(cacheKey);
+
+      // Warm cache: paint it now, refresh behind the user's back. Cold cache:
+      // this is the only path that shows the skeleton.
+      if (cached) {
+        setWorkLogs(cached);
+        setIsLoading(false);
+      } else {
         setIsLoading(true);
+      }
+
+      try {
         const url = filterProjectId ? `/api/worklogs?project=${filterProjectId}` : '/api/worklogs';
-        const [workLogsResponse, projectsResponse] = await Promise.all([
-          apiFetch(url),
-          apiFetch('/api/projects')
+        // Cached and de-duplicated: a prefetch from the tab bar usually means
+        // this resolves without a request at all.
+        const [workLogsData, projectsData] = await Promise.all([
+          fetchJsonCached<WorkLog[]>(cacheKey, url),
+          fetchJsonCached<Project[]>(PROJECTS_CACHE_KEY, '/api/projects'),
         ]);
-
-        if (!workLogsResponse.ok) {
-          throw new Error('Failed to fetch work logs');
-        }
-
-        if (!projectsResponse.ok) {
-          throw new Error('Failed to fetch projects');
-        }
-
-        const workLogsData = await workLogsResponse.json();
-        const projectsData = await projectsResponse.json();
 
         setWorkLogs(workLogsData);
         setProjects(projectsData);
+        setError(null);
 
         if (filterProjectId) {
           const foundProject = projectsData.find((p: Project) => p._id === filterProjectId);
@@ -130,7 +155,9 @@ function WorkLogsPageContent() {
         }
       } catch (error) {
         console.error('Error fetching work logs:', error);
-        setError('Failed to load work logs');
+        // A cached list is better than an error screen: only report failure
+        // when there is nothing to show.
+        if (!cached) setError('Failed to load work logs');
       } finally {
         setIsLoading(false);
       }

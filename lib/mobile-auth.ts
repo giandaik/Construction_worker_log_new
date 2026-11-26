@@ -51,7 +51,19 @@ async function getPreferences() {
   }
 }
 
-export async function getMobileToken(): Promise<string | null> {
+/**
+ * Session-level memo for the token.
+ *
+ * `getMobileToken()` is awaited by every `apiFetch` on mobile, and each call
+ * crosses the bridge into `Preferences.get()` — a round trip per request, on
+ * top of the request itself. The token cannot change behind our back (writes
+ * go through `setMobileToken`/`clearMobileToken` below, which refresh this),
+ * so one read per launch is enough.
+ */
+let tokenCache: { value: string | null } | null = null;
+let tokenInFlight: Promise<string | null> | null = null;
+
+async function readTokenOnce(): Promise<string | null> {
   const preferences = await getPreferences();
   if (!preferences) return null;
 
@@ -64,7 +76,26 @@ export async function getMobileToken(): Promise<string | null> {
   }
 }
 
+export async function getMobileToken(): Promise<string | null> {
+  if (tokenCache) return tokenCache.value;
+
+  if (!tokenInFlight) {
+    tokenInFlight = readTokenOnce()
+      .then((value) => {
+        tokenCache = { value };
+        return value;
+      })
+      .finally(() => {
+        tokenInFlight = null;
+      });
+  }
+
+  return tokenInFlight;
+}
+
 export async function setMobileToken(token: string): Promise<void> {
+  tokenCache = { value: token };
+  tokenInFlight = null;
   const preferences = await getPreferences();
   if (!preferences) return;
 
@@ -78,6 +109,8 @@ export async function setMobileToken(token: string): Promise<void> {
 }
 
 export async function clearMobileToken(): Promise<void> {
+  tokenCache = { value: null };
+  tokenInFlight = null;
   const preferences = await getPreferences();
   if (!preferences) return;
 

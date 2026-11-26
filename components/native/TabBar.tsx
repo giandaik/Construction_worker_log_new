@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { FileText, FolderOpen, House, Plus, User } from "lucide-react"
 
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { isAdminRole, isPlatformUser } from "@/components/layout/navConfig"
+import { prefetchJson } from "@/lib/cachedApi"
 import { AccountSheet } from "./AccountSheet"
 
 interface TabItem {
@@ -35,6 +37,18 @@ const TABS: TabItem[] = [
 export function TabBar() {
   const pathname = usePathname() || ""
   const { user } = useCurrentUser()
+
+  // Warm the two GETs the Logs tab needs while the user is still looking at
+  // whatever brought them here. Inside the WebView each of those calls costs a
+  // cross-origin round trip, and this is what turns the Logs tap into an
+  // instant paint instead of a skeleton.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      prefetchJson("worklogs:all", "/api/worklogs")
+      prefetchJson("projects", "/api/projects", 5 * 60_000)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const accountVisible = !isPlatformUser(user?.platformRole)
   const admin = isAdminRole(user?.role) && !isPlatformUser(user?.platformRole)
