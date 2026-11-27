@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, History, MapPin, PlusCircle, Search, UserRound } from "lucide-react";
+import { CalendarDays, History, PlusCircle, Search, UserRound } from "lucide-react";
+import { LocationLink } from "@/components/LocationLink";
 import { Glyph } from "@/components/native/icons";
 import { toGreekUpperCase } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiClient";
@@ -38,6 +39,8 @@ interface Project {
   name: string;
   description?: string;
   location?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   startDate?: string;
   endDate?: string;
   status?: string;
@@ -461,9 +464,13 @@ export default function ProjectsPage() {
                 {(project.location || project.manager) && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {project.location && (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" aria-hidden /> {project.location}
-                      </span>
+                      <LocationLink
+                        location={project.location}
+                        latitude={project.latitude}
+                        longitude={project.longitude}
+                        iconClassName="h-3.5 w-3.5"
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      />
                     )}
                     {project.manager && (
                       <span className="inline-flex items-center gap-1">

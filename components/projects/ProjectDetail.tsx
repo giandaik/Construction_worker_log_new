@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, History, PlusCircle, Pencil, MapPin } from 'lucide-react';
+import { CalendarDays, History, PlusCircle, Pencil } from 'lucide-react';
+import { LocationLink } from '@/components/LocationLink';
 import { DwgUpload, type DwgFile } from '@/components/forms/DwgUpload';
 import { ProjectMap } from '@/components/projects/ProjectMap';
 import { ProjectCatalogManager } from '@/components/projects/ProjectCatalogManager';
@@ -199,10 +200,13 @@ export function ProjectDetail({ id, pane = false }: { id: string | null; pane?: 
             {project.status ? (
               <Pill tone={statusTone(project.status)}>{statusLabel(project.status)}</Pill>
             ) : null}
-            <span className="t-footnote flex min-w-0 items-center gap-1 text-[color:var(--ios-ink2)]">
-              <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate">{project.location ?? 'No location yet'}</span>
-            </span>
+            <LocationLink
+              location={project.location}
+              latitude={project.latitude}
+              longitude={project.longitude}
+              className="t-footnote flex min-w-0 items-center gap-1 text-[color:var(--ios-ink2)]"
+              iconClassName="h-3 w-3"
+            />
           </div>
         </div>
 
@@ -382,7 +386,18 @@ export function ProjectDetail({ id, pane = false }: { id: string | null; pane?: 
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {project.description && <p><strong>Description:</strong> {project.description}</p>}
-          {project.location && <p><strong>Location:</strong> {project.location}</p>}
+          {project.location && (
+            <p>
+              <strong>Location:</strong>{' '}
+              <LocationLink
+                location={project.location}
+                latitude={project.latitude}
+                longitude={project.longitude}
+                iconClassName="h-3.5 w-3.5"
+                className="inline-flex items-center gap-1"
+              />
+            </p>
+          )}
           {project.latitude != null && project.longitude != null && (
             <div className="pt-2">
               <ProjectMap latitude={project.latitude} longitude={project.longitude} />
