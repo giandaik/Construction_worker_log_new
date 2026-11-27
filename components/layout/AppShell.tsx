@@ -6,6 +6,7 @@ import { Navbar } from "./Navbar"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { NavBar } from "@/components/native/NavBar"
 import { TabBar } from "@/components/native/TabBar"
+import { Rail } from "@/components/native/Rail"
 import { NativeRouteBridge } from "@/components/native/NativeRouteBridge"
 import { AndroidBackButton } from "@/components/native/AndroidBackButton"
 
@@ -46,11 +47,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
          * above the home indicator with list rows showing underneath. In flow it
          * cannot move: the column owns the height and only the middle pane scrolls.
          */}
-        <div className="ios-surface flex h-[100dvh] flex-col overflow-hidden">
+        <div className="ios-surface native-shell flex h-[100dvh] overflow-hidden">
           <AndroidBackButton />
-          <NavBar />
-          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</main>
-          <TabBar />
+          {/*
+           * Tablet (≥720 px) turns this column into a row: the rail takes the
+           * left edge and the nav / content / tab-bar column keeps the rest.
+           * The tab bar stays in the markup — it is hidden by CSS on wide
+           * screens, so the phone shell is untouched and the rail is the same
+           * five destinations rather than a second navigation model.
+           */}
+          <Rail />
+          <div className="native-col flex min-w-0 flex-1 flex-col">
+            <NavBar />
+            <main className="native-main min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</main>
+            <TabBar />
+          </div>
         </div>
       </NativeRouteBridge>
     )

@@ -608,8 +608,8 @@ export const WorkLogForm = React.memo<WorkLogFormProps>(({ onSubmit, initialProj
       </FormSection>
 
       {isNativeBundle() ? (
-        <div className="fixed inset-x-0 z-30 mx-auto max-w-md border-t bg-[color:var(--ios-card)]/95 px-4 pb-3 pt-2 backdrop-blur-xl ios-above-tabbar">
-          <div className="mb-1 flex items-center justify-between">
+        <div className="native-fixed native-savebar fixed inset-x-0 z-30 mx-auto max-w-md border-t bg-[color:var(--ios-card)]/95 px-4 pb-3 pt-2 backdrop-blur-xl ios-above-tabbar">
+          <div className="sb-notes mb-1 flex items-center justify-between">
             <span className="t-caption t-secondary">
               {wordCount} {wordCount === 1 ? 'word' : 'words'}
             </span>

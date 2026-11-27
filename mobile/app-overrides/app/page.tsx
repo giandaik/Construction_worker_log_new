@@ -172,7 +172,7 @@ export default function MobileHomePage() {
   const hasTodayLog = workLogs.some((log) => String(log.date ?? "").slice(0, 10) === todayKey)
 
   return (
-    <div className="safe-b pb-6">
+    <div className={isWorker ? "safe-b pb-6" : "tb-wide safe-b pb-6"}>
       <LargeTitle sub={today}>Home</LargeTitle>
 
       <OfflineBar>
@@ -207,6 +207,7 @@ export default function MobileHomePage() {
             </div>
           </Section>
 
+          <div className={isWorker ? undefined : "tb-home-grid"}>
           <Section
             title="Recent logs"
             icon="logs"
@@ -259,6 +260,7 @@ export default function MobileHomePage() {
           ) : null}
 
           <PendingSubmissions initialData={{ projects, workLogs }} />
+          </div>
         </>
       )}
     </div>

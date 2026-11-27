@@ -66,7 +66,7 @@ export function NavBar() {
       className="safe-t sticky top-0 z-40 border-b bg-[color:var(--ios-card)]/95 backdrop-blur-xl"
       style={{ borderColor: "var(--ios-sep)", paddingTop: safeTop || undefined }}
     >
-      <div className="relative mx-auto flex h-11 max-w-md items-center px-2">
+      <div className="native-navrow relative mx-auto flex h-11 max-w-md items-center px-2">
         {chrome.back ? (
           <button
             type="button"

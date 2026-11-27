@@ -34,7 +34,7 @@ function NewWorkLogFormContent() {
   }
 
   return (
-    <div className={isNativeBundle() ? "" : "container mx-auto px-3 py-4 sm:px-4"}>
+    <div className={isNativeBundle() ? "tb-wide" : "container mx-auto px-3 py-4 sm:px-4"}>
       <Toaster />
       {isNativeBundle() ? (
         <WorkLogForm onSubmit={handleSubmit} initialProject={initialProject} />

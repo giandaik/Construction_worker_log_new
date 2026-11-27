@@ -66,7 +66,7 @@ export function TabBar() {
        * disagreed with the CSS spacer, and the two together are what pushed the
        * bar off the bottom edge.
        */
-      className="shrink-0 border-t bg-[color:var(--ios-card)]"
+      className="native-tabbar shrink-0 border-t bg-[color:var(--ios-card)]"
       style={{ borderColor: "var(--ios-sep)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="ios-tabbar-row mx-auto max-w-md">

@@ -626,7 +626,7 @@ export default function WorkLogDetailPage() {
         </div>
 
         <div
-          className="ios-above-tabbar fixed inset-x-0 z-30 border-t bg-[color:var(--ios-card)]/95 backdrop-blur-xl"
+          className="native-fixed ios-above-tabbar fixed inset-x-0 z-30 border-t bg-[color:var(--ios-card)]/95 backdrop-blur-xl"
           style={{ borderColor: "var(--ios-sep)" }}
         >
           <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2">

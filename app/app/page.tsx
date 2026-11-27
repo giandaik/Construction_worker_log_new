@@ -129,7 +129,7 @@ export default async function HomePage() {
     const nativeLastEntry = workLogs[0]?.date ? entryDate(workLogs[0].date) : null
 
     return (
-      <div className="pb-4">
+      <div className={isWorker ? "pb-4" : "tb-wide pb-4"}>
         <LargeTitle sub={today}>Today</LargeTitle>
 
         {isWorker && authUser ? (
@@ -152,6 +152,7 @@ export default async function HomePage() {
           </Section>
         )}
 
+        <div className={isWorker ? undefined : "tb-home-grid"}>
         <Section
           title="Recent logs"
           icon="logs"
@@ -198,6 +199,7 @@ export default async function HomePage() {
         {!isWorker && (
           <PendingSubmissions className="mx-4 mt-5" initialData={{ projects, workLogs }} />
         )}
+        </div>
       </div>
     )
   }
