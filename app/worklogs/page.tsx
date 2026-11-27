@@ -20,6 +20,8 @@ import { FORM_STATUS, FORM_STATUS_LABELS, FORM_STATUS_CLASSES } from "@/lib/cons
 import { fetchJsonCached } from "@/lib/cachedApi";
 import { peekCached } from "@/lib/apiCache";
 import { isNativeBundle } from "@/lib/native-mode";
+import { useSplitPane } from "@/hooks/useSplitPane";
+import { WorkLogDetail } from "@/components/worklogs/WorkLogDetail";
 import {
   Btn,
   Empty,
@@ -128,6 +130,10 @@ function WorkLogsPageContent() {
   const [nativePeriod, setNativePeriod] = useState<NativePeriod>(
     projectIdParam || fromParam || toParam ? "all" : "month"
   );
+  // Tablet master–detail: which log is open in the right-hand pane. `split`
+  // starts false and flips after mount, so the phone render is the default.
+  const split = useSplitPane();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchWorkLogs = async () => {
@@ -279,6 +285,14 @@ function WorkLogsPageContent() {
     router.push('/worklogs');
   };
 
+  // Master–detail default: the newest log is open when the pane appears, and a
+  // selection that no longer exists (period change, filter) falls back to it.
+  useEffect(() => {
+    if (!split) return;
+    if (selectedId && nativeLogs.some((log) => log._id === selectedId)) return;
+    setSelectedId(nativeLogs[0]?._id ?? null);
+  }, [split, nativeLogs, selectedId]);
+
   /* ------------------------------------------------------------------ *
    * Native presentation (Capacitor WebView). Same data, same handlers;
    * only the chrome and the grouping change. The web branch below is the
@@ -341,7 +355,10 @@ function WorkLogsPageContent() {
     const renderLogRow = (log: (typeof nativeLogs)[number]) => (
       <Row
         key={log._id}
-        href={`/worklogs/${log._id}`}
+        // In the split the row selects the record; on the phone it navigates.
+        href={split ? undefined : `/worklogs/${log._id}`}
+        onClick={split ? () => setSelectedId(log._id) : undefined}
+        selected={split && log._id === selectedId}
         title={<span className="font-semibold">{getProjectName(log.project)}</span>}
         subtitle={
           <span className="block truncate text-[15px] leading-5">
@@ -360,8 +377,8 @@ function WorkLogsPageContent() {
       />
     );
 
-    return (
-      <div className="pb-4">
+    const listBody = (
+      <>
         <LargeTitle
           sub={`${nativeLogs.length} ${nativeLogs.length === 1 ? "log" : "logs"}${
             activeProjectName ? ` · ${activeProjectName}` : ` · ${projects.length} sites`
@@ -421,8 +438,27 @@ function WorkLogsPageContent() {
             </Section>
           ))
         )}
-      </div>
+      </>
     );
+
+    // Tablet: list on the left, the open record on the right. Both panes scroll
+    // themselves (globals.css → .tb-split*). The phone keeps the plain column.
+    if (split) {
+      return (
+        <div className="tb-split-page">
+          <div className="tb-split">
+            <div className="tb-split-list">{listBody}</div>
+            {selectedId ? (
+              <div className="tb-split-pane">
+                <WorkLogDetail key={selectedId} id={selectedId} pane />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    return <div className="pb-4">{listBody}</div>;
   }
 
   if (isLoading) {

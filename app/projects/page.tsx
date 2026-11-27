@@ -20,6 +20,8 @@ import { Glyph } from "@/components/native/icons";
 import { toGreekUpperCase } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiClient";
 import { isNativeBundle } from "@/lib/native-mode";
+import { useSplitPane } from "@/hooks/useSplitPane";
+import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import {
   Btn,
   LargeTitle,
@@ -128,6 +130,9 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES);
   const [sortKey, setSortKey] = useState<SortKey>("activity");
   const [nativeFilter, setNativeFilter] = useState<NativeFilter>("all");
+  // Tablet master–detail, same contract as the logs list.
+  const split = useSplitPane();
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -208,6 +213,14 @@ export default function ProjectsPage() {
     [projects]
   );
 
+  // Master–detail default: the first visible site is open when the pane appears,
+  // and a filter that hides the selection falls back to the new first row.
+  useEffect(() => {
+    if (!split) return;
+    if (selectedSiteId && nativeProjects.some((project) => project._id === selectedSiteId)) return;
+    setSelectedSiteId(nativeProjects[0]?._id ?? null);
+  }, [split, nativeProjects, selectedSiteId]);
+
   if (isLoading) {
     if (isNativeBundle()) {
       return (
@@ -237,8 +250,8 @@ export default function ProjectsPage() {
     const logCount = `${totalLogs} log${totalLogs === 1 ? "" : "s"}`;
     const nothingVisible = !error && nativeProjects.length === 0;
 
-    return (
-      <div className="pb-6">
+    const listBody = (
+      <>
         <LargeTitle sub={`${siteCount} · ${logCount}`}>Sites</LargeTitle>
 
         <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search sites" />
@@ -294,7 +307,9 @@ export default function ProjectsPage() {
               return (
                 <Row
                   key={project._id}
-                  href={`/projects/${project._id}`}
+                  href={split ? undefined : `/projects/${project._id}`}
+                  onClick={split ? () => setSelectedSiteId(project._id) : undefined}
+                  selected={split && project._id === selectedSiteId}
                   chevron
                   trailing={<Pill tone={statusTone(project.status)}>{statusLabel(project.status)}</Pill>}
                 >
@@ -323,8 +338,25 @@ export default function ProjectsPage() {
             {siteCount} on file. Archived sites stay readable from the office.
           </p>
         ) : null}
-      </div>
+      </>
     );
+
+    if (split) {
+      return (
+        <div className="tb-split-page">
+          <div className="tb-split">
+            <div className="tb-split-list">{listBody}</div>
+            {selectedSiteId ? (
+              <div className="tb-split-pane">
+                <ProjectDetail key={selectedSiteId} id={selectedSiteId} pane />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    return <div className="pb-6">{listBody}</div>;
   }
 
   return (

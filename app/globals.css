@@ -50,6 +50,8 @@
        this value is theme-invariant — it must stay dark, and it must never be
        used for text that sits on the bar itself. */
     --ios-accent-ink: #111111;
+    /* Master–detail: the list row whose record is open in the pane. */
+    --ios-sel: rgba(242, 194, 0, 0.24);
   }
 
   .dark {
@@ -96,6 +98,7 @@
     /* On-accent ink: the chip stays yellow in the asphalt theme, so the glyph on
        it stays dark. Label ink comes from --ios-ink, never from this token. */
     --ios-accent-ink: #111111;
+    --ios-sel: rgba(255, 214, 10, 0.22);
   }
 }
 
@@ -720,6 +723,68 @@
 
   .native-main .ios-form > section {
     margin-top: 20px;
+  }
+
+  /* Master–detail (design → 02-logs / 05-projects): the list keeps its own
+     scroll pane on the left, the record fills the right. The page root stops
+     being a scroller so the two panes scroll independently. */
+  .native-main:has(> .tb-split-page) {
+    overflow: hidden;
+  }
+
+  .native-main > .tb-split-page {
+    max-width: none;
+    height: 100%;
+  }
+
+  .tb-split-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .tb-split {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .tb-split-list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 28px;
+    border-right: 0.5px solid var(--ios-sep);
+  }
+
+  .tb-split-pane {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 28px;
+    background: var(--ios-surface);
+  }
+
+  /* Inside a pane the record's own action bar is the last block of the pane,
+     not a fixed bar over the shell's bottom edge. */
+  .tb-pane .native-fixed {
+    position: static;
+    margin: 12px 16px 0;
+    max-width: none;
+    border-radius: 10px;
+    border: 0.5px solid var(--ios-sep);
+  }
+
+  .tb-pane .native-fixed > div {
+    max-width: none;
+  }
+
+  /* The pane header carries the record's own title, so the large title is
+     redundant at the top of the list pane's twin. */
+  .tb-split-list .t-large {
+    font-size: 28px;
+    line-height: 33px;
   }
 }
 

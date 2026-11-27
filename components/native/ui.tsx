@@ -67,6 +67,7 @@ export function Row({
   onClick,
   chevron,
   disabled,
+  selected,
   children,
 }: {
   title?: ReactNode
@@ -78,6 +79,8 @@ export function Row({
   onClick?: () => void
   chevron?: boolean
   disabled?: boolean
+  /** Master–detail: the row whose record is open in the pane. */
+  selected?: boolean
   children?: ReactNode
 }) {
   const body = (
@@ -95,6 +98,8 @@ export function Row({
   )
 
   const cls = `block w-full text-left [&+&]:before:absolute [&+&]:before:left-4 [&+&]:before:right-0 [&+&]:before:top-0 [&+&]:before:h-[0.5px] [&+&]:before:bg-[color:var(--ios-sep)] [&+&]:relative${
+    selected ? " bg-[color:var(--ios-sel)]" : ""
+  }${
     disabled ? " pointer-events-none opacity-50" : " active:bg-black/[0.04]"
   }`
 
